@@ -1,3 +1,5 @@
+import java.security.DigestInputStream
+
 plugins {
     id "com.android.application"
 }
@@ -190,7 +192,7 @@ def downloadBootstrap(String arch, String expectedChecksum, String version) {
 
     def connection = new URL(remoteUrl).openConnection()
     connection.setInstanceFollowRedirects(true)
-    def digestStream = new java.security.DigestInputStream(connection.inputStream, digest)
+    def digestStream = new DigestInputStream(connection.inputStream, digest)
     out << digestStream
     out.close()
 

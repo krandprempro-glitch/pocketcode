@@ -99,10 +99,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_above="@+id/terminal_toolbar_view_pager"
-            android:background="#2d3748"
-            android:elevation="4dp"
             android:orientation="horizontal"
+            android:background="#2d3748"
             android:padding="8dp"
+            android:elevation="4dp"
             android:visibility="visible">
 
             <EditText
@@ -112,16 +112,16 @@
                 android:layout_weight="1"
                 android:background="@drawable/terminal_input_background"
                 android:hint="输入命令..."
-                android:imeOptions="actionSend"
-                android:inputType="text"
-                android:paddingStart="12dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="12dp"
-                android:paddingBottom="8dp"
-                android:singleLine="true"
                 android:textColor="#ffffff"
                 android:textColorHint="#a0aec0"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:singleLine="true"
+                android:imeOptions="actionSend"
+                android:inputType="text" />
 
             <ImageButton
                 android:id="@+id/terminal_send_button"
@@ -129,8 +129,8 @@
                 android:layout_height="48dp"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/terminal_send_button_background"
-                android:contentDescription="发送命令"
                 android:src="@drawable/ic_send"
+                android:contentDescription="发送命令"
                 android:tint="#ffffff" />
 
         </LinearLayout>

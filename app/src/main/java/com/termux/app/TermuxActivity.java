@@ -25,6 +25,8 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
 
 import com.termux.R;
 import com.termux.app.api.file.FileReceiverActivity;
@@ -250,6 +252,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         setNewSessionButtonView();
 
         setToggleKeyboardView();
+
+        setTerminalInputView();
 
         registerForContextMenu(mTerminalView);
 
@@ -592,6 +596,44 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             toggleTerminalToolbar();
             return true;
         });
+    }
+
+    private void setTerminalInputView() {
+        EditText terminalCommandInput = findViewById(R.id.terminal_command_input);
+        ImageButton terminalSendButton = findViewById(R.id.terminal_send_button);
+        
+        if (terminalCommandInput == null || terminalSendButton == null) {
+            return;
+        }
+
+        terminalCommandInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND || 
+                (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                sendCommandToTerminal(terminalCommandInput.getText().toString());
+                terminalCommandInput.setText("");
+                return true;
+            }
+            return false;
+        });
+
+        terminalSendButton.setOnClickListener(v -> {
+            sendCommandToTerminal(terminalCommandInput.getText().toString());
+            terminalCommandInput.setText("");
+        });
+    }
+
+    private void sendCommandToTerminal(String command) {
+        if (command == null || command.trim().isEmpty()) {
+            return;
+        }
+        
+        TerminalSession currentSession = getCurrentSession();
+        if (currentSession != null && currentSession.isRunning()) {
+            byte[] commandBytes = (command.trim() + "\r").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            currentSession.write(commandBytes, 0, commandBytes.length);
+        } else {
+            showToast("终端会话未运行", false);
+        }
     }
 
 
