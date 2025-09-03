@@ -27,11 +27,13 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 
 import com.termux.R;
 import com.termux.app.api.file.FileReceiverActivity;
 import com.termux.app.terminal.TermuxActivityRootView;
 import com.termux.app.terminal.TermuxTerminalSessionActivityClient;
+import com.termux.app.terminal.ClaudeCodeMenuHelper;
 import com.termux.app.terminal.io.TermuxTerminalExtraKeys;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.ActivityUtils;
@@ -134,6 +136,11 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
      * The client for the {@link #mExtraKeysView}.
      */
     TermuxTerminalExtraKeys mTermuxTerminalExtraKeys;
+
+    /**
+     * Helper for Claude Code command menu.
+     */
+    ClaudeCodeMenuHelper mClaudeCodeMenuHelper;
 
     /**
      * The termux sessions list controller.
@@ -360,6 +367,12 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             // Do not leave service and session clients with references to activity.
             mTermuxService.unsetTermuxTerminalSessionClient();
             mTermuxService = null;
+        }
+
+        // Cleanup Claude Code menu
+        if (mClaudeCodeMenuHelper != null) {
+            mClaudeCodeMenuHelper.dismiss();
+            mClaudeCodeMenuHelper = null;
         }
 
         try {
@@ -601,10 +614,14 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     private void setTerminalInputView() {
         EditText terminalCommandInput = findViewById(R.id.terminal_command_input);
         ImageButton terminalSendButton = findViewById(R.id.terminal_send_button);
+        ImageButton claudeCodeMenuButton = findViewById(R.id.claude_code_menu_button);
         
         if (terminalCommandInput == null || terminalSendButton == null) {
             return;
         }
+
+        // Initialize Claude Code menu helper
+        mClaudeCodeMenuHelper = new ClaudeCodeMenuHelper(this);
 
         terminalCommandInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND || 
@@ -616,10 +633,27 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             return false;
         });
 
+        // Add keyboard shortcut support
+        terminalCommandInput.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                return handleClaudeCodeShortcuts(keyCode, event, terminalCommandInput);
+            }
+            return false;
+        });
+
         terminalSendButton.setOnClickListener(v -> {
             sendCommandToTerminal(terminalCommandInput.getText().toString());
             terminalCommandInput.setText("");
         });
+
+        // Setup Claude Code menu button
+        if (claudeCodeMenuButton != null) {
+            claudeCodeMenuButton.setOnClickListener(v -> {
+                if (mClaudeCodeMenuHelper != null) {
+                    mClaudeCodeMenuHelper.showMenu(claudeCodeMenuButton);
+                }
+            });
+        }
     }
 
     private void sendCommandToTerminal(String command) {
@@ -634,6 +668,54 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         } else {
             showToast("终端会话未运行", false);
         }
+    }
+
+    /**
+     * Handle Claude Code keyboard shortcuts
+     */
+    private boolean handleClaudeCodeShortcuts(int keyCode, KeyEvent event, EditText editText) {
+        boolean ctrlPressed = event.isCtrlPressed();
+        boolean shiftPressed = event.isShiftPressed();
+
+        if (shiftPressed && keyCode == KeyEvent.KEYCODE_TAB) {
+            // Shift + Tab: 代码补全（模拟功能）
+            showToast("Claude Code: 代码补全", false);
+            return true;
+        }
+
+        if (ctrlPressed) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_L:
+                    // Ctrl + L: 清屏
+                    editText.setText("/clear");
+                    editText.setSelection(editText.getText().length());
+                    showToast("Claude Code: 清屏指令", false);
+                    return true;
+
+                case KeyEvent.KEYCODE_K:
+                    // Ctrl + K: 文件搜索
+                    showToast("Claude Code: 打开文件搜索", false);
+                    return true;
+
+                case KeyEvent.KEYCODE_ENTER:
+                    // Ctrl + Enter: 发送消息
+                    sendCommandToTerminal(editText.getText().toString());
+                    editText.setText("");
+                    return true;
+
+                case KeyEvent.KEYCODE_SLASH:
+                    // Ctrl + /: 快捷键帮助
+                    if (mClaudeCodeMenuHelper != null) {
+                        ImageButton claudeCodeButton = findViewById(R.id.claude_code_menu_button);
+                        if (claudeCodeButton != null) {
+                            mClaudeCodeMenuHelper.showMenu(claudeCodeButton);
+                        }
+                    }
+                    return true;
+            }
+        }
+
+        return false;
     }
 
 

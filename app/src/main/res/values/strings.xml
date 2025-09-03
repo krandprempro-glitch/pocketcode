@@ -235,4 +235,13 @@
     <!-- Donate Preference -->
     <string name="donate_preference_title">Donate</string>
 
+    <!-- Claude Code Menu -->
+    <string name="claude_code_menu_title">Claude Code 快捷指令</string>
+    <string name="claude_code_menu_button_desc">Claude Code 指令菜单</string>
+    <string name="claude_code_basic_commands">基础指令</string>
+    <string name="claude_code_file_operations">文件操作</string>
+    <string name="claude_code_git_operations">Git 操作</string>
+    <string name="claude_code_system_info">系统信息</string>
+    <string name="claude_code_network_operations">网络操作</string>
+
 </resources>
