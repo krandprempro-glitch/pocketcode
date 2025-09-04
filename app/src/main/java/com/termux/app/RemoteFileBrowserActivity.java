@@ -25,13 +25,18 @@ import com.termux.R;
 import com.termux.app.models.SSHConnectionConfig;
 import com.termux.app.models.RemoteFileItem;
 import com.termux.app.models.FileTreeNode;
+import com.termux.app.models.ProjectWorkspace;
+import com.termux.app.models.DirectoryBookmark;
 import com.termux.app.sftp.SFTPConnectionManager;
 import com.termux.app.adapters.RemoteFileBrowserAdapter;
 import com.termux.app.adapters.FileTreeAdapter;
+import com.termux.app.adapters.BookmarksAdapter;
+import com.termux.app.managers.ProjectWorkspaceManager;
 import com.termux.shared.logger.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -40,7 +45,10 @@ import io.reactivex.rxjava3.disposables.Disposable;
  * VSCode风格远程文件浏览器主Activity
  * 提供目录树导航、文件浏览、书签管理等功能
  */
-public class RemoteFileBrowserActivity extends AppCompatActivity implements RemoteFileBrowserAdapter.OnFileClickListener {
+public class RemoteFileBrowserActivity extends AppCompatActivity implements 
+        RemoteFileBrowserAdapter.OnFileClickListener, 
+        FileTreeAdapter.OnFileTreeActionListener,
+        BookmarksAdapter.OnBookmarkActionListener {
     
     private static final String LOG_TAG = "RemoteFileBrowserActivity";
     
@@ -65,12 +73,16 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
     
     // 数据和状态
     private SSHConnectionConfig currentConnection;
+    private ProjectWorkspace currentWorkspace;
     private String currentPath = "/";
     private boolean isConnected = false;
     
     // 管理器和适配器
     private SFTPConnectionManager sftpManager;
+    private ProjectWorkspaceManager workspaceManager;
     private RemoteFileBrowserAdapter fileAdapter;
+    private FileTreeAdapter treeAdapter;
+    private BookmarksAdapter bookmarksAdapter;
     private CompositeDisposable compositeDisposable;
     
     @Override
@@ -82,6 +94,7 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
         
         // 初始化管理器
         sftpManager = SFTPConnectionManager.getInstance();
+        workspaceManager = ProjectWorkspaceManager.getInstance(this);
         compositeDisposable = new CompositeDisposable();
         
         initViews();
@@ -158,9 +171,13 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
         
         // 目录树
         fileTreeRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        treeAdapter = new FileTreeAdapter(this); // 传入FileTreeActionListener
+        fileTreeRecyclerView.setAdapter(treeAdapter);
         
         // 书签列表
         bookmarksRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        bookmarksAdapter = new BookmarksAdapter(this); // 传入BookmarkActionListener
+        bookmarksRecyclerView.setAdapter(bookmarksAdapter);
         
         Logger.logInfo(LOG_TAG, "RecyclerViews configured");
     }
@@ -244,9 +261,15 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
         // 加载项目工作区
         loadProjectWorkspace(currentConnection);
         
-        // 加载根目录
+        // 加载目录树
         loadDirectoryTree("/");
         navigateToDirectory("/");
+        
+        // 加载书签列表
+        loadBookmarks();
+        
+        // 同步书签状态
+        syncBookmarkStates();
         
         showLoading(false);
     }
@@ -270,8 +293,29 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
      * 加载项目工作区
      */
     private void loadProjectWorkspace(SSHConnectionConfig config) {
-        // TODO: 实现项目工作区管理
         Logger.logInfo(LOG_TAG, "Loading project workspace for " + config.getHost());
+        
+        // 使用工作区管理器获取或创建工作区
+        currentWorkspace = workspaceManager.getOrCreateWorkspaceForConnection(config);
+        
+        if (currentWorkspace != null) {
+            // 更新项目显示信息
+            updateProjectInfo(currentWorkspace.getDisplayName());
+            
+            // 恢复上次的路径状态
+            String savedCurrentPath = currentWorkspace.getCurrentPath();
+            if (savedCurrentPath != null && !savedCurrentPath.isEmpty()) {
+                currentPath = savedCurrentPath;
+            }
+            
+            // 更新最后访问时间
+            workspaceManager.updateLastAccess(currentWorkspace.getId());
+            
+            Logger.logInfo(LOG_TAG, "Workspace loaded: " + currentWorkspace.getId());
+            Logger.logInfo(LOG_TAG, "Current path restored: " + currentPath);
+        } else {
+            Logger.logError(LOG_TAG, "Failed to create workspace for connection");
+        }
     }
     
     /**
@@ -279,7 +323,33 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
      */
     private void loadDirectoryTree(String path) {
         Logger.logInfo(LOG_TAG, "Loading directory tree for path: " + path);
-        // TODO: 实现目录树加载逻辑
+        
+        if (!isConnected || sftpManager == null) {
+            Logger.logError(LOG_TAG, "Not connected, cannot load directory tree");
+            return;
+        }
+        
+        // 创建根节点
+        FileTreeNode rootNode = new FileTreeNode(
+            path.equals("/") ? "Root" : path.substring(path.lastIndexOf('/') + 1),
+            path,
+            true // 是目录
+        );
+        rootNode.setDepth(0);
+        
+        // 加载根目录的直接子目录
+        loadNodeChildren(rootNode);
+
+        // 设置到tree adapter
+        List<FileTreeNode> rootNodes = new ArrayList<>();
+        rootNodes.add(rootNode);
+        treeAdapter.updateTree(rootNodes);
+        
+        // 默认展开根节点
+        treeAdapter.expandNode(rootNode);
+        
+        // 恢复工作区的展开状态
+        restoreTreeExpandedState();
     }
     
     /**
@@ -288,9 +358,16 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
     private void navigateToDirectory(String dirPath) {
         Logger.logInfo(LOG_TAG, "Navigating to directory: " + dirPath);
         
-        currentPath = dirPath;
-        updateBreadcrumb(dirPath);
+        // 使用统一的路径变化处理
+        onPathChanged(dirPath);
+        
+        // 加载目录内容
         loadDirectoryContent(dirPath);
+        
+        // 确保路径在树中可见
+        if (treeAdapter != null) {
+            treeAdapter.expandToPath(dirPath);
+        }
     }
     
     /**
@@ -309,6 +386,9 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
                     updateFileCount(files.size());
                     showEmptyState(files.isEmpty());
                     showLoading(false);
+                    
+                    // 同步选中状态
+                    syncSelectionStates();
                 },
                 throwable -> {
                     Logger.logError(LOG_TAG, "Failed to load directory content: " + throwable.getMessage());
@@ -424,6 +504,107 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
         findViewById(android.R.id.content).postDelayed(runnable, delayMillis);
     }
     
+    /**
+     * 恢复目录树的展开状态
+     */
+    private void restoreTreeExpandedState() {
+        if (currentWorkspace == null) {
+            return;
+        }
+        
+        Logger.logInfo(LOG_TAG, "Restoring tree expanded state");
+        
+        // 获取保存的展开状态
+        Map<String, Boolean> expandedFolders = currentWorkspace.getExpandedFolders();
+        if (expandedFolders != null && !expandedFolders.isEmpty()) {
+            for (Map.Entry<String, Boolean> entry : expandedFolders.entrySet()) {
+                if (entry.getValue()) {
+                    // 展开该路径
+                    treeAdapter.expandToPath(entry.getKey());
+                }
+            }
+        }
+    }
+    
+    /**
+     * 加载书签列表
+     */
+    private void loadBookmarks() {
+        if (currentWorkspace == null) {
+            return;
+        }
+        
+        Logger.logInfo(LOG_TAG, "Loading bookmarks for workspace: " + currentWorkspace.getId());
+        
+        List<DirectoryBookmark> bookmarks = workspaceManager.getProjectBookmarks(currentWorkspace.getId());
+        bookmarksAdapter.updateBookmarks(bookmarks);
+        Logger.logInfo(LOG_TAG, "Loaded " + bookmarks.size() + " bookmarks");
+    }
+    
+    /**
+     * 同步目录树中的书签状态
+     */
+    private void syncBookmarkStates() {
+        if (currentWorkspace == null || treeAdapter == null) {
+            return;
+        }
+        
+        Logger.logInfo(LOG_TAG, "Syncing bookmark states in tree");
+        
+        List<FileTreeNode> flattenedNodes = treeAdapter.getFlattenedNodes();
+        for (FileTreeNode node : flattenedNodes) {
+            if (node.isDirectory()) {
+                boolean isBookmarked = workspaceManager.isBookmarked(
+                    currentWorkspace.getId(), 
+                    node.getFullPath()
+                );
+                if (node.isBookmarked() != isBookmarked) {
+                    node.setBookmarked(isBookmarked);
+                    treeAdapter.refreshNode(node);
+                }
+            }
+        }
+    }
+    
+    /**
+     * 同步目录树和主内容区的选中状态
+     */
+    private void syncSelectionStates() {
+        if (treeAdapter == null || fileAdapter == null) {
+            return;
+        }
+        
+        Logger.logInfo(LOG_TAG, "Syncing selection states between tree and main content");
+        
+        // 同步目录树的选中状态到当前路径
+        treeAdapter.setSelectedPath(currentPath);
+        
+        // 同步文件列表的选中状态（如果需要）
+        // 这里可以添加文件列表选中同步逻辑
+    }
+    
+    /**
+     * 当路径变化时的同步处理
+     */
+    private void onPathChanged(String newPath) {
+        Logger.logInfo(LOG_TAG, "Path changed to: " + newPath);
+        
+        // 更新当前路径
+        currentPath = newPath;
+        
+        // 同步选中状态
+        syncSelectionStates();
+        
+        // 保存到工作区
+        if (currentWorkspace != null) {
+            currentWorkspace.setCurrentPath(newPath);
+            workspaceManager.saveWorkspaceState(currentWorkspace);
+        }
+        
+        // 更新面包屑
+        updateBreadcrumb(newPath);
+    }
+    
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -470,7 +651,7 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
         Logger.logInfo(LOG_TAG, "File clicked: " + file.getName());
         
         if (file.isDirectory()) {
-            // 导航到目录
+            // 导航到目录，这会自动同步目录树
             navigateToDirectory(file.getPath());
         } else {
             // 显示文件操作菜单
@@ -500,5 +681,245 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements Remo
         android.widget.Toast.makeText(this, 
             "文件操作: " + file.getName(), 
             android.widget.Toast.LENGTH_SHORT).show();
+    }
+    
+    // FileTreeAdapter.OnFileTreeActionListener 实现
+    
+    @Override
+    public void onNodeExpanded(FileTreeNode node) {
+        Logger.logInfo(LOG_TAG, "Tree node expanded: " + node.getName());
+        // 保存展开状态到项目工作区
+        if (currentWorkspace != null) {
+            currentWorkspace.getExpandedFolders().put(node.getFullPath(), true);
+            workspaceManager.saveWorkspaceState(currentWorkspace);
+        }
+    }
+    
+    @Override
+    public void onNodeCollapsed(FileTreeNode node) {
+        Logger.logInfo(LOG_TAG, "Tree node collapsed: " + node.getName());
+        // 保存折叠状态到项目工作区
+        if (currentWorkspace != null) {
+            currentWorkspace.getExpandedFolders().put(node.getFullPath(), false);
+            workspaceManager.saveWorkspaceState(currentWorkspace);
+        }
+    }
+    
+    @Override
+    public void onFileSelected(FileTreeNode node) {
+        Logger.logInfo(LOG_TAG, "Tree file selected: " + node.getName());
+        
+        if (node.isDirectory()) {
+            // 同步主内容区到选中的目录
+            navigateToDirectory(node.getFullPath());
+        } else {
+            // 文件被选中，可以实现文件操作
+            RemoteFileItem fileItem = createRemoteFileItemFromNode(node);
+            showFileOperationsDialog(fileItem);
+        }
+    }
+    
+    @Override
+    public void onDirectoryBookmarked(FileTreeNode node) {
+        Logger.logInfo(LOG_TAG, "Tree directory bookmarked: " + node.getName());
+        
+        if (currentWorkspace != null && node.isDirectory()) {
+            // 创建书签对象
+            DirectoryBookmark bookmark = new DirectoryBookmark(
+                null, // ID will be auto-generated
+                node.getName(),
+                node.getFullPath(),
+                currentWorkspace.getId()
+            );
+            
+            // 检查是否已存在书签
+            if (!workspaceManager.isBookmarked(currentWorkspace.getId(), node.getFullPath())) {
+                workspaceManager.addBookmark(currentWorkspace.getId(), bookmark);
+                android.widget.Toast.makeText(this, 
+                    "已添加书签: " + node.getName(), 
+                    android.widget.Toast.LENGTH_SHORT).show();
+                
+                // 标记为已收藏
+                node.setBookmarked(true);
+                treeAdapter.refreshNode(node);
+                
+                // 刷新书签列表
+                loadBookmarks();
+            } else {
+                android.widget.Toast.makeText(this, 
+                    "书签已存在: " + node.getName(), 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+    
+    @Override
+    public void onLoadNodeChildren(FileTreeNode node) {
+        Logger.logInfo(LOG_TAG, "Loading children for tree node: " + node.getName());
+        loadNodeChildren(node);
+    }
+    
+    /**
+     * 加载目录树节点的子节点
+     */
+    private void loadNodeChildren(FileTreeNode parentNode) {
+        if (!isConnected || sftpManager == null) {
+            Logger.logError(LOG_TAG, "Not connected, cannot load node children");
+            return;
+        }
+        
+        // 使用SFTP管理器获取目录列表
+        Disposable disposable = sftpManager.listFiles(parentNode.getFullPath())
+            .subscribe(
+                files -> {
+                    Logger.logInfo(LOG_TAG, "Loaded " + files.size() + " children for " + parentNode.getName());
+                    
+                    // 转换为FileTreeNode并只包含目录
+                    List<FileTreeNode> childNodes = new ArrayList<>();
+                    for (RemoteFileItem file : files) {
+                        if (file.isDirectory()) { // 只显示目录在树中
+                            FileTreeNode childNode = new FileTreeNode(
+                                file.getName(),
+                                file.getPath(),
+                                file.isDirectory()
+                            );
+                            childNode.setDepth(parentNode.getDepth() + 1);
+                            childNode.setFileType(file.getType());
+                            childNodes.add(childNode);
+                        }
+                    }
+                    
+                    // 添加到父节点
+                    treeAdapter.addChildrenToNode(parentNode, childNodes);
+                },
+                throwable -> {
+                    Logger.logError(LOG_TAG, "Failed to load node children: " + throwable.getMessage());
+                    parentNode.setLoading(false);
+                    treeAdapter.refreshNode(parentNode);
+                }
+            );
+        
+        compositeDisposable.add(disposable);
+    }
+    
+    /**
+     * 从FileTreeNode创建RemoteFileItem
+     */
+    private RemoteFileItem createRemoteFileItemFromNode(FileTreeNode node) {
+        RemoteFileItem item = new RemoteFileItem();
+        item.setName(node.getName());
+        item.setPath(node.getFullPath());
+        item.setDirectory(node.isDirectory());
+        item.setType(node.getFileType());
+        // 其他属性需要从SFTP获取具体文件信息，这里先用默认值
+        item.setSize(0);
+        item.setLastModified(0);
+        item.setPermissions("");
+        return item;
+    }
+    
+    // BookmarksAdapter.OnBookmarkActionListener 实现
+    
+    @Override
+    public void onBookmarkClick(DirectoryBookmark bookmark) {
+        Logger.logInfo(LOG_TAG, "Bookmark clicked: " + bookmark.getDisplayName());
+        
+        // 导航到书签路径
+        navigateToDirectory(bookmark.getFullPath());
+        
+        // 关闭抽屉
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        }
+    }
+    
+    @Override
+    public void onBookmarkLongClick(DirectoryBookmark bookmark) {
+        Logger.logInfo(LOG_TAG, "Bookmark long clicked: " + bookmark.getDisplayName());
+        // 显示书签编辑操作菜单
+        showBookmarkOptionsDialog(bookmark);
+    }
+    
+    @Override
+    public void onBookmarkRemove(DirectoryBookmark bookmark) {
+        Logger.logInfo(LOG_TAG, "Removing bookmark: " + bookmark.getDisplayName());
+        
+        // 从数据库删除书签
+        boolean removed = workspaceManager.removeBookmark(bookmark.getId());
+        if (removed) {
+            // 从适配器删除
+            bookmarksAdapter.removeBookmark(bookmark);
+            
+            // 更新目录树中的书签状态
+            syncBookmarkStates();
+            
+            android.widget.Toast.makeText(this, 
+                "已删除书签: " + bookmark.getDisplayName(), 
+                android.widget.Toast.LENGTH_SHORT).show();
+        } else {
+            android.widget.Toast.makeText(this, 
+                "删除书签失败", 
+                android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * 显示书签操作对话框
+     */
+    private void showBookmarkOptionsDialog(DirectoryBookmark bookmark) {
+        Logger.logInfo(LOG_TAG, "Showing bookmark options dialog for: " + bookmark.getDisplayName());
+        
+        // 创建操作选项列表
+        String[] options = {"跳转到该目录", "重命名书签", "删除书签"};
+        
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("书签操作: " + bookmark.getDisplayName())
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // 跳转到该目录
+                            onBookmarkClick(bookmark);
+                            break;
+                        case 1: // 重命名书签
+                            showRenameBookmarkDialog(bookmark);
+                            break;
+                        case 2: // 删除书签
+                            onBookmarkRemove(bookmark);
+                            break;
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+    
+    /**
+     * 显示重命名书签对话框
+     */
+    private void showRenameBookmarkDialog(DirectoryBookmark bookmark) {
+        Logger.logInfo(LOG_TAG, "Showing rename bookmark dialog for: " + bookmark.getDisplayName());
+        
+        android.widget.EditText editText = new android.widget.EditText(this);
+        editText.setText(bookmark.getDisplayName());
+        editText.setSelection(bookmark.getDisplayName().length());
+        
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("重命名书签")
+                .setView(editText)
+                .setPositiveButton("确定", (dialog, which) -> {
+                    String newName = editText.getText().toString().trim();
+                    if (!newName.isEmpty() && !newName.equals(bookmark.getDisplayName())) {
+                        // 更新书签名称
+                        bookmark.setDisplayName(newName);
+                        workspaceManager.addBookmark(currentWorkspace.getId(), bookmark);
+                        
+                        // 刷新书签列表
+                        loadBookmarks();
+                        
+                        android.widget.Toast.makeText(this, 
+                            "书签已重命名", 
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 }

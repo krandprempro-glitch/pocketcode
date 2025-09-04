@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 远程文件浏览器尺寸 -->
+    <dimen name="tree_indent_size">16dp</dimen>
+    <dimen name="file_icon_size">14dp</dimen>
+    <dimen name="file_icon_large">28dp</dimen>
+    <dimen name="drawer_width">300dp</dimen>
+    <dimen name="breadcrumb_height">36dp</dimen>
+    <dimen name="status_bar_height">28dp</dimen>
+    <dimen name="section_header_height">48dp</dimen>
+    <dimen name="bookmark_item_height">36dp</dimen>
+</resources>

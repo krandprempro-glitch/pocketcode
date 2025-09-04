@@ -1,4 +1,11 @@
 # Termux application
+请执行Termux远程文件浏览器项目的批次任务。工作目录是：D:\as\termux-app-master
+执行步骤：
+1. 先读取总规划：todos/task_0904_1300.md （了解整体架构）
+2. 读取具体批次：todos/batch_0904_XXXX.md （获取详细任务）
+3. 使用TodoWrite工具跟踪每个子任务进度
+4. 严格按批次文件的检查清单逐项完成
+
 
 [![Build status](https://github.com/termux/termux-app/workflows/Build/badge.svg)](https://github.com/termux/termux-app/actions)
 [![Testing status](https://github.com/termux/termux-app/workflows/Unit%20tests/badge.svg)](https://github.com/termux/termux-app/actions)

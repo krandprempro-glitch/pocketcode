@@ -43,6 +43,16 @@ public class SSHConnectionConfig {
     public void setPassword(String password) { this.password = password; }
 
     /**
+     * 获取显示名称
+     */
+    public String getDisplayName() {
+        if (!TextUtils.isEmpty(name)) {
+            return name;
+        }
+        return username + "@" + host + ":" + port;
+    }
+
+    /**
      * 验证配置是否有效
      */
     public boolean isValid() {

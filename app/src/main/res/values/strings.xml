@@ -244,4 +244,39 @@
     <string name="claude_code_system_info">系统信息</string>
     <string name="claude_code_network_operations">网络操作</string>
 
+    <!-- 远程文件浏览器字符串 -->
+    <string name="remote_file_browser_title">远程文件浏览</string>
+    <string name="explorer_title">资源管理器</string>
+    <string name="bookmarks_section">书签</string>
+    <string name="directory_structure">目录结构</string>
+    <string name="quick_connect">快速连接</string>
+    <string name="recent_connections">最近连接</string>
+    <string name="saved_connections">已保存连接</string>
+    <string name="connected">已连接</string>
+    <string name="disconnected">已断开</string>
+    <string name="connecting">连接中</string>
+    <string name="empty_folder">此文件夹为空</string>
+    <string name="add_project">添加项目</string>
+    <string name="add_connection">添加连接</string>
+    <string name="refresh">刷新</string>
+    <string name="settings">设置</string>
+    <string name="expand_collapse">展开/折叠</string>
+    <string name="more_options">更多选项</string>
+
+    <!-- 文件操作 -->
+    <string name="view_content">查看内容</string>
+    <string name="download_file">下载到本地</string>
+    <string name="add_to_bookmarks">添加到书签</string>
+    <string name="copy_path">复制路径</string>
+    <string name="file_info">文件信息</string>
+    <string name="remove_bookmark">移除书签</string>
+    <string name="rename_bookmark">重命名书签</string>
+
+    <!-- 错误消息 -->
+    <string name="connection_failed">连接失败</string>
+    <string name="network_error">网络错误</string>
+    <string name="permission_denied">权限不足</string>
+    <string name="file_not_found">文件不存在</string>
+    <string name="download_failed">下载失败</string>
+
 </resources>

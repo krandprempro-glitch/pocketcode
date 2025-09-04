@@ -28,4 +28,27 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <!-- 远程文件浏览器样式 -->
+    <style name="FileTreeItemStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">28dp</item>
+        <item name="android:padding">4dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+    </style>
+
+    <style name="FileListItemStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+    </style>
+
+    <style name="SectionTitleStyle">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/drawer_section_title</item>
+    </style>
+
 </resources>

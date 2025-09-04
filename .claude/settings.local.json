@@ -21,7 +21,10 @@
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
-      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)"
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res/**)"
     ],
     "deny": [],
     "ask": []
