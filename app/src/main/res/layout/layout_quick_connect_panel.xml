@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 快速连接面板布局 -->
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:paddingTop="8dp">
+    
+    <!-- 面板拖拽指示器 -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="#CCCCCC" />
+    
+    <!-- 标题 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingBottom="16dp">
+        
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="快速连接"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+            
+        <ImageButton
+            android:id="@+id/add_connection_button"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@android:drawable/btn_default"
+            android:src="@android:drawable/ic_menu_add"
+            android:contentDescription="添加连接" />
+    </LinearLayout>
+    
+    <!-- 最近连接 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="20dp"
+        android:paddingBottom="8dp"
+        android:text="最近连接"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#555555" />
+    
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recent_connections_recyclerview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="12dp" />
+    
+    <!-- 分割线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="16dp"
+        android:layout_marginHorizontal="20dp"
+        android:background="#DDDDDD" />
+    
+    <!-- 已保存连接 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="20dp"
+        android:paddingBottom="8dp"
+        android:text="已保存连接"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#555555" />
+    
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/saved_connections_recyclerview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="240dp"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="20dp" />
+</LinearLayout>

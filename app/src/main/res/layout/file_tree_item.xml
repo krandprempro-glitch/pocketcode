@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 目录树节点项布局 -->
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal" 
+    android:padding="4dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:minHeight="28dp"
+    android:gravity="center_vertical">
+    
+    <!-- 缩进空间 -->
+    <Space 
+        android:id="@+id/indent_space"
+        android:layout_width="0dp" 
+        android:layout_height="match_parent" />
+    
+    <!-- 展开/折叠图标 -->
+    <ImageView
+        android:id="@+id/expand_icon"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:src="@android:drawable/arrow_down_float"
+        android:visibility="gone"
+        android:layout_marginEnd="2dp" />
+    
+    <!-- 文件类型图标 -->
+    <ImageView
+        android:id="@+id/file_icon"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_marginEnd="6dp"
+        android:src="@android:drawable/ic_menu_gallery" />
+    
+    <!-- 文件名 -->
+    <TextView
+        android:id="@+id/file_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="13sp"
+        android:textColor="#333333"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="文件名" />
+    
+    <!-- 加载指示器 -->
+    <ProgressBar
+        android:id="@+id/loading_indicator"
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:visibility="gone"
+        android:layout_marginEnd="4dp" />
+    
+    <!-- 书签图标 -->
+    <ImageView
+        android:id="@+id/bookmark_icon"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:src="@android:drawable/btn_star"
+        android:visibility="gone"
+        android:tint="#FFD700" />
+</LinearLayout>

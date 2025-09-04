@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 远程文件列表项布局 -->
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:minHeight="48dp">
+
+    <!-- 选择框 -->
+    <CheckBox
+        android:id="@+id/file_selection_checkbox"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="12dp"
+        android:layout_gravity="center_vertical"
+        android:visibility="gone" />
+
+    <!-- 文件类型图标 -->
+    <ImageView
+        android:id="@+id/file_type_icon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="12dp"
+        android:layout_gravity="center_vertical"
+        android:src="@android:drawable/ic_menu_gallery" />
+
+    <!-- 文件信息 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/file_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:textColor="#333333"
+            android:singleLine="true"
+            android:ellipsize="middle"
+            android:text="文件名.txt" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:id="@+id/file_info"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="12sp"
+                android:textColor="#666666"
+                android:text="1.2 KB · 2024-01-15 10:30" />
+
+            <TextView
+                android:id="@+id/file_permissions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="#999999"
+                android:fontFamily="monospace"
+                android:visibility="gone"
+                android:text="rwxr-xr-x" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 书签指示器 -->
+    <ImageView
+        android:id="@+id/bookmark_indicator"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:layout_marginEnd="8dp"
+        android:layout_gravity="center_vertical"
+        android:src="@android:drawable/btn_star"
+        android:visibility="gone"
+        app:tint="#FFD700" />
+    
+    <!-- 更多操作按钮 -->
+    <ImageButton
+        android:id="@+id/more_options_button"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_vertical"
+        android:background="@android:drawable/btn_default"
+        android:src="@android:drawable/ic_menu_more"
+        android:contentDescription="更多选项" />
+</LinearLayout>

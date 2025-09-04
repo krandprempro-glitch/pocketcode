@@ -28,12 +28,18 @@ android {
         implementation "androidx.drawerlayout:drawerlayout:1.1.1"
         implementation "androidx.preference:preference:1.1.1"
         implementation "androidx.viewpager:viewpager:1.0.0"
+        implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
+        implementation "androidx.recyclerview:recyclerview:1.2.1"
         implementation "com.google.android.material:material:1.4.0"
         implementation "com.google.guava:guava:24.1-jre"
         implementation "io.noties.markwon:core:$markwonVersion"
         implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
         implementation "io.noties.markwon:linkify:$markwonVersion"
         implementation "io.noties.markwon:recycler:$markwonVersion"
+
+        // RxJava3 dependencies for SFTP functionality
+        implementation 'io.reactivex.rxjava3:rxjava:3.1.5'
+        implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")
