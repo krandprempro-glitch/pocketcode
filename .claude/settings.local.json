@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res\\drawable/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res\\drawable/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app\\ssh/**)",
+      "Read(/D:\\as\\termux-app-master\\termux-shared\\src\\main\\java\\com\\termux\\shared\\termux\\shell\\command\\runner\\terminal/**)",
+      "Read(/D:\\as\\termux-app-master\\termux-shared\\src\\main\\java\\com\\termux\\shared\\termux\\shell\\command\\runner\\terminal/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app\\ssh/**)",
+      "Bash(gradlew:*)",
+      "Bash(./gradlew:*)",
+      "Bash(javac:*)",
+      "Read(/D:\\as\\termux-app-master\\termux-shared\\src\\main\\java\\com\\termux\\shared\\termux\\shell\\command\\runner\\terminal/**)",
+      "Bash(.gradlew app:compileDebugJavaWithJavac --no-daemon)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res\\layout/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app\\terminal/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

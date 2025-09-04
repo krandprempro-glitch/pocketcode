@@ -94,6 +94,17 @@
 
         </androidx.drawerlayout.widget.DrawerLayout>
 
+        <!-- SSH悬浮按钮 -->
+        <com.termux.app.ui.SSHFloatingActionButton
+            android:id="@+id/ssh_floating_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:elevation="8dp" />
+
         <LinearLayout
             android:id="@+id/terminal_input_container"
             android:layout_width="match_parent"
@@ -108,16 +119,17 @@
             <EditText
                 android:id="@+id/terminal_command_input"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="32dp"
                 android:layout_weight="1"
+                android:layout_gravity="center_vertical"
                 android:background="@drawable/terminal_input_background"
                 android:hint="输入命令..."
                 android:imeOptions="actionSend"
                 android:inputType="text"
                 android:paddingStart="12dp"
-                android:paddingTop="8dp"
+                android:paddingTop="4dp"
                 android:paddingEnd="12dp"
-                android:paddingBottom="8dp"
+                android:paddingBottom="4dp"
                 android:singleLine="true"
                 android:textColor="#ffffff"
                 android:textColorHint="#a0aec0"
@@ -125,25 +137,29 @@
 
             <ImageButton
                 android:id="@+id/claude_code_menu_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp"
-                android:background="@drawable/claude_code_button_background"
+                android:layout_gravity="center_vertical"
+                android:background="@null"
                 android:contentDescription="Claude Code 指令菜单"
                 android:src="@drawable/ic_claude_code"
-                android:scaleType="centerInside"
-                android:padding="8dp" />
+                android:scaleType="center"
+                android:padding="4dp" />
 
             <ImageButton
                 android:id="@+id/terminal_send_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:layout_marginStart="4dp"
-                android:background="@drawable/terminal_send_button_background"
+                android:layout_gravity="center_vertical"
+                android:background="@null"
                 android:contentDescription="发送命令"
                 android:src="@drawable/ic_send"
-                android:tint="#ffffff" />
+                android:tint="#ffffff"
+                android:scaleType="center"
+                android:padding="4dp" />
 
         </LinearLayout>
 

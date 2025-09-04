@@ -35,6 +35,10 @@ import com.termux.app.terminal.TermuxActivityRootView;
 import com.termux.app.terminal.TermuxTerminalSessionActivityClient;
 import com.termux.app.terminal.ClaudeCodeMenuHelper;
 import com.termux.app.terminal.io.TermuxTerminalExtraKeys;
+import com.termux.app.ui.SSHFloatingActionButton;
+import com.termux.app.ui.SSHConfigDialog;
+import com.termux.app.models.SSHConnectionConfig;
+import com.termux.app.ssh.SSHConnectionManager;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.ActivityUtils;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
@@ -141,6 +145,21 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
      * Helper for Claude Code command menu.
      */
     ClaudeCodeMenuHelper mClaudeCodeMenuHelper;
+
+    /**
+     * SSH floating action button for quick SSH configuration access.
+     */
+    SSHFloatingActionButton mSSHFloatingActionButton;
+
+    /**
+     * SSH configuration dialog for managing SSH connections.
+     */
+    SSHConfigDialog mSSHConfigDialog;
+
+    /**
+     * SSH connection manager for handling SSH connections.
+     */
+    SSHConnectionManager mSSHConnectionManager;
 
     /**
      * The termux sessions list controller.
@@ -262,6 +281,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
         setTerminalInputView();
 
+        setSSHFloatingActionButton();
+
         registerForContextMenu(mTerminalView);
 
         FileReceiverActivity.updateFileReceiverActivityComponentsState(this);
@@ -374,6 +395,15 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             mClaudeCodeMenuHelper.dismiss();
             mClaudeCodeMenuHelper = null;
         }
+
+        // Cleanup SSH dialog
+        if (mSSHConfigDialog != null) {
+            mSSHConfigDialog.dismiss();
+            mSSHConfigDialog = null;
+        }
+
+        // Cleanup SSH connection manager
+        mSSHConnectionManager = null;
 
         try {
             unbindService(this);
@@ -678,8 +708,13 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         boolean shiftPressed = event.isShiftPressed();
 
         if (shiftPressed && keyCode == KeyEvent.KEYCODE_TAB) {
-            // Shift + Tab: 代码补全（模拟功能）
-            showToast("Claude Code: 代码补全", false);
+            // Shift + Tab: 打开指令菜单
+            if (mClaudeCodeMenuHelper != null) {
+                ImageButton claudeCodeButton = findViewById(R.id.claude_code_menu_button);
+                if (claudeCodeButton != null) {
+                    mClaudeCodeMenuHelper.showMenu(claudeCodeButton);
+                }
+            }
             return true;
         }
 
@@ -1087,6 +1122,80 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
                 }
             }
         }
+    }
+
+    /**
+     * 设置SSH悬浮按钮
+     */
+    private void setSSHFloatingActionButton() {
+        mSSHFloatingActionButton = findViewById(R.id.ssh_floating_button);
+        if (mSSHFloatingActionButton == null) {
+            Logger.logError(LOG_TAG, "SSH floating button not found in layout");
+            return;
+        }
+
+        // 初始化SSH连接管理器
+        mSSHConnectionManager = new SSHConnectionManager(this);
+
+        // 初始化SSH配置对话框
+        mSSHConfigDialog = new SSHConfigDialog(this);
+        mSSHConfigDialog.setOnSSHConfigListener(new SSHConfigDialog.OnSSHConfigListener() {
+            @Override
+            public void onSSHConnect(SSHConnectionConfig config) {
+                Logger.logInfo(LOG_TAG, "Generating SSH command for: " + config.getHost());
+                showToast("生成SSH连接命令...", false);
+                
+                // 使用SSH连接管理器保存配置并生成命令
+                mSSHConnectionManager.saveConfigAndGenerateCommand(config, new SSHConnectionManager.SSHConnectionCallback() {
+                    @Override
+                    public void onCommandGenerated(String sshCommand) {
+                        // 将SSH命令发送到当前终端
+                        TerminalSession currentSession = getCurrentSession();
+                        if (currentSession != null && currentSession.isRunning()) {
+                            mSSHConnectionManager.sendCommandToTerminal(sshCommand, currentSession);
+                            showToast("SSH命令已发送到终端", false);
+                        } else {
+                            showToast("当前没有活动的终端会话", true);
+                        }
+                    }
+
+                    @Override
+                    public void onConfigSaved(SSHConnectionConfig config) {
+                        showToast("SSH配置已保存", false);
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        showToast("错误: " + error, true);
+                        Logger.logError(LOG_TAG, "SSH error: " + error);
+                    }
+                });
+            }
+
+            @Override
+            public void onSSHConfigSaved(SSHConnectionConfig config) {
+                showToast("SSH配置已保存", false);
+            }
+
+            @Override
+            public void onSSHConfigDeleted(String configName) {
+                showToast("SSH配置已删除: " + configName, false);
+            }
+
+            @Override
+            public void onDialogClosed() {
+                // 对话框关闭时的处理
+            }
+        });
+
+        // 设置悬浮按钮点击监听器
+        mSSHFloatingActionButton.setOnSSHFabClickListener(() -> {
+            if (mSSHConfigDialog != null) {
+                mSSHConfigDialog.show();
+            }
+        });
+
+        Logger.logInfo(LOG_TAG, "SSH floating button initialized successfully");
     }
 
     private void reloadActivityStyling(boolean recreateActivity) {

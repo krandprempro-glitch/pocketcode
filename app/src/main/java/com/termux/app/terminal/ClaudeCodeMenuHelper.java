@@ -8,10 +8,17 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.PopupWindow;
+import android.widget.TextView;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
 import com.termux.app.TermuxActivity;
 import com.termux.terminal.TerminalSession;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Helper class for Claude Code command menu functionality
@@ -23,6 +30,102 @@ public class ClaudeCodeMenuHelper {
 
     public ClaudeCodeMenuHelper(TermuxActivity activity) {
         this.mActivity = activity;
+    }
+
+    /**
+     * Command configuration class
+     */
+    public static class Command {
+        public final String command;
+        public final String description;
+
+        public Command(String command, String description) {
+            this.command = command;
+            this.description = description;
+        }
+    }
+
+    /**
+     * RecyclerView Adapter for commands
+     */
+    private class CommandAdapter extends RecyclerView.Adapter<CommandAdapter.CommandViewHolder> {
+        private final List<Command> commands;
+        private final EditText commandInput;
+
+        public CommandAdapter(List<Command> commands, EditText commandInput) {
+            this.commands = commands;
+            this.commandInput = commandInput;
+        }
+
+        @Override
+        public CommandViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View itemView = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_command, parent, false);
+            return new CommandViewHolder(itemView);
+        }
+
+        @Override
+        public void onBindViewHolder(CommandViewHolder holder, int position) {
+            Command command = commands.get(position);
+            holder.cmdButton.setText(command.command);
+            holder.cmdDescription.setText(command.description);
+            
+            holder.cmdButton.setOnClickListener(v -> {
+                commandInput.setText(command.command);
+                
+                // For commands ending with space, position cursor at end
+                // For complete commands, select all for easy replacement
+                if (command.command.endsWith(" ")) {
+                    commandInput.setSelection(command.command.length());
+                } else {
+                    commandInput.selectAll();
+                }
+                
+                commandInput.requestFocus();
+                mPopupWindow.dismiss();
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return commands.size();
+        }
+
+        class CommandViewHolder extends RecyclerView.ViewHolder {
+            Button cmdButton;
+            TextView cmdDescription;
+
+            public CommandViewHolder(View itemView) {
+                super(itemView);
+                cmdButton = itemView.findViewById(R.id.cmd_button);
+                cmdDescription = itemView.findViewById(R.id.cmd_description);
+            }
+        }
+    }
+
+    /**
+     * Default command configuration - can be easily modified
+     */
+    private List<Command> getDefaultCommands() {
+        return Arrays.asList(
+            new Command("/add-dir", "添加目录"),
+            new Command("/agents", "代理管理"),
+            new Command("/clear", "清屏"),
+            new Command("/compact", "紧凑模式"),
+            new Command("/config", "配置设置"),
+            new Command("/doctor", "系统诊断"),
+            new Command("/help", "获取帮助"),
+            new Command("/init", "初始化"),
+            new Command("/mcp", "MCP协议"),
+            new Command("/memory", "内存管理"),
+            new Command("/model", "模型设置"),
+            new Command("/review", "代码审查"),
+            new Command("/resume", "恢复会话"),
+            new Command("thinkharder", "深度思考"),
+            new Command("ultrathink", "超级思考"),
+            new Command("!(bash)", "执行bash命令"),
+            new Command("#(memory)", "访问记忆")
+        );
     }
 
     /**
@@ -69,37 +172,13 @@ public class ClaudeCodeMenuHelper {
 
     private void setupMenuButtons(View menuView) {
         EditText commandInput = mActivity.findViewById(R.id.terminal_command_input);
-
-        // Claude Code 指令
-        setupButton(menuView, R.id.cmd_help, "/help", commandInput);
-        setupButton(menuView, R.id.cmd_clear, "/clear", commandInput);
-        setupButton(menuView, R.id.cmd_compact, "/compact", commandInput);
-        setupButton(menuView, R.id.cmd_add_on_dir, "/add-dir ", commandInput);
-        setupButton(menuView, R.id.cmd_shell, "/shell ", commandInput);
-        setupButton(menuView, R.id.cmd_edit, "/edit ", commandInput);
-    }
-
-    private void setupButton(View menuView, int buttonId, String command, EditText commandInput) {
-        Button button = menuView.findViewById(buttonId);
-        if (button != null) {
-            button.setOnClickListener(v -> {
-                commandInput.setText(command);
-                
-                // For commands ending with space, position cursor at end
-                // For complete commands, select all for easy replacement
-                if (command.endsWith(" ")) {
-                    commandInput.setSelection(command.length());
-                } else if (command.contains("\"\"")) {
-                    // For git commit, position cursor inside quotes
-                    int quotePos = command.lastIndexOf("\"\"");
-                    commandInput.setSelection(quotePos + 1);
-                } else {
-                    commandInput.selectAll();
-                }
-                
-                commandInput.requestFocus();
-                mPopupWindow.dismiss();
-            });
+        RecyclerView recyclerView = menuView.findViewById(R.id.commands_recycler_view);
+        
+        if (recyclerView != null) {
+            // Setup RecyclerView
+            recyclerView.setLayoutManager(new LinearLayoutManager(mActivity));
+            CommandAdapter adapter = new CommandAdapter(getDefaultCommands(), commandInput);
+            recyclerView.setAdapter(adapter);
         }
     }
 

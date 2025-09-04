@@ -28,6 +28,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -152,55 +153,104 @@ final class TermuxInstaller {
                     }
 
                     Logger.logInfo(LOG_TAG, "Extracting bootstrap zip to prefix staging directory \"" + TERMUX_STAGING_PREFIX_DIR_PATH + "\".");
+                    Logger.logInfo(LOG_TAG, "Starting bootstrap extraction with retry mechanism...");
 
                     final byte[] buffer = new byte[8096];
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
 
-                    final byte[] zipBytes = loadZipBytes();
-                    try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
-                        ZipEntry zipEntry;
-                        while ((zipEntry = zipInput.getNextEntry()) != null) {
-                            if (zipEntry.getName().equals("SYMLINKS.txt")) {
-                                BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
-                                String line;
-                                while ((line = symlinksReader.readLine()) != null) {
-                                    String[] parts = line.split("←");
-                                    if (parts.length != 2)
-                                        throw new RuntimeException("Malformed symlink line: " + line);
-                                    String oldPath = parts[0];
-                                    String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
-                                    symlinks.add(Pair.create(oldPath, newPath));
-
-                                    error = ensureDirectoryExists(new File(newPath).getParentFile());
-                                    if (error != null) {
-                                        showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                        return;
-                                    }
+                    // Retry bootstrap extraction up to 3 times on corruption
+                    int retryCount = 0;
+                    final int maxRetries = 3;
+                    boolean extractionSuccessful = false;
+                    
+                    while (retryCount < maxRetries && !extractionSuccessful) {
+                        Logger.logInfo(LOG_TAG, "Starting extraction attempt " + (retryCount + 1) + "/" + maxRetries);
+                        try {
+                            // Clear symlinks for retry attempt
+                            symlinks.clear();
+                            
+                            final byte[] zipBytes = loadZipBytes();
+                            
+                            // Log ZIP file info for debugging
+                            String zipChecksum = "unknown";
+                            try {
+                                MessageDigest md = MessageDigest.getInstance("SHA-1");
+                                byte[] digest = md.digest(zipBytes);
+                                StringBuilder sb = new StringBuilder();
+                                for (byte b : digest) {
+                                    sb.append(String.format("%02x", b));
                                 }
-                            } else {
-                                String zipEntryName = zipEntry.getName();
-                                File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
-                                boolean isDirectory = zipEntry.isDirectory();
+                                zipChecksum = sb.toString().substring(0, 8); // First 8 chars
+                            } catch (Exception e) {
+                                Logger.logError(LOG_TAG, "Failed to compute ZIP checksum: " + e.getMessage());
+                            }
+                            
+                            Logger.logInfo(LOG_TAG, "Loaded ZIP bytes: " + zipBytes.length + " bytes, checksum: " + zipChecksum + " (attempt " + (retryCount + 1) + "/" + maxRetries + ")");
+                            try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+                                ZipEntry zipEntry;
+                                while ((zipEntry = zipInput.getNextEntry()) != null) {
+                                    if (zipEntry.getName().equals("SYMLINKS.txt")) {
+                                        BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
+                                        String line;
+                                        while ((line = symlinksReader.readLine()) != null) {
+                                            String[] parts = line.split("←");
+                                            if (parts.length != 2)
+                                                throw new RuntimeException("Malformed symlink line: " + line);
+                                            String oldPath = parts[0];
+                                            String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
+                                            symlinks.add(Pair.create(oldPath, newPath));
 
-                                error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
-                                if (error != null) {
-                                    showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                    return;
-                                }
+                                            error = ensureDirectoryExists(new File(newPath).getParentFile());
+                                            if (error != null) {
+                                                showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
+                                                return;
+                                            }
+                                        }
+                                    } else {
+                                        String zipEntryName = zipEntry.getName();
+                                        File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
+                                        boolean isDirectory = zipEntry.isDirectory();
 
-                                if (!isDirectory) {
-                                    try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
-                                        int readBytes;
-                                        while ((readBytes = zipInput.read(buffer)) != -1)
-                                            outStream.write(buffer, 0, readBytes);
-                                    }
-                                    if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
-                                        zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
-                                        //noinspection OctalInteger
-                                        Os.chmod(targetFile.getAbsolutePath(), 0700);
+                                        error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
+                                        if (error != null) {
+                                            showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
+                                            return;
+                                        }
+
+                                        if (!isDirectory) {
+                                            try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
+                                                int readBytes;
+                                                while ((readBytes = zipInput.read(buffer)) != -1)
+                                                    outStream.write(buffer, 0, readBytes);
+                                            }
+                                            if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("libexec") ||
+                                                zipEntryName.startsWith("lib/apt/apt-helper") || zipEntryName.startsWith("lib/apt/methods")) {
+                                                //noinspection OctalInteger
+                                                Os.chmod(targetFile.getAbsolutePath(), 0700);
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            extractionSuccessful = true;
+                            
+                        } catch (java.io.EOFException e) {
+                            retryCount++;
+                            Logger.logError(LOG_TAG, "ZIP extraction failed (attempt " + retryCount + "/" + maxRetries + "): " + e.getMessage());
+                            
+                            if (retryCount >= maxRetries) {
+                                Logger.logError(LOG_TAG, "ZIP file corrupted after " + maxRetries + " attempts");
+                                showBootstrapErrorDialog(activity, whenDone, 
+                                    "Bootstrap installation failed due to corrupted ZIP file.\n\n" +
+                                    "Tried " + maxRetries + " times but extraction keeps failing.\n\n" +
+                                    "This may be a device-specific issue. Please restart the app and try again.\n\n" +
+                                    "Error: " + e.getMessage());
+                                return;
+                            }
+                            
+                            // Clean up partially extracted files before retry
+                            FileUtils.deleteFile("termux prefix staging directory", TERMUX_STAGING_PREFIX_DIR_PATH, true);
+                            TermuxFileUtils.isTermuxPrefixStagingDirectoryAccessible(true, true);
                         }
                     }
 
