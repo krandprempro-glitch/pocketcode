@@ -291,19 +291,43 @@ class RemoteFileBrowserFragment : Fragment(),
         val statusText = when (state) {
             is RemoteFileBrowserViewModel.ConnectionState.Disconnected -> "未连接"
             is RemoteFileBrowserViewModel.ConnectionState.Connecting -> "连接中..."
-            is RemoteFileBrowserViewModel.ConnectionState.Connected -> "已连接 - ${state.config.host}"
+            is RemoteFileBrowserViewModel.ConnectionState.Connected -> "已连接"
             is RemoteFileBrowserViewModel.ConnectionState.Error -> "连接失败"
         }
 
-        updateConnectionStatus(isConnected, statusText)
+        updateConnectionStatus(isConnected, statusText, if (state is RemoteFileBrowserViewModel.ConnectionState.Connected) state.config else null)
+        
+        // 更新抽屉头部的连接信息和项目名称
+        when (state) {
+            is RemoteFileBrowserViewModel.ConnectionState.Connected -> {
+                val config = state.config
+                val connectionInfo = "${config.username}@${config.host}:${config.port}"
+                val projectName = config.displayName
+                
+                binding.drawerConnectionInfo.text = connectionInfo
+                binding.drawerProjectName.text = projectName
+            }
+            else -> {
+                binding.drawerConnectionInfo.text = "未连接"
+                binding.drawerProjectName.text = "远程文件浏览"
+            }
+        }
     }
 
-    private fun updateConnectionStatus(connected: Boolean, statusText: String) {
+    private fun updateConnectionStatus(connected: Boolean, statusText: String, config: SSHConnectionConfig? = null) {
         binding.connectionStatusIcon.setImageResource(
             if (connected) android.R.drawable.presence_online
             else android.R.drawable.presence_offline
         )
-        binding.connectionStatusText.text = statusText
+        
+        // 在工具栏显示更详细的连接信息
+        val displayText = if (connected && config != null) {
+            "${config.displayName} - $statusText"
+        } else {
+            statusText
+        }
+        
+        binding.connectionStatusText.text = displayText
     }
 
     private fun updatePathDisplay(path: String) {
