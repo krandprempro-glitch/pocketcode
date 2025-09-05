@@ -1,4 +1,4 @@
-package com.termux.app.adapters
+package com.termux.filebrowser.adapters
 
 import android.view.LayoutInflater
 import android.view.View
@@ -6,7 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.termux.R
+import com.termux.app.models.FileType
 import com.termux.app.models.FileTypeUtils
 import com.termux.app.models.RemoteFileItem
 import com.termux.app.utils.FileUtils
@@ -213,7 +213,7 @@ class RemoteFileBrowserAdapter(
             name = ".."
             path = parentPath
             isDirectory = true
-            type = com.termux.app.models.FileType.DIRECTORY
+            type = FileType.DIRECTORY
             size = 0
             lastModified = 0
             permissions = ""

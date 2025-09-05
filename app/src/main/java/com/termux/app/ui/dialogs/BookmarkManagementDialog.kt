@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.termux.R
-import com.termux.app.adapters.BookmarksAdapter
+import com.termux.filebrowser.adapters.BookmarksAdapter
 import com.termux.app.models.DirectoryBookmark
 import com.termux.app.utils.LightToast
 import com.termux.databinding.DialogBookmarkManagementBinding

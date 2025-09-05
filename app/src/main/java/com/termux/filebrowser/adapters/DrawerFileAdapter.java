@@ -1,4 +1,4 @@
-package com.termux.app.adapters;
+package com.termux.filebrowser.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;

@@ -1,5 +1,6 @@
-package com.termux.app.viewmodels
+package com.termux.filebrowser.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.app.managers.ProjectWorkspaceManager
@@ -74,7 +75,7 @@ class RemoteFileBrowserViewModel : ViewModel() {
         Logger.logInfo(LOG_TAG, "ViewModel initialized")
     }
 
-    fun initializeWithContext(context: android.content.Context) {
+    fun initializeWithContext(context: Context) {
         // 初始化管理器（兼容性处理）
         workspaceManager = ProjectWorkspaceManager.getInstance(context)
         

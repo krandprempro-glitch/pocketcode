@@ -1,9 +1,16 @@
-package com.termux.app.fragments
+package com.termux.filebrowser
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -11,18 +18,20 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.termux.R
-import com.termux.app.adapters.DrawerFileAdapter
-import com.termux.app.adapters.DrawerMenuAdapter
 import com.termux.app.models.DrawerMenuItem
 import com.termux.app.models.RemoteFileItem
 import com.termux.app.models.SSHConnectionConfig
 import com.termux.app.ui.SSHConfigDialog
 import com.termux.app.utils.LightToast
-import com.termux.app.viewmodels.RemoteFileBrowserViewModel
 import com.termux.databinding.FragmentRemoteFileBrowserDrawerBinding
+import com.termux.filebrowser.adapters.DrawerFileAdapter
+import com.termux.filebrowser.adapters.DrawerMenuAdapter
+import com.termux.filebrowser.viewmodels.RemoteFileBrowserViewModel
 import com.termux.shared.logger.Logger
 import kotlinx.coroutines.launch
+import java.util.Date
 
 /**
  * 远程文件浏览Fragment - Kotlin重构版本
@@ -61,19 +70,19 @@ class RemoteFileBrowserFragment : Fragment(),
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // 初始化ViewModel的Context依赖
         viewModel.initializeWithContext(requireContext())
-        
+
         initViews()
         setupAdapters()
         setupObservers()
         setupEventListeners()
-        
+
         Logger.logInfo(LOG_TAG, "Fragment initialized with MVVM architecture")
     }
 
-    override fun onAttach(context: android.content.Context) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         sshConfigDialog = SSHConfigDialog(context).apply {
             setOnSSHConfigListener(this@RemoteFileBrowserFragment)
@@ -87,8 +96,8 @@ class RemoteFileBrowserFragment : Fragment(),
     }
 
     private fun setupToolbar() {
-        (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(binding.toolbar)
-        (requireActivity() as androidx.appcompat.app.AppCompatActivity).supportActionBar?.apply {
+        (requireActivity() as AppCompatActivity).setSupportActionBar(binding.toolbar)
+        (requireActivity() as AppCompatActivity).supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowTitleEnabled(false)
             setHomeAsUpIndicator(R.drawable.ic_menu)
@@ -96,7 +105,7 @@ class RemoteFileBrowserFragment : Fragment(),
     }
 
     private fun setupDrawerLayout() {
-        val toggle = androidx.appcompat.app.ActionBarDrawerToggle(
+        val toggle = ActionBarDrawerToggle(
             requireActivity(),
             binding.drawerLayout,
             binding.toolbar,
@@ -124,19 +133,23 @@ class RemoteFileBrowserFragment : Fragment(),
         }
 
         // 抽屉菜单适配器
-        drawerMenuAdapter = DrawerMenuAdapter(requireContext(), object : DrawerMenuAdapter.OnMenuItemClickListener {
-            override fun onMenuItemClick(item: DrawerMenuItem) {
-                handleDrawerMenuClick(item)
-            }
+        drawerMenuAdapter =
+            DrawerMenuAdapter(requireContext(), object : DrawerMenuAdapter.OnMenuItemClickListener {
+                override fun onMenuItemClick(item: DrawerMenuItem) {
+                    handleDrawerMenuClick(item)
+                }
 
-            override fun onSubMenuItemClick(parentItem: DrawerMenuItem, subItem: DrawerMenuItem) {
-                handleDrawerSubMenuClick(parentItem, subItem)
-            }
-        })
+                override fun onSubMenuItemClick(
+                    parentItem: DrawerMenuItem,
+                    subItem: DrawerMenuItem
+                ) {
+                    handleDrawerSubMenuClick(parentItem, subItem)
+                }
+            })
 
         // 设置菜单到容器
         binding.drawerMenuContainer?.let { container ->
-            val recyclerView = androidx.recyclerview.widget.RecyclerView(requireContext()).apply {
+            val recyclerView = RecyclerView(requireContext()).apply {
                 layoutManager = LinearLayoutManager(requireContext())
                 adapter = drawerMenuAdapter
                 isNestedScrollingEnabled = false
@@ -204,7 +217,7 @@ class RemoteFileBrowserFragment : Fragment(),
         }
 
         // 主界面选项按钮处理
-        (requireActivity() as androidx.appcompat.app.AppCompatActivity).supportActionBar?.setHomeActionContentDescription("打开菜单")
+        (requireActivity() as AppCompatActivity).supportActionBar?.setHomeActionContentDescription("打开菜单")
     }
 
     private fun initDrawerMenuItems() {
@@ -212,14 +225,49 @@ class RemoteFileBrowserFragment : Fragment(),
 
         // 主功能模块
         val mainModule = DrawerMenuItem("main_functions", "功能菜单", R.drawable.ic_menu)
-        mainModule.addSubItem(DrawerMenuItem("ssh_config", "SSH连接配置", R.drawable.ic_ssh, DrawerMenuItem.MenuAction.SSH_CONFIG))
-        mainModule.addSubItem(DrawerMenuItem("bookmarks", "收藏夹管理", R.drawable.ic_bookmark_small, DrawerMenuItem.MenuAction.BOOKMARK_MANAGE_ALL))
-        mainModule.addSubItem(DrawerMenuItem("refresh", "刷新目录", R.drawable.ic_refresh_small, DrawerMenuItem.MenuAction.REFRESH))
+        mainModule.addSubItem(
+            DrawerMenuItem(
+                "ssh_config",
+                "SSH连接配置",
+                R.drawable.ic_ssh,
+                DrawerMenuItem.MenuAction.SSH_CONFIG
+            )
+        )
+        mainModule.addSubItem(
+            DrawerMenuItem(
+                "bookmarks",
+                "收藏夹管理",
+                R.drawable.ic_bookmark_small,
+                DrawerMenuItem.MenuAction.BOOKMARK_MANAGE_ALL
+            )
+        )
+        mainModule.addSubItem(
+            DrawerMenuItem(
+                "refresh",
+                "刷新目录",
+                R.drawable.ic_refresh_small,
+                DrawerMenuItem.MenuAction.REFRESH
+            )
+        )
 
         // 设置子模块
         val settingsModule = DrawerMenuItem("settings", "设置选项", R.drawable.ic_settings_small)
-        settingsModule.addSubItem(DrawerMenuItem("settings_display", "显示设置", R.drawable.ic_settings_small, DrawerMenuItem.MenuAction.SETTINGS_DISPLAY))
-        settingsModule.addSubItem(DrawerMenuItem("settings_connection", "连接设置", R.drawable.ic_settings_small, DrawerMenuItem.MenuAction.SETTINGS_CONNECTION))
+        settingsModule.addSubItem(
+            DrawerMenuItem(
+                "settings_display",
+                "显示设置",
+                R.drawable.ic_settings_small,
+                DrawerMenuItem.MenuAction.SETTINGS_DISPLAY
+            )
+        )
+        settingsModule.addSubItem(
+            DrawerMenuItem(
+                "settings_connection",
+                "连接设置",
+                R.drawable.ic_settings_small,
+                DrawerMenuItem.MenuAction.SETTINGS_CONNECTION
+            )
+        )
         mainModule.addSubItem(settingsModule)
 
         menuItems.add(mainModule)
@@ -230,7 +278,7 @@ class RemoteFileBrowserFragment : Fragment(),
         binding.apply {
             drawerLoadingProgress.visibility = if (state.isLoading) View.VISIBLE else View.GONE
             drawerEmptyState.visibility = if (state.isEmpty) View.VISIBLE else View.GONE
-            
+
             // 停止刷新动画
             if (!state.isLoading && drawerSwipeRefresh.isRefreshing) {
                 drawerSwipeRefresh.isRefreshing = false
@@ -246,13 +294,13 @@ class RemoteFileBrowserFragment : Fragment(),
             is RemoteFileBrowserViewModel.ConnectionState.Connected -> "已连接 - ${state.config.host}"
             is RemoteFileBrowserViewModel.ConnectionState.Error -> "连接失败"
         }
-        
+
         updateConnectionStatus(isConnected, statusText)
     }
 
     private fun updateConnectionStatus(connected: Boolean, statusText: String) {
         binding.connectionStatusIcon.setImageResource(
-            if (connected) android.R.drawable.presence_online 
+            if (connected) android.R.drawable.presence_online
             else android.R.drawable.presence_offline
         )
         binding.connectionStatusText.text = statusText
@@ -265,7 +313,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun optimizePathDisplay(fullPath: String): String {
         if (fullPath.length <= 40) return fullPath
-        
+
         val pathParts = fullPath.split("/")
         return if (pathParts.size > 2) {
             val currentDir = pathParts.last()
@@ -278,7 +326,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun handleDrawerMenuClick(item: DrawerMenuItem) {
         Logger.logInfo(LOG_TAG, "Drawer menu clicked: ${item.title}")
-        
+
         when (item.action) {
             DrawerMenuItem.MenuAction.SSH_CONFIG -> {
                 showConnectionDialog()
@@ -294,7 +342,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun handleDrawerSubMenuClick(parentItem: DrawerMenuItem, subItem: DrawerMenuItem) {
         Logger.logInfo(LOG_TAG, "Drawer submenu clicked: ${subItem.title}")
-        
+
         when (subItem.action) {
             DrawerMenuItem.MenuAction.SSH_CONFIG -> {
                 showConnectionDialog()
@@ -329,9 +377,9 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun showAllBookmarksDialog() {
         val bookmarks = viewModel.getBookmarks()
-        
+
         if (bookmarks.isEmpty()) {
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            AlertDialog.Builder(requireContext())
                 .setTitle("收藏夹")
                 .setMessage("还没有收藏任何目录。\n\n你可以通过菜单中的「收藏当前目录」功能添加书签。")
                 .setPositiveButton("确定", null)
@@ -340,8 +388,8 @@ class RemoteFileBrowserFragment : Fragment(),
         }
 
         val bookmarkNames = bookmarks.map { "${it.displayName} (${it.fullPath})" }.toTypedArray()
-        
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+
+        AlertDialog.Builder(requireContext())
             .setTitle("收藏夹 (${bookmarks.size} 项)")
             .setItems(bookmarkNames) { _, which ->
                 val bookmark = bookmarks[which]
@@ -358,12 +406,12 @@ class RemoteFileBrowserFragment : Fragment(),
 
         val isBookmarked = viewModel.isPathBookmarked(currentPath)
         val options = mutableListOf<String>()
-        
+
         options.add("📋 复制路径")
         options.add(if (isBookmarked) "⭐ 取消收藏此目录" else "⭐ 收藏此目录")
         options.add("📚 查看所有书签")
 
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle("当前路径: ${optimizePathDisplay(currentPath)}")
             .setItems(options.toTypedArray()) { _, which ->
                 when (which) {
@@ -381,21 +429,21 @@ class RemoteFileBrowserFragment : Fragment(),
     }
 
     private fun copyPathToClipboard(path: String) {
-        val clipboard = requireActivity().getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        val clip = android.content.ClipData.newPlainText("Remote Path", path)
+        val clipboard = requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Remote Path", path)
         clipboard.setPrimaryClip(clip)
         LightToast.showShort(requireContext(), "路径已复制到剪贴板")
     }
 
     private fun showAddBookmarkDialog(path: String) {
         val defaultName = if (path == "/") "根目录" else path.substringAfterLast('/')
-        val editText = android.widget.EditText(requireContext()).apply {
+        val editText = EditText(requireContext()).apply {
             setText(defaultName)
             setSelection(defaultName.length)
             hint = "请输入书签名称"
         }
 
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle("添加书签")
             .setMessage("路径: $path")
             .setView(editText)
@@ -433,7 +481,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun showFileOperationsDialog(file: RemoteFileItem) {
         val options = mutableListOf<String>()
-        
+
         if (file.isDirectory) {
             options.add("📂 进入目录")
             options.add(if (isBookmarked(file.path)) "⭐ 取消收藏" else "⭐ 收藏目录")
@@ -442,7 +490,7 @@ class RemoteFileBrowserFragment : Fragment(),
         }
         options.add("ℹ️ 查看属性")
 
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle(file.name)
             .setItems(options.toTypedArray()) { _, which ->
                 handleFileOperation(file, which, options)
@@ -453,7 +501,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun handleFileOperation(file: RemoteFileItem, optionIndex: Int, options: List<String>) {
         val selectedOption = options[optionIndex]
-        
+
         when {
             selectedOption.contains("进入目录") -> viewModel.navigateToPath(file.path)
             selectedOption.contains("收藏目录") -> showAddBookmarkDialog(file.path)
@@ -470,10 +518,10 @@ class RemoteFileBrowserFragment : Fragment(),
             append("类型: ${if (file.isDirectory) "目录" else "文件"}\n")
             append("大小: ${file.size} 字节\n")
             append("权限: ${file.permissions}\n")
-            append("修改时间: ${java.util.Date(file.lastModified)}")
+            append("修改时间: ${Date(file.lastModified)}")
         }
 
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle("文件属性")
             .setMessage(properties)
             .setPositiveButton("确定", null)
@@ -485,7 +533,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     override fun onBookmarkToggle(file: RemoteFileItem) {
         if (!file.isDirectory) return
-        
+
         if (isBookmarked(file.path)) {
             viewModel.removeBookmark(file.path)
         } else {

@@ -1,8 +1,7 @@
 package com.termux.app;
 
 import android.os.Bundle;
-import android.os.Build;
-import android.view.View;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -13,7 +12,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.termux.R;
 import com.termux.app.fragments.SSHConnectionFragment;
-import com.termux.app.fragments.RemoteFileBrowserFragment;
+import com.termux.filebrowser.RemoteFileBrowserFragment;
 import com.termux.app.fragments.GitChangesFragment;
 import com.termux.app.fragments.SettingsFragment;
 import com.termux.app.models.SSHConnectionConfig;
