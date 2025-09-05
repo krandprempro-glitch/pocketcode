@@ -43,4 +43,18 @@
     <color name="directory_text_color">#2196F3</color>
     <color name="file_text_color">#333333</color>
     <color name="file_selected_background">#E3F2FD</color>
+    
+    <!-- Connection status colors -->
+    <color name="connection_status_disconnected">#F44336</color>
+    <color name="connection_status_connecting">#FF9800</color>
+    <color name="connection_status_connected">#4CAF50</color>
+    <color name="connection_status_error">#F44336</color>
+    
+    <!-- Breadcrumb colors -->
+    <color name="breadcrumb_current_color">#2196F3</color>
+    <color name="breadcrumb_normal_color">#666666</color>
+    <color name="breadcrumb_separator_color">#CCCCCC</color>
+    
+    <!-- Background selectors -->
+    <color name="breadcrumb_item_selector">#E8E8E8</color>
 </resources>

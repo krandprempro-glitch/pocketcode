@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="@dimen/connection_status_padding">
+
+    <ImageView
+        android:id="@+id/status_icon"
+        android:layout_width="@dimen/connection_status_icon_size"
+        android:layout_height="@dimen/connection_status_icon_size"
+        android:layout_marginEnd="@dimen/connection_status_icon_margin"
+        android:src="@android:drawable/presence_offline"
+        android:contentDescription="连接状态" />
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="未连接"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary" />
+
+</LinearLayout>

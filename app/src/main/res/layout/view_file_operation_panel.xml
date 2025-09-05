@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/operation_panel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/file_operation_panel_background"
+    android:padding="16dp">
+
+    <!-- 文件信息区域 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/file_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="文件名"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/file_text_color" />
+
+        <TextView
+            android:id="@+id/file_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="文件信息"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary" />
+    </LinearLayout>
+
+    <!-- 操作按钮区域 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/download_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="下载"
+            android:drawableTop="@drawable/ic_download"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/upload_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="上传"
+            android:drawableTop="@drawable/ic_upload"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/delete_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="删除"
+            android:drawableTop="@drawable/ic_delete"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/rename_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="重命名"
+            android:drawableTop="@drawable/ic_rename"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/copy_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="复制"
+            android:drawableTop="@drawable/ic_copy"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/move_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="移动"
+            android:drawableTop="@drawable/ic_move"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/properties_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="属性"
+            android:drawableTop="@drawable/ic_properties"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <Button
+            android:id="@+id/bookmark_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="书签"
+            android:drawableTop="@drawable/ic_bookmark"
+            style="?attr/materialButtonOutlinedStyle" />
+    </LinearLayout>
+
+    <!-- 关闭按钮 -->
+    <Button
+        android:id="@+id/close_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:text="关闭"
+        style="?attr/materialButtonStyle" />
+
+</LinearLayout>

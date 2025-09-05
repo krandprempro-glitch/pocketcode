@@ -78,9 +78,7 @@
 
 ```
 remote-file-browser/
-├── build.gradle.kts
-├── proguard-rules.pro
-└── src/main/kotlin/com/termux/filebrowser/
+└── src/main/java/com/termux/filebrowser/
     ├── presentation/           # 表示层 - UI相关
     │   ├── ui/
     │   │   ├── RemoteFileBrowserFragment.kt      # 精简的Fragment
@@ -820,3 +818,4 @@ object FileBrowserModule {
 重构将分5个阶段进行，每个阶段都有明确的目标和可验证的成果。整个过程预计需要15天左右的开发时间，但长期收益远超过短期投入。
 
 这不仅是一次技术重构，更是向现代Android开发实践的全面升级，为项目的长期发展奠定坚实基础。
+

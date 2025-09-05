@@ -282,5 +282,9 @@
     <!-- 抽屉操作 -->
     <string name="drawer_open">打开抽屉</string>
     <string name="drawer_close">关闭抽屉</string>
+    
+    <!-- 书签操作 -->
+    <string name="add_bookmark">添加书签</string>
+    <string name="remove_from_bookmark">取消收藏</string>
 
 </resources>

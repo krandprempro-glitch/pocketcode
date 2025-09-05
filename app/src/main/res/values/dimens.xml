@@ -9,4 +9,20 @@
     <dimen name="status_bar_height">28dp</dimen>
     <dimen name="section_header_height">48dp</dimen>
     <dimen name="bookmark_item_height">36dp</dimen>
+    
+    <!-- Connection status -->
+    <dimen name="connection_status_padding">8dp</dimen>
+    <dimen name="connection_status_icon_size">16dp</dimen>
+    <dimen name="connection_status_icon_margin">4dp</dimen>
+    
+    <!-- Breadcrumb -->
+    <dimen name="breadcrumb_padding">12dp</dimen>
+    <dimen name="breadcrumb_item_padding_horizontal">8dp</dimen>
+    <dimen name="breadcrumb_item_padding_vertical">4dp</dimen>
+    
+    <!-- File operation panel -->
+    <dimen name="file_operation_panel_background">8dp</dimen>
+    
+    <!-- String resources for text -->
+    <dimen name="add_bookmark">0dp</dimen>
 </resources>

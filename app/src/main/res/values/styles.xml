@@ -66,4 +66,24 @@
         <item name="android:textSize">20sp</item>
     </style>
 
+    <!-- Dialog Styles -->
+    <style name="AppTheme.Dialog" parent="Theme.MaterialComponents.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:colorAccent">@color/termux_color_accent</item>
+        <item name="colorPrimary">@color/termux_color_primary</item>
+        <item name="colorPrimaryDark">@color/termux_color_primary_dark</item>
+    </style>
+
+    <!-- Dialog Animations -->
+    <style name="DialogAnimation">
+        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
+    </style>
+
+    <style name="BottomSheetDialogAnimation">
+        <item name="android:windowEnterAnimation">@android:anim/slide_in_left</item>
+        <item name="android:windowExitAnimation">@android:anim/slide_out_right</item>
+    </style>
+
 </resources>

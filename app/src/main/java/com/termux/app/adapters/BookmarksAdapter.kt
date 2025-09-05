@@ -1,158 +1,122 @@
-package com.termux.app.adapters;
+package com.termux.app.adapters
 
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
-import com.termux.R;
-import com.termux.app.models.DirectoryBookmark;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.termux.R
+import com.termux.app.models.DirectoryBookmark
+import com.termux.databinding.ItemBookmarkBinding
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
- * 书签列表适配器
+ * 书签列表适配器 - Kotlin重构版本
+ * 使用现代Android开发最佳实践：ListAdapter, DiffUtil, ViewBinding
  */
-public class BookmarksAdapter extends RecyclerView.Adapter<BookmarksAdapter.BookmarkViewHolder> {
+class BookmarksAdapter(
+    private val listener: OnBookmarkActionListener
+) : ListAdapter<DirectoryBookmark, BookmarksAdapter.BookmarkViewHolder>(BookmarkDiffCallback()) {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM/dd HH:mm", Locale.getDefault());
-    
-    private List<DirectoryBookmark> bookmarks;
-    private OnBookmarkActionListener listener;
-    
-    public interface OnBookmarkActionListener {
-        void onBookmarkClick(DirectoryBookmark bookmark);
-        void onBookmarkLongClick(DirectoryBookmark bookmark);
-        void onBookmarkRemove(DirectoryBookmark bookmark);
+    companion object {
+        private val DATE_FORMAT = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
     }
-    
-    public BookmarksAdapter(OnBookmarkActionListener listener) {
-        this.bookmarks = new ArrayList<>();
-        this.listener = listener;
+
+    interface OnBookmarkActionListener {
+        fun onBookmarkClick(bookmark: DirectoryBookmark)
+        fun onBookmarkLongClick(bookmark: DirectoryBookmark)
+        fun onBookmarkRemove(bookmark: DirectoryBookmark)
     }
-    
-    @NonNull
-    @Override
-    public BookmarkViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_bookmark, parent, false);
-        return new BookmarkViewHolder(view);
-    }
-    
-    @Override
-    public void onBindViewHolder(@NonNull BookmarkViewHolder holder, int position) {
-        DirectoryBookmark bookmark = bookmarks.get(position);
-        
-        // 设置书签图标
-        holder.bookmarkIcon.setImageResource(android.R.drawable.btn_star);
-        
-        // 设置显示名称
-        holder.bookmarkName.setText(bookmark.getDisplayName());
-        
-        // 设置路径
-        holder.bookmarkPath.setText(bookmark.getFullPath());
-        
-        // 设置创建时间
-        String timeStr = DATE_FORMAT.format(new Date(bookmark.getCreatedTime()));
-        holder.bookmarkTime.setText(timeStr);
-        
-        // 设置点击事件
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onBookmarkClick(bookmark);
+
+    class BookmarkViewHolder(
+        private val binding: ItemBookmarkBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(bookmark: DirectoryBookmark, listener: OnBookmarkActionListener) {
+            binding.apply {
+                // 设置书签图标
+                bookmarkIcon.setImageResource(R.drawable.ic_bookmark_filled)
+
+                // 设置显示名称
+                bookmarkName.text = bookmark.displayName
+
+                // 设置路径
+                bookmarkPath.text = bookmark.fullPath
+
+                // 设置创建时间
+                val timeStr = DATE_FORMAT.format(Date(bookmark.createdTime))
+                bookmarkTime.text = timeStr
+
+                // 点击事件
+                root.setOnClickListener {
+                    listener.onBookmarkClick(bookmark)
+                }
+
+                // 长按事件
+                root.setOnLongClickListener {
+                    listener.onBookmarkLongClick(bookmark)
+                    true
+                }
+
+                // 删除按钮点击事件
+                removeButton.setOnClickListener {
+                    listener.onBookmarkRemove(bookmark)
+                }
+
+                // 设置项目背景
+                root.setBackgroundResource(R.drawable.bookmark_item_background)
             }
-        });
-        
-        // 设置长按事件
-        holder.itemView.setOnLongClickListener(v -> {
-            if (listener != null) {
-                listener.onBookmarkLongClick(bookmark);
-            }
-            return true;
-        });
-        
-        // 设置删除按钮点击事件
-        holder.removeButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onBookmarkRemove(bookmark);
-            }
-        });
-    }
-    
-    @Override
-    public int getItemCount() {
-        return bookmarks.size();
-    }
-    
-    /**
-     * 更新书签列表
-     */
-    public void updateBookmarks(List<DirectoryBookmark> newBookmarks) {
-        this.bookmarks.clear();
-        if (newBookmarks != null) {
-            this.bookmarks.addAll(newBookmarks);
-        }
-        notifyDataSetChanged();
-    }
-    
-    /**
-     * 添加书签
-     */
-    public void addBookmark(DirectoryBookmark bookmark) {
-        if (bookmark != null) {
-            bookmarks.add(0, bookmark); // 添加到顶部
-            notifyItemInserted(0);
         }
     }
-    
-    /**
-     * 删除书签
-     */
-    public void removeBookmark(DirectoryBookmark bookmark) {
-        int index = bookmarks.indexOf(bookmark);
-        if (index >= 0) {
-            bookmarks.remove(index);
-            notifyItemRemoved(index);
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookmarkViewHolder {
+        val binding = ItemBookmarkBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
+        return BookmarkViewHolder(binding)
+    }
+
+    override fun onBindViewHolder(holder: BookmarkViewHolder, position: Int) {
+        val bookmark = getItem(position)
+        holder.bind(bookmark, listener)
+    }
+
+    // 公共方法
+    fun updateBookmarks(bookmarks: List<DirectoryBookmark>) {
+        // 按创建时间倒序排列
+        val sortedBookmarks = bookmarks.sortedByDescending { it.createdTime }
+        submitList(sortedBookmarks)
+    }
+
+    fun removeBookmark(bookmark: DirectoryBookmark) {
+        val currentList = currentList.toMutableList()
+        currentList.remove(bookmark)
+        submitList(currentList)
+    }
+
+    fun addBookmark(bookmark: DirectoryBookmark) {
+        val currentList = currentList.toMutableList()
+        currentList.add(0, bookmark) // 添加到顶部
+        submitList(currentList)
+    }
+
+    // DiffUtil for efficient updates
+    private class BookmarkDiffCallback : DiffUtil.ItemCallback<DirectoryBookmark>() {
+        override fun areItemsTheSame(
+            oldItem: DirectoryBookmark,
+            newItem: DirectoryBookmark
+        ): Boolean {
+            return oldItem.id == newItem.id
         }
-    }
-    
-    /**
-     * 获取书签列表
-     */
-    public List<DirectoryBookmark> getBookmarks() {
-        return new ArrayList<>(bookmarks);
-    }
-    
-    /**
-     * 清空书签列表
-     */
-    public void clear() {
-        bookmarks.clear();
-        notifyDataSetChanged();
-    }
-    
-    static class BookmarkViewHolder extends RecyclerView.ViewHolder {
-        ImageView bookmarkIcon;
-        TextView bookmarkName;
-        TextView bookmarkPath;
-        TextView bookmarkTime;
-        ImageView removeButton;
-        
-        public BookmarkViewHolder(@NonNull View itemView) {
-            super(itemView);
-            bookmarkIcon = itemView.findViewById(R.id.bookmark_icon);
-            bookmarkName = itemView.findViewById(R.id.bookmark_name);
-            bookmarkPath = itemView.findViewById(R.id.bookmark_path);
-            bookmarkTime = itemView.findViewById(R.id.bookmark_time);
-            removeButton = itemView.findViewById(R.id.remove_button);
+
+        override fun areContentsTheSame(
+            oldItem: DirectoryBookmark,
+            newItem: DirectoryBookmark
+        ): Boolean {
+            return oldItem == newItem
         }
     }
 }

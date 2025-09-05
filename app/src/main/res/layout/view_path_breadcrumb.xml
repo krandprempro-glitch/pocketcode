@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/breadcrumb_background"
+    android:scrollbars="none"
+    android:fadingEdge="horizontal"
+    android:fadingEdgeLength="16dp">
+
+    <LinearLayout
+        android:id="@+id/breadcrumb_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/breadcrumb_padding"
+        android:gravity="center_vertical" />
+
+</HorizontalScrollView>

@@ -86,14 +86,6 @@
             android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar"
             tools:targetApi="n" />
 
-        <activity
-            android:name=".app.RemoteFileBrowserActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|smallestScreenSize|density|screenLayout|keyboard|keyboardHidden|navigation"
-            android:label="Remote File Browser"
-            android:resizeableActivity="true"
-            android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar"
-            tools:targetApi="n" />
 
         <activity-alias
             android:name=".HomeActivity"

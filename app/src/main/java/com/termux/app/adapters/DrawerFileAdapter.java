@@ -28,7 +28,7 @@ public class DrawerFileAdapter extends RecyclerView.Adapter<DrawerFileAdapter.Fi
     private Context context;
     private List<RemoteFileItem> files;
     private String currentPath;
-    private OnFileActionListener listener;
+    public OnFileActionListener listener; // 使其可访问用于包装器
     private boolean showFileInfo;
     
     public interface OnFileActionListener {

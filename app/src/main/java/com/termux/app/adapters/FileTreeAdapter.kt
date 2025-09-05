@@ -1,352 +1,244 @@
-package com.termux.app.adapters;
+package com.termux.app.adapters
 
-import android.animation.ObjectAnimator;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.Space;
-import android.widget.TextView;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
-import com.termux.R;
-import com.termux.app.models.FileTreeNode;
-import com.termux.app.models.FileTypeUtils;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.animation.ObjectAnimator
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.termux.R
+import com.termux.app.models.FileTreeNode
+import com.termux.app.models.FileTypeUtils
+import com.termux.databinding.FileTreeItemBinding
 
 /**
- * 文件树适配器
- * 实现VSCode风格的层级目录树显示
+ * 文件树适配器 - Kotlin重构版本
+ * 实现VSCode风格的层级目录树显示，使用现代Android开发最佳实践
  */
-public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileTreeViewHolder> {
-    
-    private static final int INDENT_SIZE_DP = 20; // 每级缩进的dp值
-    
-    private List<FileTreeNode> rootNodes;          // 根节点列表
-    private List<FileTreeNode> flattenedNodes;     // 扁平化后的节点列表
-    private OnFileTreeActionListener listener;
-    private String selectedPath = null;            // 当前选中的路径
-    
-    public interface OnFileTreeActionListener {
-        void onNodeExpanded(FileTreeNode node);
-        void onNodeCollapsed(FileTreeNode node);
-        void onFileSelected(FileTreeNode node);
-        void onDirectoryBookmarked(FileTreeNode node);
-        void onLoadNodeChildren(FileTreeNode node);
+class FileTreeAdapter(
+    private val listener: OnFileTreeActionListener
+) : ListAdapter<FileTreeNode, FileTreeAdapter.FileTreeViewHolder>(TreeNodeDiffCallback()) {
+
+    companion object {
+        private const val INDENT_SIZE_DP = 20 // 每级缩进的dp值
     }
-    
-    public FileTreeAdapter(OnFileTreeActionListener listener) {
-        this.rootNodes = new ArrayList<>();
-        this.flattenedNodes = new ArrayList<>();
-        this.listener = listener;
+
+    private val rootNodes = mutableListOf<FileTreeNode>()
+    private val flattenedNodes = mutableListOf<FileTreeNode>()
+    private var selectedPath: String? = null
+
+    interface OnFileTreeActionListener {
+        fun onNodeExpanded(node: FileTreeNode)
+        fun onNodeCollapsed(node: FileTreeNode)
+        fun onFileSelected(node: FileTreeNode)
+        fun onDirectoryBookmarked(node: FileTreeNode)
+        fun onLoadNodeChildren(node: FileTreeNode)
     }
-    
-    @NonNull
-    @Override
-    public FileTreeViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.file_tree_item, parent, false);
-        return new FileTreeViewHolder(view);
-    }
-    
-    @Override
-    public void onBindViewHolder(@NonNull FileTreeViewHolder holder, int position) {
-        FileTreeNode node = flattenedNodes.get(position);
-        
-        // 设置缩进
-        float density = holder.itemView.getContext().getResources().getDisplayMetrics().density;
-        int indentPx = (int) (node.getDepth() * INDENT_SIZE_DP * density);
-        ViewGroup.LayoutParams params = holder.indentSpace.getLayoutParams();
-        params.width = indentPx;
-        holder.indentSpace.setLayoutParams(params);
-        
-        // 设置展开/折叠图标
-        if (node.isDirectory()) {
-            if (node.hasChildren() || !node.isExpanded()) {
-                holder.expandIcon.setVisibility(View.VISIBLE);
-                // 设置箭头旋转角度
-                float rotation = node.isExpanded() ? 90f : 0f;
-                holder.expandIcon.setRotation(rotation);
+
+    class FileTreeViewHolder(
+        private val binding: FileTreeItemBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(
+            node: FileTreeNode,
+            isSelected: Boolean,
+            listener: OnFileTreeActionListener
+        ) {
+            binding.apply {
+                // 设置缩进
+                val density = root.context.resources.displayMetrics.density
+                val indentPx = (node.depth * INDENT_SIZE_DP * density).toInt()
+                val params = indentSpace.layoutParams
+                params.width = indentPx
+                indentSpace.layoutParams = params
+
+                // 设置展开/折叠图标
+                if (node.isDirectory) {
+                    when {
+                        node.hasChildren() || !node.isExpanded -> {
+                            expandIcon.visibility = View.VISIBLE
+                            val rotation = if (node.isExpanded) 90f else 0f
+                            expandIcon.rotation = rotation
+                        }
+                        else -> expandIcon.visibility = View.INVISIBLE
+                    }
+                } else {
+                    expandIcon.visibility = View.INVISIBLE
+                }
+
+                // 设置文件/目录图标
+                fileIcon.setImageResource(FileTypeUtils.getFileTypeIcon(node.fileType))
+
+                // 设置文件名
+                fileName.text = node.name
+
+                // 设置选中状态
+                root.isSelected = isSelected
+                root.setBackgroundResource(
+                    if (isSelected) R.drawable.file_tree_item_selected_background 
+                    else android.R.color.transparent
+                )
+
+                // 设置加载状态
+                loadingIndicator.visibility = if (node.isLoading) View.VISIBLE else View.GONE
+
+                // 设置书签状态
+                bookmarkIcon.visibility = if (node.isBookmarked) View.VISIBLE else View.GONE
+
+                // 展开/折叠点击事件
+                expandIcon.setOnClickListener {
+                    if (node.isDirectory) {
+                        toggleNodeExpansion(node, listener)
+                    }
+                }
+
+                // 整个项目点击事件
+                root.setOnClickListener {
+                    if (node.isDirectory) {
+                        if (node.hasChildren() || node.children.isNotEmpty()) {
+                            toggleNodeExpansion(node, listener)
+                        } else {
+                            // 加载子节点
+                            node.isLoading = true
+                            loadingIndicator.visibility = View.VISIBLE
+                            listener.onLoadNodeChildren(node)
+                        }
+                    } else {
+                        listener.onFileSelected(node)
+                    }
+                }
+
+                // 长按书签事件（仅目录）
+                if (node.isDirectory) {
+                    root.setOnLongClickListener {
+                        listener.onDirectoryBookmarked(node)
+                        true
+                    }
+                }
+            }
+        }
+
+        private fun toggleNodeExpansion(node: FileTreeNode, listener: OnFileTreeActionListener) {
+            if (node.isExpanded) {
+                // 折叠动画
+                ObjectAnimator.ofFloat(binding.expandIcon, "rotation", 90f, 0f).apply {
+                    duration = 200
+                    start()
+                }
+                node.isExpanded = false
+                listener.onNodeCollapsed(node)
             } else {
-                holder.expandIcon.setVisibility(View.INVISIBLE);
+                // 展开动画
+                ObjectAnimator.ofFloat(binding.expandIcon, "rotation", 0f, 90f).apply {
+                    duration = 200
+                    start()
+                }
+                node.isExpanded = true
+                listener.onNodeExpanded(node)
             }
-        } else {
-            holder.expandIcon.setVisibility(View.INVISIBLE);
-        }
-        
-        // 设置文件图标
-        holder.fileIcon.setImageResource(FileTypeUtils.getFileTypeIcon(node.getFileType()));
-        
-        // 设置文件名
-        holder.fileName.setText(node.getName());
-        
-        // 设置加载指示器
-        holder.loadingIndicator.setVisibility(node.isLoading() ? View.VISIBLE : View.GONE);
-        
-        // 设置书签图标
-        holder.bookmarkIcon.setVisibility(node.isBookmarked() ? View.VISIBLE : View.GONE);
-        
-        // 设置选中状态
-        boolean isSelected = node.getFullPath().equals(selectedPath);
-        holder.itemView.setSelected(isSelected);
-        if (isSelected) {
-            holder.itemView.setBackgroundColor(0x1A2196F3); // 浅蓝色背景
-        } else {
-            holder.itemView.setBackground(null);
-        }
-        
-        // 设置点击事件
-        holder.itemView.setOnClickListener(v -> {
-            if (node.isDirectory()) {
-                toggleNode(node);
-            } else if (listener != null) {
-                listener.onFileSelected(node);
-            }
-        });
-        
-        // 设置展开图标点击事件
-        holder.expandIcon.setOnClickListener(v -> {
-            if (node.isDirectory()) {
-                toggleNode(node);
-            }
-        });
-        
-        // 设置长按事件（用于书签功能）
-        holder.itemView.setOnLongClickListener(v -> {
-            if (listener != null && node.isDirectory()) {
-                listener.onDirectoryBookmarked(node);
-            }
-            return true;
-        });
-    }
-    
-    @Override
-    public int getItemCount() {
-        return flattenedNodes.size();
-    }
-    
-    /**
-     * 更新根节点列表并重建树
-     */
-    public void updateTree(List<FileTreeNode> rootNodes) {
-        this.rootNodes.clear();
-        if (rootNodes != null) {
-            this.rootNodes.addAll(rootNodes);
-        }
-        rebuildFlattenedList();
-        notifyDataSetChanged();
-    }
-    
-    /**
-     * 添加根节点
-     */
-    public void addRootNode(FileTreeNode node) {
-        if (node != null) {
-            rootNodes.add(node);
-            node.setDepth(0);
-            rebuildFlattenedList();
-            notifyDataSetChanged();
         }
     }
-    
-    /**
-     * 切换节点展开/折叠状态
-     */
-    public void toggleNode(FileTreeNode node) {
-        if (!node.isDirectory()) {
-            return;
-        }
-        
-        if (node.isExpanded()) {
-            collapseNode(node);
-        } else {
-            expandNode(node);
-        }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileTreeViewHolder {
+        val binding = FileTreeItemBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
+        return FileTreeViewHolder(binding)
     }
-    
-    /**
-     * 展开节点
-     */
-    public void expandNode(FileTreeNode node) {
-        if (!node.isDirectory() || node.isExpanded()) {
-            return;
-        }
-        
-        node.setExpanded(true);
-        
-        // 如果没有子节点，需要加载
-        if (!node.hasChildren() && listener != null) {
-            node.setLoading(true);
-            listener.onLoadNodeChildren(node);
-        }
-        
-        rebuildFlattenedList();
-        notifyDataSetChanged();
-        
-        if (listener != null) {
-            listener.onNodeExpanded(node);
-        }
+
+    override fun onBindViewHolder(holder: FileTreeViewHolder, position: Int) {
+        val node = getItem(position)
+        val isSelected = node.fullPath == selectedPath
+        holder.bind(node, isSelected, listener)
     }
-    
-    /**
-     * 折叠节点
-     */
-    public void collapseNode(FileTreeNode node) {
-        if (!node.isDirectory() || !node.isExpanded()) {
-            return;
-        }
-        
-        node.setExpanded(false);
-        node.setLoading(false);
-        
-        rebuildFlattenedList();
-        notifyDataSetChanged();
-        
-        if (listener != null) {
-            listener.onNodeCollapsed(node);
-        }
+
+    // 公共方法
+    fun setRootNodes(nodes: List<FileTreeNode>) {
+        rootNodes.clear()
+        rootNodes.addAll(nodes)
+        refreshFlattenedNodes()
     }
-    
-    /**
-     * 为节点添加子节点
-     */
-    public void addChildrenToNode(FileTreeNode parentNode, List<FileTreeNode> children) {
-        if (parentNode == null || children == null) {
-            return;
-        }
-        
-        parentNode.setLoading(false);
-        parentNode.setChildren(children);
+
+    fun addChildrenToNode(parentNode: FileTreeNode, children: List<FileTreeNode>) {
+        parentNode.children.clear()
+        parentNode.children.addAll(children)
+        parentNode.isLoading = false
         
         // 设置子节点的深度
-        for (FileTreeNode child : children) {
-            child.setDepth(parentNode.getDepth() + 1);
+        children.forEach { child ->
+            child.depth = parentNode.depth + 1
         }
         
-        rebuildFlattenedList();
-        notifyDataSetChanged();
+        refreshFlattenedNodes()
     }
-    
-    /**
-     * 设置选中的路径
-     */
-    public void setSelectedPath(String path) {
-        this.selectedPath = path;
-        notifyDataSetChanged();
-    }
-    
-    /**
-     * 展开到指定路径
-     */
-    public void expandToPath(String targetPath) {
-        for (FileTreeNode root : rootNodes) {
-            if (root.expandToPath(targetPath)) {
-                break;
-            }
-        }
-        rebuildFlattenedList();
-        notifyDataSetChanged();
-    }
-    
-    /**
-     * 查找指定路径的节点
-     */
-    public FileTreeNode findNodeByPath(String path) {
-        for (FileTreeNode node : flattenedNodes) {
-            if (node.getFullPath().equals(path)) {
-                return node;
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * 重新构建扁平化列表
-     */
-    private void rebuildFlattenedList() {
-        flattenedNodes.clear();
-        for (FileTreeNode root : rootNodes) {
-            flattenTree(root, flattenedNodes);
+
+    fun refreshNode(node: FileTreeNode) {
+        val position = flattenedNodes.indexOf(node)
+        if (position != -1) {
+            notifyItemChanged(position)
         }
     }
-    
-    /**
-     * 递归扁平化树结构
-     */
-    private void flattenTree(FileTreeNode node, List<FileTreeNode> result) {
-        result.add(node);
+
+    fun setSelectedPath(path: String?) {
+        selectedPath = path
+        notifyDataSetChanged()
+    }
+
+    fun expandToPath(path: String) {
+        val pathParts = path.split("/").filter { it.isNotEmpty() }
+        var currentPath = ""
         
-        if (node.isExpanded() && node.hasChildren()) {
-            for (FileTreeNode child : node.getChildren()) {
-                flattenTree(child, result);
+        for (part in pathParts) {
+            currentPath += "/$part"
+            val node = findNodeByPath(currentPath)
+            node?.let {
+                if (it.isDirectory && !it.isExpanded) {
+                    it.isExpanded = true
+                }
+            }
+        }
+        
+        refreshFlattenedNodes()
+        setSelectedPath(path)
+    }
+
+    fun getFlattenedNodes(): List<FileTreeNode> {
+        return flattenedNodes.toList()
+    }
+
+    private fun refreshFlattenedNodes() {
+        flattenedNodes.clear()
+        for (rootNode in rootNodes) {
+            addNodeToFlattened(rootNode)
+        }
+        submitList(flattenedNodes.toList())
+    }
+
+    private fun addNodeToFlattened(node: FileTreeNode) {
+        flattenedNodes.add(node)
+        
+        if (node.isExpanded && node.children.isNotEmpty()) {
+            for (child in node.children) {
+                addNodeToFlattened(child)
             }
         }
     }
-    
-    /**
-     * 获取扁平化节点列表
-     */
-    public List<FileTreeNode> getFlattenedNodes() {
-        return new ArrayList<>(flattenedNodes);
+
+    private fun findNodeByPath(path: String): FileTreeNode? {
+        return flattenedNodes.find { it.fullPath == path }
     }
-    
-    /**
-     * 清空树
-     */
-    public void clear() {
-        rootNodes.clear();
-        flattenedNodes.clear();
-        selectedPath = null;
-        notifyDataSetChanged();
-    }
-    
-    /**
-     * 刷新指定节点
-     */
-    public void refreshNode(FileTreeNode node) {
-        if (node == null) {
-            return;
+
+    // DiffUtil for efficient updates
+    private class TreeNodeDiffCallback : DiffUtil.ItemCallback<FileTreeNode>() {
+        override fun areItemsTheSame(oldItem: FileTreeNode, newItem: FileTreeNode): Boolean {
+            return oldItem.fullPath == newItem.fullPath
         }
-        
-        int index = flattenedNodes.indexOf(node);
-        if (index >= 0) {
-            notifyItemChanged(index);
-        }
-    }
-    
-    /**
-     * 播放展开/折叠动画
-     */
-    private void animateExpansion(View expandIcon, boolean expanding) {
-        float fromRotation = expanding ? 0f : 90f;
-        float toRotation = expanding ? 90f : 0f;
-        
-        ObjectAnimator animator = ObjectAnimator.ofFloat(expandIcon, "rotation", fromRotation, toRotation);
-        animator.setDuration(200);
-        animator.start();
-    }
-    
-    static class FileTreeViewHolder extends RecyclerView.ViewHolder {
-        Space indentSpace;
-        ImageView expandIcon;
-        ImageView fileIcon;
-        TextView fileName;
-        ProgressBar loadingIndicator;
-        ImageView bookmarkIcon;
-        
-        public FileTreeViewHolder(@NonNull View itemView) {
-            super(itemView);
-            indentSpace = itemView.findViewById(R.id.indent_space);
-            expandIcon = itemView.findViewById(R.id.expand_icon);
-            fileIcon = itemView.findViewById(R.id.file_icon);
-            fileName = itemView.findViewById(R.id.file_name);
-            loadingIndicator = itemView.findViewById(R.id.loading_indicator);
-            bookmarkIcon = itemView.findViewById(R.id.bookmark_icon);
+
+        override fun areContentsTheSame(oldItem: FileTreeNode, newItem: FileTreeNode): Boolean {
+            return oldItem == newItem
         }
     }
 }
