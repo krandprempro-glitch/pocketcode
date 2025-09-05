@@ -16,8 +16,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
+import com.google.android.material.navigation.NavigationView;
+import android.util.DisplayMetrics;
+import android.widget.FrameLayout;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -71,6 +75,17 @@ public class RemoteFileBrowserFragment extends Fragment implements
     private ProgressBar loadingProgress;
     private View emptyStateLayout;
     private DrawerLayout drawerLayout;
+    
+    // 抽屉相关组件
+    private TextView breadcrumbText;
+    private TextView drawerProjectName;
+    private TextView drawerConnectionInfo;
+    private TextView drawerCurrentPath;
+    private FrameLayout mainContentArea;
+    private View welcomeLayout;
+    private FrameLayout codeViewerContainer;
+    private TextView statusTextLeft;
+    private TextView statusTextRight;
     
     // 原有组件（兼容性保留）
     private RecyclerView rvFiles;
@@ -127,7 +142,7 @@ public class RemoteFileBrowserFragment extends Fragment implements
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.activity_remote_file_browser, container, false);
+        return inflater.inflate(R.layout.fragment_remote_file_browser_drawer, container, false);
     }
     
     @Override
@@ -145,46 +160,135 @@ public class RemoteFileBrowserFragment extends Fragment implements
      * 初始化UI组件
      */
     private void initViews(View view) {
-        // 从activity_remote_file_browser.xml布局中获取组件
+        // 抽屉布局组件
+        drawerLayout = view.findViewById(R.id.drawer_layout);
+        com.google.android.material.navigation.NavigationView navView = view.findViewById(R.id.nav_view);
+        
+        // 动态设置抽屉宽度为屏幕宽度的50%
+        if (navView != null) {
+            setDrawerWidth(navView);
+        }
+        
+        // ActionBar组件
         toolbar = view.findViewById(R.id.toolbar);
-        projectNameText = view.findViewById(R.id.project_name);
-        currentPathText = view.findViewById(R.id.current_path_text);
-        bookmarkIndicator = view.findViewById(R.id.bookmark_indicator);
-        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
-        fileContentRecyclerView = view.findViewById(R.id.file_content_recyclerview);
-        fileCountText = view.findViewById(R.id.file_count_text);
-        selectionInfoText = view.findViewById(R.id.selection_info_text);
-        loadingProgress = view.findViewById(R.id.loading_progress);
-        emptyStateLayout = view.findViewById(R.id.empty_state_layout);
+        breadcrumbText = view.findViewById(R.id.breadcrumb_text);
         connectionStatusIcon = view.findViewById(R.id.connection_status_icon);
-        connectionStatusText = view.findViewById(R.id.connection_status);
+        connectionStatusText = view.findViewById(R.id.connection_status_text);
+        
+        // 主内容区域
+        mainContentArea = view.findViewById(R.id.main_content_area);
+        welcomeLayout = view.findViewById(R.id.welcome_layout);
+        codeViewerContainer = view.findViewById(R.id.code_viewer_container);
+        
+        // 状态栏
+        statusTextLeft = view.findViewById(R.id.status_text_left);
+        statusTextRight = view.findViewById(R.id.status_text_right);
+        
+        // 抽屉头部
+        drawerProjectName = view.findViewById(R.id.drawer_project_name);
+        drawerConnectionInfo = view.findViewById(R.id.drawer_connection_info);
+        drawerCurrentPath = view.findViewById(R.id.drawer_current_path);
+        
+        // 抽屉内容区域
+        SwipeRefreshLayout drawerSwipeRefresh = view.findViewById(R.id.drawer_swipe_refresh);
+        RecyclerView drawerFileList = view.findViewById(R.id.drawer_file_list);
+        View drawerEmptyState = view.findViewById(R.id.drawer_empty_state);
+        ProgressBar drawerLoadingProgress = view.findViewById(R.id.drawer_loading_progress);
+        
+        // 兼容性映射：将抽屉中的文件列表映射到原有变量
+        swipeRefreshLayout = drawerSwipeRefresh;
+        fileContentRecyclerView = drawerFileList;
+        emptyStateLayout = drawerEmptyState;
+        loadingProgress = drawerLoadingProgress;
         
         // 兼容性映射：将新布局的组件映射到原有的变量名
         rvFiles = fileContentRecyclerView;
         progressLoading = loadingProgress;
         
-        // 这些组件在新布局中不存在，设为null以防空指针
-        drawerLayout = null; // 新布局中没有抽屉
+        // 兼容性映射：路径显示
+        projectNameText = drawerProjectName;
+        currentPathText = drawerCurrentPath;
+        
+        // 这些组件在新布局中不存在或已重新映射，设为null以防空指针
         etCurrentPath = null; // 新布局中路径显示为TextView，不可编辑
         btnConnect = null; // 新布局中没有连接按钮
         btnBack = null; // 新布局中没有返回按钮
         btnRefresh = null; // 新布局中没有刷新按钮
         btnSshConnect = null; // 新布局中没有SSH连接按钮
+        bookmarkIndicator = null; // 新布局中没有书签指示器
+        fileCountText = statusTextLeft; // 文件计数显示在状态栏左侧
+        selectionInfoText = statusTextRight; // 选择信息显示在状态栏右侧
         
-        Logger.logInfo(LOG_TAG, "Views initialized with activity layout");
+        Logger.logInfo(LOG_TAG, "Drawer views initialized");
+    }
+
+    /**
+     * 动态设置抽屉宽度为屏幕宽度的50%
+     */
+    private void setDrawerWidth(com.google.android.material.navigation.NavigationView navView) {
+        if (getActivity() != null) {
+            android.util.DisplayMetrics displayMetrics = new android.util.DisplayMetrics();
+            getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+            int screenWidth = displayMetrics.widthPixels;
+            int drawerWidth = screenWidth / 2; // 50% 屏幕宽度
+            
+            ViewGroup.LayoutParams params = navView.getLayoutParams();
+            params.width = drawerWidth;
+            navView.setLayoutParams(params);
+        }
     }
     
     /**
-     * 设置工具栏
+     * 设置工具栏和抽屉
      */
     private void setupToolbar() {
         if (toolbar != null && getActivity() != null) {
             ((androidx.appcompat.app.AppCompatActivity) getActivity()).setSupportActionBar(toolbar);
             androidx.appcompat.app.ActionBar actionBar = ((androidx.appcompat.app.AppCompatActivity) getActivity()).getSupportActionBar();
             if (actionBar != null) {
-                actionBar.setDisplayHomeAsUpEnabled(false);
+                actionBar.setDisplayHomeAsUpEnabled(true);
                 actionBar.setDisplayShowTitleEnabled(false);
+                actionBar.setHomeAsUpIndicator(R.drawable.ic_menu); // 汉堡菜单图标
             }
+        }
+        
+        // 设置抽屉切换
+        setupDrawerToggle();
+    }
+
+    /**
+     * 设置抽屉开关切换
+     */
+    private void setupDrawerToggle() {
+        if (drawerLayout != null && toolbar != null) {
+            androidx.appcompat.app.ActionBarDrawerToggle toggle = new androidx.appcompat.app.ActionBarDrawerToggle(
+                getActivity(), drawerLayout, toolbar,
+                R.string.drawer_open, R.string.drawer_close);
+            drawerLayout.addDrawerListener(toggle);
+            toggle.syncState();
+            
+            // 抽屉状态监听
+            drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
+                @Override
+                public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+                    // 可以添加滑动动画效果
+                }
+
+                @Override
+                public void onDrawerOpened(@NonNull View drawerView) {
+                    Logger.logInfo(LOG_TAG, "Drawer opened");
+                }
+
+                @Override
+                public void onDrawerClosed(@NonNull View drawerView) {
+                    Logger.logInfo(LOG_TAG, "Drawer closed");
+                }
+
+                @Override
+                public void onDrawerStateChanged(int newState) {
+                    // 抽屉状态变化
+                }
+            });
         }
     }
     
@@ -353,8 +457,9 @@ public class RemoteFileBrowserFragment extends Fragment implements
                 } else {
                     drawerLayout.openDrawer(GravityCompat.START);
                 }
+                return true;
             }
-            return true;
+            return false;
         } else if (item.getItemId() == R.id.action_ssh_config) {
             showConnectionDialog();
             return true;

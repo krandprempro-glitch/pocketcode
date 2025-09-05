@@ -4,7 +4,7 @@
     <dimen name="tree_indent_size">16dp</dimen>
     <dimen name="file_icon_size">14dp</dimen>
     <dimen name="file_icon_large">28dp</dimen>
-    <dimen name="drawer_width">300dp</dimen>
+    <dimen name="drawer_width">0dp</dimen>
     <dimen name="breadcrumb_height">36dp</dimen>
     <dimen name="status_bar_height">28dp</dimen>
     <dimen name="section_header_height">48dp</dimen>
