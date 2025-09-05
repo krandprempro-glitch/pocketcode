@@ -303,15 +303,22 @@ public class ProjectWorkspaceManager {
      * 添加目录书签
      */
     public void addBookmark(String projectId, DirectoryBookmark bookmark) {
-        if (projectId == null || bookmark == null || !bookmark.isValid()) {
-            Logger.logError(TAG, "Cannot add invalid bookmark");
+        if (projectId == null || bookmark == null) {
+            Logger.logError(TAG, "Cannot add null bookmark or projectId");
             return;
         }
         
         try {
+            // 先设置 projectId 和 id（如果需要）
             bookmark.setProjectId(projectId);
             if (bookmark.getId() == null || bookmark.getId().isEmpty()) {
                 bookmark.setId(UUID.randomUUID().toString());
+            }
+            
+            // 现在再验证有效性
+            if (!bookmark.isValid()) {
+                Logger.logError(TAG, "Cannot add invalid bookmark: " + bookmark.toString());
+                return;
             }
             
             String json = gson.toJson(bookmark);
@@ -319,7 +326,7 @@ public class ProjectWorkspaceManager {
                     .putString(BOOKMARK_PREFIX + bookmark.getId(), json)
                     .apply();
             
-            Logger.logInfo(TAG, "Bookmark added: " + bookmark.getDisplayName());
+            Logger.logInfo(TAG, "Bookmark added: " + bookmark.getDisplayName() + " with ID: " + bookmark.getId());
         } catch (Exception e) {
             Logger.logError(TAG, "Failed to add bookmark: " + e.getMessage());
         }

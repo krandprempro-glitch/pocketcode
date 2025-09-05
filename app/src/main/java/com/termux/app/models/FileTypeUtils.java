@@ -1,5 +1,6 @@
 package com.termux.app.models;
 
+import com.termux.R;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -195,27 +196,27 @@ public class FileTypeUtils {
     public static int getFileTypeIcon(FileType fileType) {
         switch (fileType) {
             case DIRECTORY:
-                return android.R.drawable.ic_menu_myplaces;
+                return R.drawable.ic_folder_blue;
             case CODE_FILE:
                 return android.R.drawable.ic_menu_edit;
             case TEXT_FILE:
-                return android.R.drawable.ic_menu_agenda;
+                return R.drawable.ic_file_document;
             case CONFIG_FILE:
                 return android.R.drawable.ic_menu_preferences;
             case LOG_FILE:
                 return android.R.drawable.ic_menu_info_details;
             case IMAGE_FILE:
-                return android.R.drawable.ic_menu_camera;
+                return R.drawable.ic_file_image;
             case ARCHIVE_FILE:
-                return android.R.drawable.ic_menu_save;
+                return R.drawable.ic_file_archive;
             case DOCUMENT_FILE:
-                return android.R.drawable.ic_menu_agenda;
+                return R.drawable.ic_file_document;
             case MEDIA_FILE:
                 return android.R.drawable.ic_media_play;
             case EXECUTABLE_FILE:
                 return android.R.drawable.ic_menu_send;
             default:
-                return android.R.drawable.ic_menu_gallery;
+                return R.drawable.ic_file_document;
         }
     }
     

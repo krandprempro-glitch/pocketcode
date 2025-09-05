@@ -2,21 +2,18 @@ package com.termux.app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.core.view.GravityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -24,52 +21,50 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.termux.R;
 import com.termux.app.models.SSHConnectionConfig;
 import com.termux.app.models.RemoteFileItem;
-import com.termux.app.models.FileTreeNode;
 import com.termux.app.models.ProjectWorkspace;
 import com.termux.app.models.DirectoryBookmark;
+import com.termux.app.models.FileTreeNode;
 import com.termux.app.sftp.SFTPConnectionManager;
 import com.termux.app.adapters.RemoteFileBrowserAdapter;
-import com.termux.app.adapters.FileTreeAdapter;
 import com.termux.app.adapters.BookmarksAdapter;
+import com.termux.app.adapters.FileTreeAdapter;
 import com.termux.app.managers.ProjectWorkspaceManager;
+import com.termux.app.ui.SSHConfigDialog;
+import com.termux.app.utils.LightToast;
 import com.termux.shared.logger.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
 
 /**
- * VSCode风格远程文件浏览器主Activity
- * 提供目录树导航、文件浏览、书签管理等功能
+ * 简化版远程文件浏览器主Activity
+ * 提供单屏文件浏览和SSH连接功能
  */
 public class RemoteFileBrowserActivity extends AppCompatActivity implements 
         RemoteFileBrowserAdapter.OnFileClickListener, 
+        SSHConfigDialog.OnSSHConfigListener,
         FileTreeAdapter.OnFileTreeActionListener,
         BookmarksAdapter.OnBookmarkActionListener {
     
     private static final String LOG_TAG = "RemoteFileBrowserActivity";
     
     // UI组件
-    private DrawerLayout drawerLayout;
     private Toolbar toolbar;
     private TextView projectNameText;
     private ImageView connectionStatusIcon;
     private TextView connectionStatusText;
-    private RecyclerView breadcrumbRecyclerView;
+    private TextView currentPathText;
     private SwipeRefreshLayout swipeRefreshLayout;
     private RecyclerView fileContentRecyclerView;
-    private RecyclerView fileTreeRecyclerView;
-    private RecyclerView bookmarksRecyclerView;
-    private Spinner projectSpinner;
-    private ImageButton addProjectButton;
-    private Button quickConnectButton;
     private TextView fileCountText;
     private TextView selectionInfoText;
     private ProgressBar loadingProgress;
     private View emptyStateLayout;
+    private DrawerLayout drawerLayout;
     
     // 数据和状态
     private SSHConnectionConfig currentConnection;
@@ -81,8 +76,8 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
     private SFTPConnectionManager sftpManager;
     private ProjectWorkspaceManager workspaceManager;
     private RemoteFileBrowserAdapter fileAdapter;
-    private FileTreeAdapter treeAdapter;
     private BookmarksAdapter bookmarksAdapter;
+    private FileTreeAdapter treeAdapter;
     private CompositeDisposable compositeDisposable;
     
     @Override
@@ -94,12 +89,10 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
         
         // 初始化管理器
         sftpManager = SFTPConnectionManager.getInstance();
-        workspaceManager = ProjectWorkspaceManager.getInstance(this);
         compositeDisposable = new CompositeDisposable();
         
         initViews();
         setupToolbar();
-        setupDrawer();
         setupRecyclerViews();
         setupEventListeners();
         
@@ -111,19 +104,13 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
      * 初始化UI组件
      */
     private void initViews() {
-        drawerLayout = findViewById(R.id.drawer_layout);
         toolbar = findViewById(R.id.toolbar);
         projectNameText = findViewById(R.id.project_name);
         connectionStatusIcon = findViewById(R.id.connection_status_icon);
         connectionStatusText = findViewById(R.id.connection_status);
-        breadcrumbRecyclerView = findViewById(R.id.breadcrumb_recyclerview);
+        currentPathText = findViewById(R.id.current_path_text);
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         fileContentRecyclerView = findViewById(R.id.file_content_recyclerview);
-        fileTreeRecyclerView = findViewById(R.id.file_tree_recyclerview);
-        bookmarksRecyclerView = findViewById(R.id.bookmarks_recyclerview);
-        projectSpinner = findViewById(R.id.project_spinner);
-        addProjectButton = findViewById(R.id.add_project_button);
-        quickConnectButton = findViewById(R.id.quick_connect_button);
         fileCountText = findViewById(R.id.file_count_text);
         selectionInfoText = findViewById(R.id.selection_info_text);
         loadingProgress = findViewById(R.id.loading_progress);
@@ -140,44 +127,18 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_ssh);
+            getSupportActionBar().setDisplayShowTitleEnabled(false); // 使用自定义标题布局
         }
-    }
-    
-    /**
-     * 设置抽屉菜单
-     */
-    private void setupDrawer() {
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-            this, drawerLayout, toolbar,
-            R.string.app_name, R.string.app_name
-        );
-        drawerLayout.addDrawerListener(toggle);
-        toggle.syncState();
     }
     
     /**
      * 设置RecyclerView
      */
     private void setupRecyclerViews() {
-        // 路径导航栏
-        breadcrumbRecyclerView.setLayoutManager(
-            new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        );
-        
         // 文件内容列表
         fileContentRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         fileAdapter = new RemoteFileBrowserAdapter(this);
         fileContentRecyclerView.setAdapter(fileAdapter);
-        
-        // 目录树
-        fileTreeRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        treeAdapter = new FileTreeAdapter(this); // 传入FileTreeActionListener
-        fileTreeRecyclerView.setAdapter(treeAdapter);
-        
-        // 书签列表
-        bookmarksRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        bookmarksAdapter = new BookmarksAdapter(this); // 传入BookmarkActionListener
-        bookmarksRecyclerView.setAdapter(bookmarksAdapter);
         
         Logger.logInfo(LOG_TAG, "RecyclerViews configured");
     }
@@ -188,12 +149,6 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
     private void setupEventListeners() {
         // 下拉刷新
         swipeRefreshLayout.setOnRefreshListener(this::refreshCurrentDirectory);
-        
-        // 快速连接按钮
-        quickConnectButton.setOnClickListener(v -> showQuickConnectPanel());
-        
-        // 添加项目按钮
-        addProjectButton.setOnClickListener(v -> showAddProjectDialog());
         
         Logger.logInfo(LOG_TAG, "Event listeners configured");
     }
@@ -210,14 +165,14 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
                     connectAndLoadProject(config);
                 } else {
                     Logger.logError(LOG_TAG, "Invalid SSH config in Intent");
-                    showQuickConnectPanel();
+                    showSSHConnectionDialog();
                 }
             } else {
-                // 没有配置，显示快速连接面板
-                showQuickConnectPanel();
+                // 没有配置，显示SSH配置对话框
+                showSSHConnectionDialog();
             }
         } else {
-            showQuickConnectPanel();
+            showSSHConnectionDialog();
         }
     }
     
@@ -258,18 +213,8 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
         updateProjectInfo(currentConnection.getName() != null ? 
             currentConnection.getName() : currentConnection.getHost());
         
-        // 加载项目工作区
-        loadProjectWorkspace(currentConnection);
-        
-        // 加载目录树
-        loadDirectoryTree("/");
+        // 直接导航到根目录
         navigateToDirectory("/");
-        
-        // 加载书签列表
-        loadBookmarks();
-        
-        // 同步书签状态
-        syncBookmarkStates();
         
         showLoading(false);
     }
@@ -382,13 +327,10 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
             .subscribe(
                 files -> {
                     Logger.logInfo(LOG_TAG, "Loaded " + files.size() + " files from " + path);
-                    fileAdapter.updateFiles(files);
+                    fileAdapter.updateFiles(files, path);
                     updateFileCount(files.size());
                     showEmptyState(files.isEmpty());
                     showLoading(false);
-                    
-                    // 同步选中状态
-                    syncSelectionStates();
                 },
                 throwable -> {
                     Logger.logError(LOG_TAG, "Failed to load directory content: " + throwable.getMessage());
@@ -430,6 +372,46 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
     private void showAddProjectDialog() {
         Logger.logInfo(LOG_TAG, "Showing add project dialog");
         // TODO: 实现添加项目对话框
+    }
+    
+    /**
+     * 显示SSH连接配置对话框
+     */
+    private void showSSHConnectionDialog() {
+        Logger.logInfo(LOG_TAG, "Showing SSH connection dialog");
+        SSHConfigDialog dialog = new SSHConfigDialog(this);
+        dialog.setOnSSHConfigListener(this);
+        dialog.show();
+    }
+    
+    /**
+     * 更新当前路径显示，支持长路径的省略显示
+     */
+    private void updateCurrentPath(String path) {
+        if (currentPathText != null) {
+            String displayPath = optimizePathDisplay(path);
+            currentPathText.setText(displayPath);
+            currentPath = path;
+        }
+    }
+    
+    /**
+     * 优化路径显示，当路径过长时进行省略处理
+     */
+    private String optimizePathDisplay(String fullPath) {
+        if (fullPath == null || fullPath.length() <= 40) {
+            return fullPath;
+        }
+        
+        // 对于长路径，显示 "...父目录/当前目录" 格式
+        String[] pathParts = fullPath.split("/");
+        if (pathParts.length > 2) {
+            String currentDir = pathParts[pathParts.length - 1];
+            String parentDir = pathParts[pathParts.length - 2];
+            return ".../" + parentDir + "/" + currentDir;
+        }
+        
+        return fullPath;
     }
     
     /**
@@ -589,8 +571,8 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
     private void onPathChanged(String newPath) {
         Logger.logInfo(LOG_TAG, "Path changed to: " + newPath);
         
-        // 更新当前路径
-        currentPath = newPath;
+        // 更新当前路径显示
+        updateCurrentPath(newPath);
         
         // 同步选中状态
         syncSelectionStates();
@@ -606,6 +588,12 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
     }
     
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.remote_file_browser_menu, menu);
+        return true;
+    }
+    
+    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
@@ -613,6 +601,14 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
             } else {
                 drawerLayout.openDrawer(GravityCompat.START);
             }
+            return true;
+        } else if (item.getItemId() == R.id.action_ssh_config) {
+            // 触发SSH连接配置对话框
+            showSSHConnectionDialog();
+            return true;
+        } else if (item.getItemId() == R.id.action_bookmarks) {
+            // TODO: 后续实现收藏路径功能
+            Logger.logInfo(LOG_TAG, "Bookmarks menu clicked - to be implemented");
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -678,9 +674,7 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
         Logger.logInfo(LOG_TAG, "Showing file operations dialog for: " + file.getName());
         // TODO: 实现文件操作对话框
         // 暂时显示简单的Toast
-        android.widget.Toast.makeText(this, 
-            "文件操作: " + file.getName(), 
-            android.widget.Toast.LENGTH_SHORT).show();
+        LightToast.showShort(this, "文件操作: " + file.getName());
     }
     
     // FileTreeAdapter.OnFileTreeActionListener 实现
@@ -735,9 +729,7 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
             // 检查是否已存在书签
             if (!workspaceManager.isBookmarked(currentWorkspace.getId(), node.getFullPath())) {
                 workspaceManager.addBookmark(currentWorkspace.getId(), bookmark);
-                android.widget.Toast.makeText(this, 
-                    "已添加书签: " + node.getName(), 
-                    android.widget.Toast.LENGTH_SHORT).show();
+                LightToast.showShort(this, "已添加书签: " + node.getName());
                 
                 // 标记为已收藏
                 node.setBookmarked(true);
@@ -746,9 +738,7 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
                 // 刷新书签列表
                 loadBookmarks();
             } else {
-                android.widget.Toast.makeText(this, 
-                    "书签已存在: " + node.getName(), 
-                    android.widget.Toast.LENGTH_SHORT).show();
+                LightToast.showShort(this, "书签已存在: " + node.getName());
             }
         }
     }
@@ -853,13 +843,9 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
             // 更新目录树中的书签状态
             syncBookmarkStates();
             
-            android.widget.Toast.makeText(this, 
-                "已删除书签: " + bookmark.getDisplayName(), 
-                android.widget.Toast.LENGTH_SHORT).show();
+            LightToast.showShort(this, "已删除书签: " + bookmark.getDisplayName());
         } else {
-            android.widget.Toast.makeText(this, 
-                "删除书签失败", 
-                android.widget.Toast.LENGTH_SHORT).show();
+            LightToast.showShort(this, "删除书签失败");
         }
     }
     
@@ -914,12 +900,36 @@ public class RemoteFileBrowserActivity extends AppCompatActivity implements
                         // 刷新书签列表
                         loadBookmarks();
                         
-                        android.widget.Toast.makeText(this, 
-                            "书签已重命名", 
-                            android.widget.Toast.LENGTH_SHORT).show();
+                        LightToast.showShort(this, "书签已重命名");
                     }
                 })
                 .setNegativeButton("取消", null)
                 .show();
+    }
+    
+    // SSHConfigDialog.OnSSHConfigListener 实现
+    
+    @Override
+    public void onSSHConnect(SSHConnectionConfig config) {
+        Logger.logInfo(LOG_TAG, "SSH connect requested from dialog: " + config.getHost());
+        connectAndLoadProject(config);
+    }
+    
+    @Override
+    public void onSSHConfigSaved(SSHConnectionConfig config) {
+        Logger.logInfo(LOG_TAG, "SSH config saved from dialog: " + config.getHost());
+        // 配置已保存，可以选择连接
+        LightToast.showShort(this, "SSH配置已保存");
+    }
+    
+    @Override
+    public void onSSHConfigDeleted(String configName) {
+        Logger.logInfo(LOG_TAG, "SSH config deleted from dialog: " + configName);
+        LightToast.showShort(this, "SSH配置已删除: " + configName);
+    }
+    
+    @Override
+    public void onDialogClosed() {
+        Logger.logInfo(LOG_TAG, "SSH config dialog closed");
     }
 }

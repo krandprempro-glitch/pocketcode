@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <!-- SSH连接配置选项 -->
+    <item
+        android:id="@+id/action_ssh_config"
+        android:title="SSH连接配置"
+        android:icon="@drawable/ic_ssh"
+        app:showAsAction="never" />
+    
+    <!-- 收藏路径选项（预留） -->
+    <item
+        android:id="@+id/action_bookmarks"
+        android:title="收藏路径"
+        android:icon="@android:drawable/btn_star"
+        app:showAsAction="never" />
+        
+</menu>

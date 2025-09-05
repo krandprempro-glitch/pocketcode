@@ -62,7 +62,6 @@ public class RemoteFileAdapter extends RecyclerView.Adapter<RemoteFileAdapter.Fi
         private TextView tvName;
         private TextView tvSize;
         private TextView tvModified;
-        private TextView tvPermissions;
         
         public FileViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -70,7 +69,6 @@ public class RemoteFileAdapter extends RecyclerView.Adapter<RemoteFileAdapter.Fi
             tvName = itemView.findViewById(R.id.file_name);
             tvSize = itemView.findViewById(R.id.file_info);
             tvModified = itemView.findViewById(R.id.file_info);
-            tvPermissions = itemView.findViewById(R.id.file_permissions);
             
             itemView.setOnClickListener(v -> {
                 if (clickListener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
@@ -112,9 +110,6 @@ public class RemoteFileAdapter extends RecyclerView.Adapter<RemoteFileAdapter.Fi
             
             tvSize.setText(info.toString());
             
-            // 设置权限 (显示)
-            tvPermissions.setText(file.getPermissions());
-            tvPermissions.setVisibility(android.view.View.VISIBLE);
         }
         
         private String formatFileSize(long size) {

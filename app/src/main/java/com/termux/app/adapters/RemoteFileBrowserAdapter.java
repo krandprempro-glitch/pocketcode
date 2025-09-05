@@ -13,12 +13,16 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.termux.R;
+import com.termux.app.models.FileType;
 import com.termux.app.models.FileTypeUtils;
 import com.termux.app.models.RemoteFileItem;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -31,6 +35,7 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
     private Set<String> selectedFiles;
     private boolean selectionMode = false;
     private boolean showHiddenFiles = false;
+    private String currentPath = "/";
     private OnFileClickListener listener;
     
     public interface OnFileClickListener {
@@ -65,13 +70,20 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
         
         // 设置文件信息
         if (file.isDirectory()) {
-            holder.fileInfo.setText("文件夹");
+            // 文件夹显示项目数量
+            long itemCount = file.getSize(); // 假设size字段存储了子项数量
+            if (itemCount > 0) {
+                holder.fileInfo.setText(itemCount + " 项");
+            } else {
+                holder.fileInfo.setText("文件夹");
+            }
         } else {
-            holder.fileInfo.setText(file.getFileInfo());
+            // 文件显示大小和修改时间
+            String fileInfo = formatFileInfo(file);
+            holder.fileInfo.setText(fileInfo);
         }
         
         // 设置权限信息（默认隐藏，只在详细模式下显示）
-        holder.filePermissions.setVisibility(View.GONE);
         
         // 选择框状态
         holder.fileSelectionCheckbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
@@ -138,7 +150,22 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
      * 更新文件列表
      */
     public void updateFiles(List<RemoteFileItem> files) {
+        updateFiles(files, "/");
+    }
+    
+    /**
+     * 更新文件列表并设置当前路径
+     */
+    public void updateFiles(List<RemoteFileItem> files, String currentPath) {
+        this.currentPath = currentPath;
         this.fileList.clear();
+        
+        // 如果不在根目录，添加返回上级目录的条目
+        if (!"/".equals(currentPath)) {
+            RemoteFileItem parentItem = createParentDirectoryItem(currentPath);
+            this.fileList.add(parentItem);
+        }
+        
         if (files != null) {
             if (showHiddenFiles) {
                 this.fileList.addAll(files);
@@ -151,6 +178,56 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
             }
         }
         notifyDataSetChanged();
+    }
+    
+    /**
+     * 创建返回上级目录的文件项
+     */
+    private RemoteFileItem createParentDirectoryItem(String currentPath) {
+        String parentPath = getParentPath(currentPath);
+        
+        RemoteFileItem parentItem = new RemoteFileItem();
+        parentItem.setName("..");
+        parentItem.setPath(parentPath);
+        parentItem.setDirectory(true);
+        parentItem.setType(FileType.DIRECTORY);
+        parentItem.setSize(0);
+        parentItem.setLastModified(0);
+        parentItem.setPermissions("drwxr-xr-x");
+        
+        return parentItem;
+    }
+    
+    /**
+     * 获取父目录路径
+     */
+    private String getParentPath(String currentPath) {
+        if ("/".equals(currentPath)) {
+            return "/";
+        }
+        
+        String path = currentPath;
+        if (path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+        
+        int lastSlashIndex = path.lastIndexOf('/');
+        if (lastSlashIndex <= 0) {
+            return "/";
+        }
+        
+        return path.substring(0, lastSlashIndex);
+    }
+    
+    /**
+     * 检查指定位置是否是父目录项
+     */
+    public boolean isParentDirectoryItem(int position) {
+        if (position == 0 && !fileList.isEmpty()) {
+            RemoteFileItem item = fileList.get(0);
+            return "..".equals(item.getName()) && item.getType() == FileType.DIRECTORY;
+        }
+        return false;
     }
     
     /**
@@ -261,12 +338,55 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
         notifyDataSetChanged();
     }
     
+    /**
+     * 格式化文件信息显示
+     */
+    private String formatFileInfo(RemoteFileItem file) {
+        StringBuilder sb = new StringBuilder();
+        
+        // 添加文件大小
+        String sizeStr = formatFileSize(file.getSize());
+        sb.append(sizeStr);
+        
+        // 添加修改时间
+        if (file.getLastModified() > 0) {
+            sb.append(" · ");
+            String dateStr = formatDate(file.getLastModified());
+            sb.append(dateStr);
+        }
+        
+        return sb.toString();
+    }
+    
+    /**
+     * 格式化文件大小
+     */
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format(Locale.getDefault(), "%.1f KB", bytes / 1024.0);
+        } else if (bytes < 1024 * 1024 * 1024) {
+            return String.format(Locale.getDefault(), "%.1f MB", bytes / (1024.0 * 1024));
+        } else {
+            return String.format(Locale.getDefault(), "%.1f GB", bytes / (1024.0 * 1024 * 1024));
+        }
+    }
+    
+    /**
+     * 格式化日期时间
+     */
+    private String formatDate(long timestamp) {
+        Date date = new Date(timestamp);
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.getDefault());
+        return formatter.format(date);
+    }
+    
     static class FileViewHolder extends RecyclerView.ViewHolder {
         CheckBox fileSelectionCheckbox;
         ImageView fileTypeIcon;
         TextView fileName;
         TextView fileInfo;
-        TextView filePermissions;
         ImageView bookmarkIndicator;
         ImageButton moreOptionsButton;
         
@@ -276,7 +396,6 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
             fileTypeIcon = itemView.findViewById(R.id.file_type_icon);
             fileName = itemView.findViewById(R.id.file_name);
             fileInfo = itemView.findViewById(R.id.file_info);
-            filePermissions = itemView.findViewById(R.id.file_permissions);
             bookmarkIndicator = itemView.findViewById(R.id.bookmark_indicator);
             moreOptionsButton = itemView.findViewById(R.id.more_options_button);
         }

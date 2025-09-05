@@ -28,6 +28,7 @@
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res\\layout/**)",
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\res\\layout/**)",
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
+      "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)",
       "Read(/D:\\as\\termux-app-master\\app\\src\\main\\java\\com\\termux\\app/**)"
     ],
     "deny": [],
