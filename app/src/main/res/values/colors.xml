@@ -38,4 +38,9 @@
     <color name="tree_item_text">#333333</color>
     <color name="text_secondary">#757575</color>
     <color name="section_title">#555555</color>
+    
+    <!-- 文件树颜色 -->
+    <color name="directory_text_color">#2196F3</color>
+    <color name="file_text_color">#333333</color>
+    <color name="file_selected_background">#E3F2FD</color>
 </resources>

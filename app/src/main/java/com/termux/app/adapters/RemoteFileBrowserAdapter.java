@@ -44,6 +44,17 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
         void onMoreOptionsClick(RemoteFileItem file, View anchorView);
     }
     
+    /**
+     * 书签状态提供接口
+     */
+    public interface BookmarkStateProvider {
+        boolean isBookmarked(String path);
+    }
+    
+    public interface BookmarkToggleListener {
+        void onBookmarkToggle(RemoteFileItem file);
+    }
+    
     public RemoteFileBrowserAdapter(OnFileClickListener listener) {
         this.fileList = new ArrayList<>();
         this.selectedFiles = new HashSet<>();
@@ -89,8 +100,26 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
         holder.fileSelectionCheckbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         holder.fileSelectionCheckbox.setChecked(selectedFiles.contains(file.getPath()));
         
-        // 书签指示器（暂时隐藏，待实现书签功能后启用）
-        holder.bookmarkIndicator.setVisibility(View.GONE);
+        // 书签指示器 - 为所有文件夹显示收藏图标
+        if (file.isDirectory() && listener != null && listener instanceof BookmarkStateProvider) {
+            BookmarkStateProvider bookmarkProvider = (BookmarkStateProvider) listener;
+            boolean isBookmarked = bookmarkProvider.isBookmarked(file.getPath());
+            holder.bookmarkIndicator.setVisibility(View.VISIBLE);
+            // 收藏状态：实心星星，未收藏：空心星星
+            holder.bookmarkIndicator.setImageResource(isBookmarked ? 
+                android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off);
+            holder.bookmarkIndicator.setColorFilter(isBookmarked ? 
+                0xFFFFD700 : 0x80757575); // 收藏：金色，未收藏：灰色半透明
+            
+            // 收藏图标点击事件 - 切换收藏状态
+            holder.bookmarkIndicator.setOnClickListener(v -> {
+                if (listener instanceof BookmarkToggleListener) {
+                    ((BookmarkToggleListener) listener).onBookmarkToggle(file);
+                }
+            });
+        } else {
+            holder.bookmarkIndicator.setVisibility(View.GONE);
+        }
         
         // 点击事件
         holder.itemView.setOnClickListener(v -> {
@@ -398,6 +427,32 @@ public class RemoteFileBrowserAdapter extends RecyclerView.Adapter<RemoteFileBro
             fileInfo = itemView.findViewById(R.id.file_info);
             bookmarkIndicator = itemView.findViewById(R.id.bookmark_indicator);
             moreOptionsButton = itemView.findViewById(R.id.more_options_button);
+        }
+    }
+    
+    /**
+     * 适配器包装类，用于保持与DrawerFileAdapter的兼容性
+     */
+    public static class AdapterWrapper extends RemoteFileBrowserAdapter {
+        private DrawerFileAdapter drawerAdapter;
+        
+        public AdapterWrapper(DrawerFileAdapter drawerAdapter) {
+            super(null); // 不使用原有监听器
+            this.drawerAdapter = drawerAdapter;
+        }
+        
+        @Override
+        public void updateFiles(List<RemoteFileItem> files, String path) {
+            if (drawerAdapter != null) {
+                drawerAdapter.updateFiles(files, path);
+            }
+        }
+        
+        @Override
+        public void updateFiles(List<RemoteFileItem> files) {
+            if (drawerAdapter != null) {
+                drawerAdapter.updateFiles(files);
+            }
         }
     }
 }

@@ -92,11 +92,15 @@ public class DrawerMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         
         // 点击处理
         holder.itemView.setOnClickListener(v -> {
+            Logger.logInfo(LOG_TAG, "Menu item clicked: " + item.getTitle() + ", hasSubItems: " + item.hasSubItems());
             if (item.hasSubItems()) {
                 toggleExpansion(item, position);
             } else {
                 if (listener != null) {
+                    Logger.logInfo(LOG_TAG, "Calling onMenuItemClick for: " + item.getTitle());
                     listener.onMenuItemClick(item);
+                } else {
+                    Logger.logError(LOG_TAG, "Listener is null for menu click");
                 }
             }
         });
@@ -116,9 +120,14 @@ public class DrawerMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         
         // 点击处理
         holder.itemView.setOnClickListener(v -> {
+            Logger.logInfo(LOG_TAG, "SubMenu item clicked: " + item.getTitle() + ", action: " + item.getAction());
             if (listener != null) {
                 DrawerMenuItem parentItem = findParentItem(item);
+                Logger.logInfo(LOG_TAG, "Calling onSubMenuItemClick with parent: " + 
+                    (parentItem != null ? parentItem.getTitle() : "null") + ", sub: " + item.getTitle());
                 listener.onSubMenuItemClick(parentItem, item);
+            } else {
+                Logger.logError(LOG_TAG, "Listener is null for submenu click");
             }
         });
     }
@@ -217,13 +226,14 @@ public class DrawerMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     }
     
     /**
-     * 查找子项的父菜单项
+     * 查找子项的父菜单项（支持嵌套查找）
      */
     private DrawerMenuItem findParentItem(DrawerMenuItem subItem) {
         String parentId = subItem.getParentId();
         if (parentId != null) {
+            // 先在所有菜单项中查找（包括子菜单项）
             for (DrawerMenuItem item : menuItems) {
-                if (!item.isSubMenu() && parentId.equals(item.getId())) {
+                if (parentId.equals(item.getId())) {
                     return item;
                 }
             }
