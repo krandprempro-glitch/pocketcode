@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -34,10 +35,12 @@ import com.termux.app.models.RemoteFileItem;
 import com.termux.app.models.ProjectWorkspace;
 import com.termux.app.models.DirectoryBookmark;
 import com.termux.app.models.FileTreeNode;
+import com.termux.app.models.DrawerMenuItem;
 import com.termux.app.sftp.SFTPConnectionManager;
 import com.termux.app.adapters.RemoteFileBrowserAdapter;
 import com.termux.app.adapters.BookmarksAdapter;
 import com.termux.app.adapters.FileTreeAdapter;
+import com.termux.app.adapters.DrawerMenuAdapter;
 import com.termux.app.managers.ProjectWorkspaceManager;
 import com.termux.app.models.SSHConfigManager;
 import com.termux.app.ui.SSHConfigDialog;
@@ -106,6 +109,11 @@ public class RemoteFileBrowserFragment extends Fragment implements
     private BookmarksAdapter bookmarksAdapter;
     private FileTreeAdapter treeAdapter;
     private CompositeDisposable compositeDisposable;
+    
+    // 抽屉菜单相关
+    private RecyclerView drawerMenuRecyclerView;
+    private DrawerMenuAdapter drawerMenuAdapter;
+    private List<DrawerMenuItem> drawerMenuItems;
     
     // 原有组件（兼容性保留）
     private SFTPConnectionManager connectionManager;
@@ -219,6 +227,10 @@ public class RemoteFileBrowserFragment extends Fragment implements
         fileCountText = statusTextLeft; // 文件计数显示在状态栏左侧
         selectionInfoText = statusTextRight; // 选择信息显示在状态栏右侧
         
+        // 抽屉菜单RecyclerView
+        LinearLayout drawerMenuContainer = view.findViewById(R.id.drawer_menu_container);
+        setupDrawerMenu(drawerMenuContainer);
+        
         Logger.logInfo(LOG_TAG, "Drawer views initialized");
     }
 
@@ -289,6 +301,222 @@ public class RemoteFileBrowserFragment extends Fragment implements
                     // 抽屉状态变化
                 }
             });
+        }
+    }
+    
+    /**
+     * 设置抽屉菜单
+     */
+    private void setupDrawerMenu(LinearLayout menuContainer) {
+        if (menuContainer == null) return;
+        
+        // 创建RecyclerView用于菜单
+        drawerMenuRecyclerView = new RecyclerView(requireContext());
+        drawerMenuRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        drawerMenuRecyclerView.setNestedScrollingEnabled(false);
+        
+        // 设置适配器
+        drawerMenuAdapter = new DrawerMenuAdapter(requireContext(), new DrawerMenuAdapter.OnMenuItemClickListener() {
+            @Override
+            public void onMenuItemClick(DrawerMenuItem item) {
+                handleDrawerMenuClick(item);
+            }
+            
+            @Override
+            public void onSubMenuItemClick(DrawerMenuItem parentItem, DrawerMenuItem subItem) {
+                handleDrawerSubMenuClick(parentItem, subItem);
+            }
+        });
+        
+        drawerMenuRecyclerView.setAdapter(drawerMenuAdapter);
+        
+        // 添加到容器
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        menuContainer.addView(drawerMenuRecyclerView, params);
+        
+        // 初始化菜单项
+        initDrawerMenuItems();
+    }
+
+    /**
+     * 初始化抽屉菜单项
+     */
+    private void initDrawerMenuItems() {
+        drawerMenuItems = new ArrayList<>();
+        
+        // 创建主功能模块 (可折叠的模块，包含4个核心功能)
+        DrawerMenuItem mainFunctionsModule = new DrawerMenuItem("main_functions", "功能菜单", R.drawable.ic_menu);
+        
+        // 添加SSH配置子项
+        mainFunctionsModule.addSubItem(new DrawerMenuItem("ssh_config", "SSH连接配置", R.drawable.ic_ssh, DrawerMenuItem.MenuAction.SSH_CONFIG));
+        
+        // 添加收藏夹管理子项 (本身也是可展开的)
+        DrawerMenuItem bookmarksSubItem = new DrawerMenuItem("bookmarks", "收藏夹管理", R.drawable.ic_bookmark_small);
+        bookmarksSubItem.addSubItem(new DrawerMenuItem("bookmark_add", "收藏当前目录", R.drawable.ic_bookmark_add, DrawerMenuItem.MenuAction.BOOKMARK_ADD_CURRENT));
+        bookmarksSubItem.addSubItem(new DrawerMenuItem("bookmark_manage", "管理所有书签", R.drawable.ic_settings_small, DrawerMenuItem.MenuAction.BOOKMARK_MANAGE_ALL));
+        
+        // 根据当前收藏数量更新徽章
+        updateBookmarksBadge(bookmarksSubItem);
+        mainFunctionsModule.addSubItem(bookmarksSubItem);
+        
+        // 添加刷新目录子项
+        mainFunctionsModule.addSubItem(new DrawerMenuItem("refresh", "刷新目录", R.drawable.ic_refresh_small, DrawerMenuItem.MenuAction.REFRESH));
+        
+        // 添加设置选项子项
+        DrawerMenuItem settingsSubItem = new DrawerMenuItem("settings", "设置选项", R.drawable.ic_settings_small);
+        // 可以添加设置的具体子项
+        settingsSubItem.addSubItem(new DrawerMenuItem("settings_display", "显示设置", R.drawable.ic_settings_small, DrawerMenuItem.MenuAction.SETTINGS_DISPLAY));
+        settingsSubItem.addSubItem(new DrawerMenuItem("settings_connection", "连接设置", R.drawable.ic_settings_small, DrawerMenuItem.MenuAction.SETTINGS_CONNECTION));
+        mainFunctionsModule.addSubItem(settingsSubItem);
+        
+        // 将主功能模块添加到菜单列表
+        drawerMenuItems.add(mainFunctionsModule);
+        
+        // TODO: 在这里可以添加其他独立模块
+        // 例如：文件操作模块、项目管理模块等
+        
+        // 更新适配器
+        drawerMenuAdapter.updateMenuItems(drawerMenuItems);
+    }
+
+    /**
+     * 更新收藏夹徽章显示
+     */
+    private void updateBookmarksBadge(DrawerMenuItem bookmarksMenuItem) {
+        if (currentWorkspace != null && workspaceManager != null) {
+            List<DirectoryBookmark> bookmarks = workspaceManager.getProjectBookmarks(currentWorkspace.getId());
+            int bookmarkCount = bookmarks.size();
+            
+            if (bookmarkCount > 0) {
+                bookmarksMenuItem.setBadgeText(String.valueOf(bookmarkCount));
+                
+                // 更新"管理所有书签"子项的徽章
+                List<DrawerMenuItem> subItems = bookmarksMenuItem.getSubItems();
+                if (subItems != null && subItems.size() > 1) {
+                    subItems.get(1).setBadgeText("(" + bookmarkCount + ")");
+                }
+            } else {
+                bookmarksMenuItem.setBadgeText(null);
+            }
+        }
+    }
+
+    /**
+     * 处理抽屉菜单点击
+     */
+    private void handleDrawerMenuClick(DrawerMenuItem item) {
+        Logger.logInfo(LOG_TAG, "Drawer menu clicked: " + item.getTitle());
+        
+        if (item.getAction() == null) return;
+        
+        switch (item.getAction()) {
+            case SSH_CONFIG:
+                showConnectionDialog();
+                closeDrawer();
+                break;
+            case REFRESH:
+                refreshCurrentDirectory();
+                closeDrawer();
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * 处理抽屉子菜单点击
+     */
+    private void handleDrawerSubMenuClick(DrawerMenuItem parentItem, DrawerMenuItem subItem) {
+        Logger.logInfo(LOG_TAG, "Drawer submenu clicked: " + parentItem.getTitle() + " -> " + subItem.getTitle());
+        
+        // 如果子项有action，直接执行
+        if (subItem.getAction() != null) {
+            switch (subItem.getAction()) {
+                case SSH_CONFIG:
+                    showConnectionDialog();
+                    closeDrawer();
+                    break;
+                case REFRESH:
+                    refreshCurrentDirectory();
+                    closeDrawer();
+                    break;
+                case BOOKMARK_ADD_CURRENT:
+                    addBookmarkForCurrentDirectory();
+                    closeDrawer();
+                    break;
+                case BOOKMARK_MANAGE_ALL:
+                    showAllBookmarksDialog();
+                    closeDrawer();
+                    break;
+                case BOOKMARK_NAVIGATE:
+                    // 动态书签导航将在下一个批次实现
+                    break;
+                case SETTINGS:
+                    // 设置功能待实现
+                    if (getContext() != null) {
+                        LightToast.showShort(getContext(), "设置功能待实现");
+                    }
+                    closeDrawer();
+                    break;
+                case SETTINGS_DISPLAY:
+                    // 显示设置功能待实现
+                    if (getContext() != null) {
+                        LightToast.showShort(getContext(), "显示设置功能待实现");
+                    }
+                    closeDrawer();
+                    break;
+                case SETTINGS_CONNECTION:
+                    // 连接设置功能待实现
+                    if (getContext() != null) {
+                        LightToast.showShort(getContext(), "连接设置功能待实现");
+                    }
+                    closeDrawer();
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            // 如果子项没有action但有子项，这意味着它是一个可展开的菜单组
+            // 这种情况下，点击会触发展开/折叠，由适配器处理
+            Logger.logInfo(LOG_TAG, "Clicked expandable submenu: " + subItem.getTitle());
+        }
+    }
+
+    /**
+     * 关闭抽屉
+     */
+    private void closeDrawer() {
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        }
+    }
+
+    /**
+     * 刷新抽屉菜单 (在连接状态变化时调用)
+     */
+    private void refreshDrawerMenu() {
+        if (drawerMenuAdapter != null && drawerMenuItems != null) {
+            // 更新收藏夹徽章 - 现在需要在主功能模块的子项中查找
+            for (DrawerMenuItem mainItem : drawerMenuItems) {
+                if ("main_functions".equals(mainItem.getId())) {
+                    // 在主功能模块的子项中查找收藏夹项
+                    List<DrawerMenuItem> subItems = mainItem.getSubItems();
+                    if (subItems != null) {
+                        for (DrawerMenuItem subItem : subItems) {
+                            if ("bookmarks".equals(subItem.getId())) {
+                                updateBookmarksBadge(subItem);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            
+            drawerMenuAdapter.updateMenuItems(drawerMenuItems);
         }
     }
     
@@ -444,7 +672,8 @@ public class RemoteFileBrowserFragment extends Fragment implements
     
     @Override
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        inflater.inflate(R.menu.remote_file_browser_menu, menu);
+        // 不再使用ActionBar菜单，所有功能已移至抽屉菜单
+        // inflater.inflate(R.menu.remote_file_browser_menu, menu);
         super.onCreateOptionsMenu(menu, inflater);
     }
     
@@ -723,6 +952,9 @@ public class RemoteFileBrowserFragment extends Fragment implements
         
         // 加载项目工作区
         loadProjectWorkspace(currentConfig);
+        
+        // 刷新抽屉菜单状态
+        refreshDrawerMenu();
         
         // 加载根目录
         navigateToPath("/");
@@ -1144,6 +1376,9 @@ public class RemoteFileBrowserFragment extends Fragment implements
             
             Logger.logInfo(LOG_TAG, "Workspace loaded: " + currentWorkspace.getId());
             Logger.logInfo(LOG_TAG, "Current path restored: " + currentPath);
+            
+            // 刷新抽屉菜单 (更新收藏夹数量)
+            refreshDrawerMenu();
         } else {
             Logger.logError(LOG_TAG, "Failed to create workspace for connection");
         }
