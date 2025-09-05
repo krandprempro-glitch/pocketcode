@@ -2,6 +2,7 @@ import java.security.DigestInputStream
 
 plugins {
     id "com.android.application"
+    id "org.jetbrains.kotlin.android"
 }
 
 ext {
@@ -12,6 +13,12 @@ ext {
     // by replacing $PREFIX since app code is dependant on the variant used to build the APK.
     // Currently supported values are: [ "apt-android-7" "apt-android-5" ]
     packageVariant = System.getenv("TERMUX_PACKAGE_VARIANT") ?: "apt-android-7" // Default: "apt-android-7"
+}
+
+configurations {
+    all {
+        exclude group: "com.google.guava", module: "listenablefuture"
+    }
 }
 
 android {
@@ -38,9 +45,26 @@ android {
         implementation "io.noties.markwon:linkify:$markwonVersion"
         implementation "io.noties.markwon:recycler:$markwonVersion"
 
-        // RxJava3 dependencies for SFTP functionality
+        // Kotlin Standard Library
+        implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+        
+        // Kotlin Coroutines
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
+        
+        // Android Architecture Components
+        implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1"
+        implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.4.1"
+        implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.1"
+        implementation "androidx.fragment:fragment-ktx:1.4.1"
+        implementation "androidx.activity:activity-ktx:1.4.0"
+
+        // RxJava3 dependencies for SFTP functionality (keeping for compatibility)
         implementation 'io.reactivex.rxjava3:rxjava:3.1.5'
         implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
+        
+        // SSHJ for SSH/SFTP connections
+        implementation 'com.hierynomus:sshj:0.32.0'
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")
@@ -111,6 +135,14 @@ android {
 
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    
+    buildFeatures {
+        viewBinding true
     }
 
     externalNativeBuild {
