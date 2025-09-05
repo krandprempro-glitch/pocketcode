@@ -51,4 +51,19 @@
         <item name="android:textColor">@color/drawer_section_title</item>
     </style>
 
+    <!-- Dark Action Bar Style -->
+    <style name="ActionBar.Dark" parent="Widget.MaterialComponents.ActionBar.Solid">
+        <item name="android:background">@color/dark_tab_background</item>
+        <item name="background">@color/dark_tab_background</item>
+        <item name="android:titleTextStyle">@style/ActionBar.Dark.TitleText</item>
+        <item name="titleTextStyle">@style/ActionBar.Dark.TitleText</item>
+        <item name="android:elevation">4dp</item>
+        <item name="elevation">4dp</item>
+    </style>
+
+    <style name="ActionBar.Dark.TitleText" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
 </resources>

@@ -52,13 +52,13 @@
         tools:targetApi="m">
 
         <activity
-            android:name=".app.TermuxActivity"
+            android:name=".app.MainTabActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|density|screenLayout|keyboard|keyboardHidden|navigation"
             android:label="@string/application_name"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar"
+            android:theme="@style/Theme.MainTabActivity.Dark"
             tools:targetApi="n">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -75,6 +75,25 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <activity
+            android:name=".app.TermuxActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|density|screenLayout|keyboard|keyboardHidden|navigation"
+            android:label="@string/application_name"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar"
+            tools:targetApi="n" />
+
+        <activity
+            android:name=".app.RemoteFileBrowserActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|density|screenLayout|keyboard|keyboardHidden|navigation"
+            android:label="Remote File Browser"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.TermuxApp.DayNight.DarkActionBar"
+            tools:targetApi="n" />
 
         <activity-alias
             android:name=".HomeActivity"

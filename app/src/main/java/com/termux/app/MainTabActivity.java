@@ -1,6 +1,8 @@
 package com.termux.app;
 
 import android.os.Bundle;
+import android.os.Build;
+import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -14,6 +16,7 @@ import com.termux.app.fragments.SSHConnectionFragment;
 import com.termux.app.fragments.RemoteFileBrowserFragment;
 import com.termux.app.fragments.GitChangesFragment;
 import com.termux.app.fragments.SettingsFragment;
+import com.termux.app.models.SSHConnectionConfig;
 
 /**
  * 主Tab界面Activity
@@ -23,6 +26,9 @@ public class MainTabActivity extends AppCompatActivity {
     private TabLayout tabLayout;
     private ViewPager2 viewPager;
     private TabPagerAdapter pagerAdapter;
+    
+    private SSHConnectionFragment sshFragment;
+    private RemoteFileBrowserFragment fileFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +37,7 @@ public class MainTabActivity extends AppCompatActivity {
         
         initViews();
         setupTabs();
+        setupFragmentCommunication();
     }
     
     private void initViews() {
@@ -63,8 +70,48 @@ public class MainTabActivity extends AppCompatActivity {
             }
         }).attach();
         
-        // 默认选中Tab2 (文件浏览)
-        viewPager.setCurrentItem(1, false);
+        // 默认选中Tab1 (SSH连接)
+        viewPager.setCurrentItem(0, false);
+    }
+    
+    /**
+     * 设置Fragment之间的通信
+     */
+    private void setupFragmentCommunication() {
+        // 延迟执行，等待Fragment创建完成
+        viewPager.post(() -> {
+            try {
+                sshFragment = (SSHConnectionFragment) getSupportFragmentManager()
+                        .findFragmentByTag("f0");
+                fileFragment = (RemoteFileBrowserFragment) getSupportFragmentManager()
+                        .findFragmentByTag("f1");
+                        
+                if (sshFragment != null) {
+                    sshFragment.setOnSSHConfigListener(new SSHConnectionFragment.OnSSHConfigListener() {
+                        @Override
+                        public void onSSHConnect(SSHConnectionConfig config) {
+                            // SSH连接成功，通知文件浏览Fragment
+                            if (fileFragment != null) {
+                                fileFragment.onSSHConnected(config);
+                            }
+                            // 切换到文件浏览Tab
+                            viewPager.setCurrentItem(1, true);
+                        }
+                        
+                        @Override
+                        public void onSSHDisconnect() {
+                            // SSH断开连接，通知文件浏览Fragment
+                            if (fileFragment != null) {
+                                fileFragment.onSSHDisconnected();
+                            }
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                // Fragment可能还未创建，稍后再试
+                viewPager.postDelayed(this::setupFragmentCommunication, 100);
+            }
+        });
     }
     
     /**
@@ -98,4 +145,5 @@ public class MainTabActivity extends AppCompatActivity {
             return 4;
         }
     }
+
 }

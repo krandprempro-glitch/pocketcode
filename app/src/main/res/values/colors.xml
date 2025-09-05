@@ -14,6 +14,18 @@
     <color name="tertiary_text">#FF999999</color>
     <color name="text_hint">#FFCCCCCC</color>
     
+    <!-- Dark theme colors -->
+    <color name="dark_background">#121212</color>
+    <color name="dark_surface">#FFFFFF</color>
+    <color name="dark_tab_background">#1F1F1F</color>
+    <color name="dark_tab_text">#B3B3B3</color>
+    <color name="dark_tab_text_selected">#FFFFFF</color>
+    <color name="dark_tab_indicator">#2196F3</color>
+    <color name="dark_tab_ripple">#33FFFFFF</color>
+    <color name="dark_primary">#2196F3</color>
+    <color name="dark_primary_variant">#1976D2</color>
+    <color name="dark_secondary">#1976D2</color>
+    
     <!-- 远程文件浏览器颜色 -->
     <color name="info_bar_background">#F5F5F5</color>
     <color name="breadcrumb_background">#EEEEEE</color>

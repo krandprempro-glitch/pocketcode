@@ -20,6 +20,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.os.Build;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -268,6 +269,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         if (mProperties.isUsingFullScreen()) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
+
 
         setTermuxTerminalViewAndClients();
 
@@ -1242,5 +1244,6 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return intent;
     }
+
 
 }

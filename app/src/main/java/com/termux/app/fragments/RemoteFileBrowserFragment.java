@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -23,6 +24,7 @@ import com.termux.app.sftp.SFTPConnectionManager;
 import com.termux.app.adapters.RemoteFileAdapter;
 import com.termux.app.models.SSHConfigManager;
 import com.termux.app.utils.NetworkErrorHandler;
+import com.termux.app.ui.SSHConfigDialog;
 import com.termux.shared.logger.Logger;
 import java.util.List;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
@@ -38,6 +40,7 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
     private RecyclerView rvFiles;
     private EditText etCurrentPath;
     private Button btnConnect, btnBack, btnRefresh;
+    private ImageButton btnSshConnect;
     private ImageView connectionStatusIcon;
     private TextView connectionStatusText;
     private ProgressBar progressLoading;
@@ -46,6 +49,7 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
     private SFTPConnectionManager connectionManager;
     private SSHConfigManager configManager;
     private CompositeDisposable compositeDisposable;
+    private SSHConfigDialog configDialog;
     
     private String currentPath = "/";
     private boolean isConnected = false;
@@ -57,6 +61,13 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
         connectionManager = SFTPConnectionManager.getInstance();
         configManager = SSHConfigManager.getInstance(requireContext());
         compositeDisposable = new CompositeDisposable();
+    }
+    
+    @Override
+    public void onAttach(@NonNull android.content.Context context) {
+        super.onAttach(context);
+        configDialog = new SSHConfigDialog(context);
+        setupSSHConfigDialog();
     }
     
     @Nullable
@@ -81,6 +92,7 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
         btnConnect = view.findViewById(R.id.btn_connect);
         btnBack = view.findViewById(R.id.btn_back);
         btnRefresh = view.findViewById(R.id.btn_refresh);
+        btnSshConnect = view.findViewById(R.id.btn_ssh_connect);
         connectionStatusIcon = view.findViewById(R.id.connection_status_icon);
         connectionStatusText = view.findViewById(R.id.connection_status_text);
         progressLoading = view.findViewById(R.id.progress_loading);
@@ -94,7 +106,15 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
     }
     
     private void setupListeners() {
-        btnConnect.setOnClickListener(v -> showConnectionDialog());
+        btnConnect.setOnClickListener(v -> {
+            if (isConnected) {
+                disconnect();
+                btnConnect.setText("连接");
+            } else {
+                showConnectionDialog();
+            }
+        });
+        btnSshConnect.setOnClickListener(v -> showConnectionDialog());
         btnBack.setOnClickListener(v -> navigateBack());
         btnRefresh.setOnClickListener(v -> refreshCurrentDirectory());
         
@@ -107,70 +127,39 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
         });
     }
     
-    private void showConnectionDialog() {
-        Logger.logInfo(LOG_TAG, "Showing connection dialog");
-        
-        List<SSHConnectionConfig> configs = configManager.getAllConfigs();
-        if (configs.isEmpty()) {
-            showQuickConnectDialog();
-        } else {
-            showSavedConfigsDialog(configs);
-        }
-    }
-    
-    private void showQuickConnectDialog() {
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_ssh_config, null);
-        
-        EditText etHost = dialogView.findViewById(R.id.edit_ssh_host);
-        EditText etPort = dialogView.findViewById(R.id.edit_ssh_port);
-        EditText etUsername = dialogView.findViewById(R.id.edit_ssh_username);
-        EditText etPassword = dialogView.findViewById(R.id.edit_ssh_password);
-        
-        etPort.setText("22");
-        
-        new AlertDialog.Builder(requireContext())
-            .setTitle("快速连接")
-            .setView(dialogView)
-            .setPositiveButton("连接", (dialog, which) -> {
-                String host = etHost.getText().toString().trim();
-                String port = etPort.getText().toString().trim();
-                String username = etUsername.getText().toString().trim();
-                String password = etPassword.getText().toString();
-                
-                if (!host.isEmpty() && !username.isEmpty()) {
-                    SSHConnectionConfig config = new SSHConnectionConfig();
-                    config.setHost(host);
-                    config.setPort(port.isEmpty() ? 22 : Integer.parseInt(port));
-                    config.setUsername(username);
-                    config.setPassword(password);
-                    config.setName(username + "@" + host);
-                    
+    private void setupSSHConfigDialog() {
+        if (configDialog != null) {
+            configDialog.setOnSSHConfigListener(new SSHConfigDialog.OnSSHConfigListener() {
+                @Override
+                public void onSSHConnect(SSHConnectionConfig config) {
                     connectToServer(config);
                 }
-            })
-            .setNegativeButton("取消", null)
-            .show();
+                
+                @Override
+                public void onSSHConfigSaved(SSHConnectionConfig config) {
+                    // 配置已保存，无需特别处理
+                }
+                
+                @Override
+                public void onSSHConfigDeleted(String configName) {
+                    // 配置已删除，无需特别处理
+                }
+                
+                @Override
+                public void onDialogClosed() {
+                    // 对话框关闭，无需特别处理
+                }
+            });
+        }
     }
     
-    private void showSavedConfigsDialog(List<SSHConnectionConfig> configs) {
-        String[] configNames = new String[configs.size() + 1];
-        for (int i = 0; i < configs.size(); i++) {
-            configNames[i] = configs.get(i).getDisplayName();
+    private void showConnectionDialog() {
+        Logger.logInfo(LOG_TAG, "Showing SSH connection dialog");
+        if (configDialog != null) {
+            configDialog.show();
         }
-        configNames[configs.size()] = "新建连接...";
-        
-        new AlertDialog.Builder(requireContext())
-            .setTitle("选择连接")
-            .setItems(configNames, (dialog, which) -> {
-                if (which < configs.size()) {
-                    connectToServer(configs.get(which));
-                } else {
-                    showQuickConnectDialog();
-                }
-            })
-            .setNegativeButton("取消", null)
-            .show();
     }
+    
     
     private void connectToServer(SSHConnectionConfig config) {
         Logger.logInfo(LOG_TAG, "Connecting to " + config.getHost());
@@ -381,6 +370,47 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
             .show();
     }
     
+    /**
+     * SSH连接成功回调
+     * 从SSH连接Fragment调用
+     */
+    public void onSSHConnected(SSHConnectionConfig config) {
+        Logger.logInfo(LOG_TAG, "SSH connected from SSH tab: " + config.getHost());
+        currentConfig = config;
+        connectToServer(config);
+    }
+    
+    /**
+     * SSH断开连接回调
+     * 从SSH连接Fragment调用
+     */
+    public void onSSHDisconnected() {
+        Logger.logInfo(LOG_TAG, "SSH disconnected from SSH tab");
+        disconnect();
+    }
+    
+    /**
+     * 断开SFTP连接
+     */
+    private void disconnect() {
+        if (connectionManager != null && isConnected) {
+            connectionManager.disconnect();
+            isConnected = false;
+            currentConfig = null;
+            updateConnectionStatus(false, "已断开连接");
+            
+            // 清空文件列表
+            if (fileAdapter != null) {
+                fileAdapter.updateFiles(null);
+            }
+            
+            // 重置当前路径
+            currentPath = "/";
+            etCurrentPath.setText(currentPath);
+            btnBack.setEnabled(false);
+        }
+    }
+    
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -389,6 +419,9 @@ public class RemoteFileBrowserFragment extends Fragment implements RemoteFileAda
         }
         if (connectionManager != null && isConnected) {
             connectionManager.disconnect();
+        }
+        if (configDialog != null && configDialog.isShowing()) {
+            configDialog.dismiss();
         }
     }
 }
