@@ -560,20 +560,6 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                             mTerminalView.requestLayout();
                             Logger.logInfo(LOG_TAG, "Terminal view refresh completed");
                         });
-
-                        // Send a simple command to test output
-                        Logger.logInfo(LOG_TAG, "Sending test command to terminal...");
-                        mTerminalView.post(() -> {
-                            try {
-                                // Wait a moment for the shell to be ready
-                                Thread.sleep(500);
-                                String testCommand = "echo 'Terminal is working!'";
-                                terminalSession.write(testCommand);
-                                Logger.logInfo(LOG_TAG, "Test command sent: " + testCommand.trim());
-                            } catch (Exception e) {
-                                Logger.logError(LOG_TAG, "Failed to send test command: " + e.getMessage());
-                            }
-                        });
                     } else {
                         Logger.logError(LOG_TAG, "TerminalSession from TermuxSession is null");
                     }
@@ -1715,7 +1701,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
                     // Create basic extra keys info with common keys
                     try {
-                        String basicExtraKeys = "[[\"ESC\",\"TAB\",\"CTRL\",\"ALT\",\"/\",\"-\",\"HOME\",\"UP\",\"END\"],[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"LEFT\",\"DOWN\",\"RIGHT\"]]";
+                        String basicExtraKeys = "[[\"ESC\",\"TAB\",\"CTRL\",\" \",\"UP\"],[\"ALT\",\"SHIFT\",\"/\",\"LEFT\",\"DOWN\",\"RIGHT\"]]";
                         com.termux.shared.termux.extrakeys.ExtraKeysInfo extraKeysInfo = new com.termux.shared.termux.extrakeys.ExtraKeysInfo(basicExtraKeys, "default", com.termux.shared.termux.extrakeys.ExtraKeysConstants.CONTROL_CHARS_ALIASES);
                         extraKeysView.reload(extraKeysInfo, mFragment.getTerminalToolbarDefaultHeight());
                     } catch (Exception e) {
