@@ -2,6 +2,14 @@ package com.termux.app.fragments;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.termux.app.terminal.CommandGroupAdapter;
+
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -49,6 +57,7 @@ import com.termux.app.terminal.io.TermuxTerminalExtraKeys;
 import com.termux.app.ui.SSHFloatingActionButton;
 import com.termux.app.ui.SSHConfigDialog;
 import com.termux.app.models.SSHConnectionConfig;
+import com.termux.app.models.SSHConfigManager;
 import com.termux.app.ssh.SSHConnectionManager;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.ActivityUtils;
@@ -82,6 +91,7 @@ import com.termux.view.TerminalViewClient;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Terminal emulator fragment converted from TermuxActivity
@@ -101,14 +111,14 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
     private TerminalView mTerminalView;
 
     /**
-     *  The {@link TerminalViewClient} interface implementation to allow for communication between
-     *  {@link TerminalView} and {@link TermuxFragment}.
+     * The {@link TerminalViewClient} interface implementation to allow for communication between
+     * {@link TerminalView} and {@link TermuxFragment}.
      */
     private TermuxTerminalViewClient mTermuxTerminalViewClient;
 
     /**
-     *  The {@link TerminalSessionClient} interface implementation to allow for communication between
-     *  {@link TerminalSession} and {@link TermuxFragment}.
+     * The {@link TerminalSessionClient} interface implementation to allow for communication between
+     * {@link TerminalSession} and {@link TermuxFragment}.
      */
     private TermuxTerminalSessionActivityClient mTermuxTerminalSessionActivityClient;
 
@@ -264,11 +274,11 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         Logger.logInfo(LOG_TAG, "Calling setTermuxTerminalViewAndClients...");
         setTermuxTerminalViewAndClients(view);
         Logger.logInfo(LOG_TAG, "setTermuxTerminalViewAndClients completed, mTerminalView: " + mTerminalView);
-        
+
         // Set up command input interface
         Logger.logInfo(LOG_TAG, "Setting up terminal input view...");
         setTerminalInputView(view);
-        
+
         // Set up terminal toolbar with extra keys (arrow keys, etc.)
         Logger.logInfo(LOG_TAG, "Setting up terminal toolbar view...");
         setTerminalToolbarView(view, savedInstanceState);
@@ -286,14 +296,14 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         try {
             Intent serviceIntent = new Intent(getContext(), TermuxService.class);
             Logger.logInfo(LOG_TAG, "Created service intent: " + serviceIntent);
-            
+
             getActivity().startService(serviceIntent);
             Logger.logInfo(LOG_TAG, "Service started successfully");
-            
+
             // Bind to the service
             boolean bindResult = getActivity().bindService(serviceIntent, this, 0);
             Logger.logInfo(LOG_TAG, "Bind service result: " + bindResult);
-            
+
             if (!bindResult) {
                 throw new RuntimeException("bindService() failed");
             }
@@ -302,7 +312,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             Logger.logStackTraceWithMessage(LOG_TAG, "Service binding error", e);
             mIsInvalidState = true;
         }
-        
+
         Logger.logInfo(LOG_TAG, "=== onViewCreated END ===");
     }
 
@@ -371,7 +381,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         // removeTermuxActivityRootViewGlobalLayoutListener();
 
         unregisterTermuxActivityBroadcastReceiver();
-        
+
         // 简化版本 - 没有drawer
         // if (getDrawer() != null) {
         //     getDrawer().closeDrawers();
@@ -456,11 +466,11 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         Logger.logInfo(LOG_TAG, "  - mIsVisible: " + mIsVisible);
         Logger.logInfo(LOG_TAG, "  - getActivity(): " + getActivity());
         Logger.logInfo(LOG_TAG, "  - mTerminalView: " + mTerminalView);
-        
+
         if (mIsVisible && getActivity() != null && mTerminalView != null) {
             try {
                 Logger.logInfo(LOG_TAG, "Creating terminal session...");
-                
+
                 // Set up a simple terminal session client for the Fragment context
                 // This is crucial for handling session output and updates
                 Logger.logInfo(LOG_TAG, "Setting up terminal session client...");
@@ -476,22 +486,22 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                             });
                         }
                     }
-                    
+
                     @Override
                     public void onTitleChanged(TerminalSession changedSession) {
                         Logger.logVerbose(LOG_TAG, "Terminal title changed: " + changedSession.getTitle());
                     }
-                    
+
                     @Override
                     public void onSessionFinished(TerminalSession finishedSession) {
                         Logger.logInfo(LOG_TAG, "Terminal session finished: " + finishedSession.getTitle());
                     }
-                    
+
                     @Override
                     public void onBell(TerminalSession session) {
                         Logger.logVerbose(LOG_TAG, "Terminal bell");
                     }
-                    
+
                     @Override
                     public void onColorsChanged(TerminalSession changedSession) {
                         Logger.logVerbose(LOG_TAG, "Terminal colors changed");
@@ -500,40 +510,40 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                         }
                     }
                 };
-                
+
                 // Don't use setTermuxTerminalSessionClient as it expects TermuxTerminalSessionActivityClient
                 // Instead, we'll set the client directly on the session after creation
                 Logger.logInfo(LOG_TAG, "Terminal session client prepared (will be set on individual sessions)");
-                
+
                 // Create a new shell session using TermuxService
                 TermuxSession newTermuxSession = mTermuxService.createTermuxSession(null, null, null, null, false, null);
                 Logger.logInfo(LOG_TAG, "Created TermuxSession: " + newTermuxSession);
-                
+
                 if (newTermuxSession != null) {
                     // Get the TerminalSession from TermuxSession and attach to view
                     TerminalSession terminalSession = newTermuxSession.getTerminalSession();
                     Logger.logInfo(LOG_TAG, "Got TerminalSession from TermuxSession: " + terminalSession);
-                    
+
                     if (terminalSession != null) {
                         Logger.logInfo(LOG_TAG, "Setting terminal session client on the session...");
                         terminalSession.updateTerminalSessionClient(fragmentSessionClient);
                         Logger.logInfo(LOG_TAG, "Terminal session client set on session");
-                        
+
                         Logger.logInfo(LOG_TAG, "Attaching session to terminal view...");
                         mTerminalView.attachSession(terminalSession);
                         Logger.logInfo(LOG_TAG, "Successfully attached terminal session to view");
-                        
+
                         // Check terminal view state after attach
                         Logger.logInfo(LOG_TAG, "Terminal view state after attach:");
                         Logger.logInfo(LOG_TAG, "  - Current session: " + mTerminalView.getCurrentSession());
                         Logger.logInfo(LOG_TAG, "  - Session attached successfully: " + (mTerminalView.getCurrentSession() == terminalSession));
-                        
+
                         // Check session detailed state
                         Logger.logInfo(LOG_TAG, "Terminal session details:");
                         Logger.logInfo(LOG_TAG, "  - Session is running: " + terminalSession.isRunning());
                         Logger.logInfo(LOG_TAG, "  - Session PID: " + terminalSession.getPid());
                         Logger.logInfo(LOG_TAG, "  - Session title: " + terminalSession.getTitle());
-                        
+
                         // Check if emulator is set
                         if (terminalSession.getEmulator() != null) {
                             Logger.logInfo(LOG_TAG, "  - Emulator columns: " + terminalSession.getEmulator().mColumns);
@@ -542,7 +552,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                         } else {
                             Logger.logInfo(LOG_TAG, "  - Emulator is null");
                         }
-                        
+
                         // Force a view refresh
                         Logger.logInfo(LOG_TAG, "Forcing terminal view refresh...");
                         mTerminalView.post(() -> {
@@ -550,7 +560,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                             mTerminalView.requestLayout();
                             Logger.logInfo(LOG_TAG, "Terminal view refresh completed");
                         });
-                        
+
                         // Send a simple command to test output
                         Logger.logInfo(LOG_TAG, "Sending test command to terminal...");
                         mTerminalView.post(() -> {
@@ -577,7 +587,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         } else {
             Logger.logWarn(LOG_TAG, "Skipping session creation due to failed conditions");
         }
-        
+
         Logger.logInfo(LOG_TAG, "=== onServiceConnected END ===");
     }
 
@@ -620,11 +630,11 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         Logger.logInfo(LOG_TAG, "Fragment context: " + getContext());
         Logger.logInfo(LOG_TAG, "Fragment activity: " + getActivity());
         Logger.logInfo(LOG_TAG, "View provided: " + view);
-        
+
         // Get terminal view
         mTerminalView = view.findViewById(R.id.terminal_view);
         Logger.logInfo(LOG_TAG, "Found TerminalView: " + mTerminalView);
-        
+
         if (mTerminalView == null) {
             Logger.logError(LOG_TAG, "Terminal view not found in layout - checking view hierarchy");
             Logger.logError(LOG_TAG, "Available view IDs in root view:");
@@ -637,7 +647,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             }
             return;
         }
-        
+
         // Log terminal view details
         Logger.logInfo(LOG_TAG, "TerminalView details:");
         Logger.logInfo(LOG_TAG, "  - Width: " + mTerminalView.getWidth() + ", Height: " + mTerminalView.getHeight());
@@ -646,7 +656,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         Logger.logInfo(LOG_TAG, "  - Current session: " + mTerminalView.getCurrentSession());
         Logger.logInfo(LOG_TAG, "  - Is focusable: " + mTerminalView.isFocusable());
         Logger.logInfo(LOG_TAG, "  - Has focus: " + mTerminalView.hasFocus());
-        
+
         // Check if view will actually be measured and laid out
         mTerminalView.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
@@ -655,7 +665,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 mTerminalView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
             }
         });
-        
+
         try {
             // Create a simple terminal view client that doesn't require TermuxActivity
             TerminalViewClient simpleClient = new TerminalViewClient() {
@@ -663,7 +673,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 public float onScale(float scale) {
                     return 1.0f; // Default scaling
                 }
-                
+
                 @Override
                 public void onSingleTapUp(MotionEvent e) {
                     // Handle single tap if needed
@@ -704,7 +714,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                     return false;
                 }
 
-                @Override  
+                @Override
                 public boolean onLongPress(MotionEvent event) {
                     return false;
                 }
@@ -774,38 +784,38 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                     Logger.logStackTrace(tag, e);
                 }
             };
-            
+
             // Set the view client - this sets the client but doesn't initialize renderer yet
             Logger.logInfo(LOG_TAG, "Setting TerminalViewClient...");
             mTerminalView.setTerminalViewClient(simpleClient);
             Logger.logInfo(LOG_TAG, "TerminalViewClient set successfully");
-            
+
             // CRITICAL: Initialize the terminal renderer by setting text size
             // Without this, mRenderer stays null and causes NullPointerException
             Logger.logInfo(LOG_TAG, "Initializing terminal renderer with text size...");
-            
+
             // Use density-independent pixels for text size (sp to px conversion)
             float density = getContext().getResources().getDisplayMetrics().scaledDensity;
             int defaultTextSizeSp = 14; // 14sp is a good default for terminal
             int defaultTextSizePx = (int) (defaultTextSizeSp * density);
-            
+
             Logger.logInfo(LOG_TAG, "Screen density: " + density + ", text size: " + defaultTextSizeSp + "sp = " + defaultTextSizePx + "px");
             mTerminalView.setTextSize(defaultTextSizePx);
             Logger.logInfo(LOG_TAG, "Terminal renderer initialized with text size: " + defaultTextSizePx + "px");
-            
+
             // Check if renderer is initialized after setting text size
             try {
                 java.lang.reflect.Field rendererField = mTerminalView.getClass().getDeclaredField("mRenderer");
                 rendererField.setAccessible(true);
                 Object renderer = rendererField.get(mTerminalView);
                 Logger.logInfo(LOG_TAG, "Terminal renderer after setTextSize: " + renderer);
-                
+
                 if (renderer != null) {
                     java.lang.reflect.Field fontWidthField = renderer.getClass().getDeclaredField("mFontWidth");
                     fontWidthField.setAccessible(true);
                     Object fontWidth = fontWidthField.get(renderer);
                     Logger.logInfo(LOG_TAG, "Renderer mFontWidth: " + fontWidth);
-                    
+
                     // Also check other critical renderer fields
                     java.lang.reflect.Field fontHeightField = renderer.getClass().getDeclaredField("mFontLineSpacing");
                     fontHeightField.setAccessible(true);
@@ -817,7 +827,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             } catch (Exception reflectEx) {
                 Logger.logWarn(LOG_TAG, "Could not check renderer state via reflection: " + reflectEx.getMessage());
             }
-            
+
             Logger.logInfo(LOG_TAG, "=== setTermuxTerminalViewAndClients SUCCESS ===");
         } catch (Exception e) {
             Logger.logError(LOG_TAG, "=== setTermuxTerminalViewAndClients FAILED ===");
@@ -828,19 +838,19 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
     private void setTerminalToolbarView(View view, Bundle savedInstanceState) {
         Logger.logInfo(LOG_TAG, "=== setTerminalToolbarView START ===");
-        
+
         try {
             // For TermuxFragment, we'll create a simplified extra keys setup
             // since we don't have full TermuxActivity-style clients available
             Logger.logInfo(LOG_TAG, "Setting up simplified extra keys for Fragment context...");
-            
+
             // Instead of creating full TermuxActivity clients, we'll use a simplified approach
             // The terminal toolbar will still be functional with basic extra keys
             Logger.logInfo(LOG_TAG, "Skipping complex client creation in Fragment context");
 
             final ViewPager terminalToolbarViewPager = getTerminalToolbarViewPager(view);
             Logger.logInfo(LOG_TAG, "Terminal toolbar ViewPager: " + terminalToolbarViewPager);
-            
+
             if (terminalToolbarViewPager == null) {
                 Logger.logError(LOG_TAG, "Terminal toolbar ViewPager not found in layout!");
                 return;
@@ -867,7 +877,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             Logger.logInfo(LOG_TAG, "Setting Fragment-compatible ViewPager adapter...");
             terminalToolbarViewPager.setAdapter(new FragmentTerminalToolbarPageAdapter(this, savedTextInput));
             terminalToolbarViewPager.addOnPageChangeListener(new FragmentTerminalToolbarOnPageChangeListener(this, terminalToolbarViewPager));
-            
+
             Logger.logInfo(LOG_TAG, "=== setTerminalToolbarView SUCCESS ===");
         } catch (Exception e) {
             Logger.logError(LOG_TAG, "=== setTerminalToolbarView FAILED ===");
@@ -880,13 +890,13 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         if (terminalToolbarViewPager == null) return;
 
         ViewGroup.LayoutParams layoutParams = terminalToolbarViewPager.getLayoutParams();
-        
+
         // Use a safe default if mTermuxTerminalExtraKeys is not initialized yet
         int extraKeysRows = 1; // Default to 1 row for arrow keys
         if (mTermuxTerminalExtraKeys != null && mTermuxTerminalExtraKeys.getExtraKeysInfo() != null) {
             extraKeysRows = mTermuxTerminalExtraKeys.getExtraKeysInfo().getMatrix().length;
         }
-        
+
         layoutParams.height = Math.round(mTerminalToolbarDefaultHeight *
             extraKeysRows * mProperties.getTerminalToolbarHeightScaleFactor());
         terminalToolbarViewPager.setLayoutParams(layoutParams);
@@ -911,7 +921,8 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         final EditText textInputView = getView().findViewById(R.id.terminal_toolbar_text_input);
         if (textInputView != null) {
             String textInput = textInputView.getText().toString();
-            if (!textInput.isEmpty()) savedInstanceState.putString(ARG_TERMINAL_TOOLBAR_TEXT_INPUT, textInput);
+            if (!textInput.isEmpty())
+                savedInstanceState.putString(ARG_TERMINAL_TOOLBAR_TEXT_INPUT, textInput);
         }
     }
 
@@ -950,16 +961,16 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
     private void setTerminalInputView(View view) {
         Logger.logInfo(LOG_TAG, "=== setTerminalInputView START ===");
-        
+
         EditText terminalCommandInput = view.findViewById(R.id.terminal_command_input);
         ImageButton terminalSendButton = view.findViewById(R.id.terminal_send_button);
         ImageButton claudeCodeMenuButton = view.findViewById(R.id.claude_code_menu_button);
-        
+
         Logger.logInfo(LOG_TAG, "Input UI elements:");
         Logger.logInfo(LOG_TAG, "  - terminalCommandInput: " + terminalCommandInput);
         Logger.logInfo(LOG_TAG, "  - terminalSendButton: " + terminalSendButton);
         Logger.logInfo(LOG_TAG, "  - claudeCodeMenuButton: " + claudeCodeMenuButton);
-        
+
         if (terminalCommandInput == null || terminalSendButton == null) {
             Logger.logError(LOG_TAG, "Essential input elements missing - cannot set up terminal input");
             return;
@@ -978,7 +989,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         terminalCommandInput.setFocusable(true);
         terminalCommandInput.setFocusableInTouchMode(true);
         terminalCommandInput.setClickable(true);
-        
+
         // 设置点击监听器确保获得焦点并弹出输入法
         terminalCommandInput.setOnClickListener(v -> {
             v.requestFocus();
@@ -987,7 +998,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
             }
         });
-        
+
         // 设置焦点监听器
         terminalCommandInput.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
@@ -999,7 +1010,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         });
 
         terminalCommandInput.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND || 
+            if (actionId == EditorInfo.IME_ACTION_SEND ||
                 (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
                 sendCommandToTerminal(terminalCommandInput.getText().toString());
                 terminalCommandInput.setText("");
@@ -1037,22 +1048,22 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         } else {
             Logger.logInfo(LOG_TAG, "Claude Code menu button not found in layout");
         }
-        
+
         Logger.logInfo(LOG_TAG, "=== setTerminalInputView SUCCESS ===");
     }
 
     private void sendCommandToTerminal(String command) {
         Logger.logInfo(LOG_TAG, "=== sendCommandToTerminal START ===");
         Logger.logInfo(LOG_TAG, "Command to send: '" + command + "'");
-        
+
         if (command == null || command.trim().isEmpty()) {
             Logger.logWarn(LOG_TAG, "Empty command - nothing to send");
             return;
         }
-        
+
         TerminalSession currentSession = getCurrentSession();
         Logger.logInfo(LOG_TAG, "Current session: " + currentSession);
-        
+
         if (currentSession != null && currentSession.isRunning()) {
             Logger.logInfo(LOG_TAG, "Session is running, sending command...");
             byte[] commandBytes = (command.trim() + "\r").getBytes(java.nio.charset.StandardCharsets.UTF_8);
@@ -1065,75 +1076,105 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             }
             showToast("终端会话未运行", false);
         }
-        
+
         Logger.logInfo(LOG_TAG, "=== sendCommandToTerminal END ===");
     }
 
     /**
-     * 显示Claude Code快捷指令菜单，支持滚动并使用默认指令
+     * 显示Claude Code快捷指令菜单，使用新的BottomSheet分组展示
      */
     private void showSimpleClaudeCodeMenu(ImageButton anchor, EditText commandInput) {
-        Logger.logInfo(LOG_TAG, "Showing Claude Code menu with default commands");
-        
-        // 使用ClaudeCodeMenuHelper的默认指令
-        List<ClaudeCodeMenuHelper.Command> commands = getDefaultCommands();
-        
-        // 转换为字符串数组供AlertDialog使用
-        String[] menuItems = new String[commands.size()];
-        for (int i = 0; i < commands.size(); i++) {
-            ClaudeCodeMenuHelper.Command cmd = commands.get(i);
-            menuItems[i] = cmd.command + " - " + cmd.description;
-        }
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Claude Code 快捷指令")
-               .setItems(menuItems, (dialog, which) -> {
-                   ClaudeCodeMenuHelper.Command selectedCommand = commands.get(which);
-                   String command = selectedCommand.command;
-                   
-                   // 将选择的命令填入输入框
-                   commandInput.setText(command);
-                   
-                   // 如果命令以空格结尾，光标移到末尾；否则全选
-                   if (command.endsWith(" ")) {
-                       commandInput.setSelection(command.length());
-                   } else {
-                       commandInput.selectAll();
-                   }
-                   
-                   commandInput.requestFocus();
-                   dialog.dismiss();
-               })
-               .setNegativeButton("取消", null);
-        
-        AlertDialog dialog = builder.create();
-        dialog.show();
+        Logger.logInfo(LOG_TAG, "Showing Claude Code menu with grouped commands");
+
+        if (getContext() == null) return;
+
+        // 创建BottomSheetDialog
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(getContext());
+        View bottomSheetView = LayoutInflater.from(getContext())
+            .inflate(R.layout.bottom_sheet_claude_commands, null);
+        bottomSheetDialog.setContentView(bottomSheetView);
+
+        // 获取UI控件
+        RecyclerView commandsRecyclerView = bottomSheetView.findViewById(R.id.commands_recycler_view);
+
+        // 准备分组数据
+        List<CommandGroupAdapter.CommandGroup> commandGroups = prepareCommandGroups();
+
+        // 设置适配器
+        CommandGroupAdapter adapter = new CommandGroupAdapter(
+            commandGroups,
+            commandInput,
+            command -> bottomSheetDialog.dismiss()
+        );
+
+        commandsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        commandsRecyclerView.setAdapter(adapter);
+
+        // 显示BottomSheet
+        bottomSheetDialog.show();
     }
-    
+
     /**
-     * 获取默认Claude Code指令列表
+     * 准备三大类命令分组数据
      */
-    private List<ClaudeCodeMenuHelper.Command> getDefaultCommands() {
-        return Arrays.asList(
-            new ClaudeCodeMenuHelper.Command("/add-dir", "添加目录"),
+    private List<CommandGroupAdapter.CommandGroup> prepareCommandGroups() {
+        List<CommandGroupAdapter.CommandGroup> groups = new ArrayList<>();
+
+        // 1. SSH连接类 (第一类)
+        List<ClaudeCodeMenuHelper.Command> sshCommands = new ArrayList<>();
+        try {
+            SSHConfigManager sshConfigManager = SSHConfigManager.getInstance(getContext());
+            List<SSHConnectionConfig> sshConfigs = sshConfigManager.getAllConfigs();
+
+            for (SSHConnectionConfig config : sshConfigs) {
+                String sshCommand = config.generateSSHCommand();
+                if (sshCommand != null) {
+                    String displayName = config.getDisplayName();
+                    sshCommands.add(new ClaudeCodeMenuHelper.Command(sshCommand, "连接: " + displayName));
+                }
+            }
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to load SSH configs for menu: " + e.getMessage());
+        }
+
+        if (!sshCommands.isEmpty()) {
+            groups.add(new CommandGroupAdapter.CommandGroup(
+                CommandGroupAdapter.CommandCategory.SSH_CONNECTIONS, sshCommands));
+        }
+
+        // 2. AI指令类 (第二类)
+        List<ClaudeCodeMenuHelper.Command> aiCommands = Arrays.asList(
             new ClaudeCodeMenuHelper.Command("/agents", "代理管理"),
-            new ClaudeCodeMenuHelper.Command("/clear", "清屏"),
-            new ClaudeCodeMenuHelper.Command("/compact", "紧凑模式"),
-            new ClaudeCodeMenuHelper.Command("/config", "配置设置"),
-            new ClaudeCodeMenuHelper.Command("/doctor", "系统诊断"),
-            new ClaudeCodeMenuHelper.Command("/help", "获取帮助"),
-            new ClaudeCodeMenuHelper.Command("/init", "初始化"),
-            new ClaudeCodeMenuHelper.Command("/mcp", "MCP协议"),
-            new ClaudeCodeMenuHelper.Command("/memory", "内存管理"),
-            new ClaudeCodeMenuHelper.Command("/model", "模型设置"),
             new ClaudeCodeMenuHelper.Command("/review", "代码审查"),
-            new ClaudeCodeMenuHelper.Command("/resume", "恢复会话"),
             new ClaudeCodeMenuHelper.Command("thinkharder", "深度思考"),
             new ClaudeCodeMenuHelper.Command("ultrathink", "超级思考"),
+            new ClaudeCodeMenuHelper.Command("#(memory)", "访问记忆"),
+            new ClaudeCodeMenuHelper.Command("/memory", "内存管理"),
+            new ClaudeCodeMenuHelper.Command("/model", "模型设置"),
+            new ClaudeCodeMenuHelper.Command("/help", "获取帮助"),
+            new ClaudeCodeMenuHelper.Command("/config", "配置设置"),
+            new ClaudeCodeMenuHelper.Command("/clear", "清屏"),
+            new ClaudeCodeMenuHelper.Command("/init", "初始化"),
             new ClaudeCodeMenuHelper.Command("!(bash)", "执行bash命令"),
-            new ClaudeCodeMenuHelper.Command("#(memory)", "访问记忆")
+            new ClaudeCodeMenuHelper.Command("/add-dir", "添加目录"),
+            new ClaudeCodeMenuHelper.Command("/compact", "紧凑模式"),
+            new ClaudeCodeMenuHelper.Command("/doctor", "系统诊断"),
+            new ClaudeCodeMenuHelper.Command("/mcp", "MCP协议"),
+            new ClaudeCodeMenuHelper.Command("/resume", "恢复会话")
         );
+        groups.add(new CommandGroupAdapter.CommandGroup(
+            CommandGroupAdapter.CommandCategory.AI_COMMANDS, aiCommands));
+
+        // 3. 系统指令类 (第三类)
+        List<ClaudeCodeMenuHelper.Command> systemCommands = Arrays.asList(
+
+        );
+        groups.add(new CommandGroupAdapter.CommandGroup(
+            CommandGroupAdapter.CommandCategory.SYSTEM_COMMANDS, systemCommands));
+
+        return groups;
     }
+
 
     /**
      * Handle Claude Code keyboard shortcuts
@@ -1188,7 +1229,9 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         return false;
     }
 
-    /** Show a toast and dismiss the last one if still visible. */
+    /**
+     * Show a toast and dismiss the last one if still visible.
+     */
     public void showToast(String text, boolean longDuration) {
         if (text == null || text.isEmpty()) return;
         if (mLastToast != null) mLastToast.cancel();
@@ -1310,6 +1353,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 .setNegativeButton(android.R.string.cancel, null).show();
         }
     }
+
     private void toggleKeepScreenOn() {
         if (mTerminalView.getKeepScreenOn()) {
             mTerminalView.setKeepScreenOn(false);
@@ -1340,7 +1384,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             public void onSSHConnect(SSHConnectionConfig config) {
                 Logger.logInfo(LOG_TAG, "Generating SSH command for: " + config.getHost());
                 showToast("生成SSH连接命令...", false);
-                
+
                 // 使用SSH连接管理器保存配置并生成命令
                 mSSHConnectionManager.saveConfigAndGenerateCommand(config, new SSHConnectionManager.SSHConnectionCallback() {
                     @Override
@@ -1565,7 +1609,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
     @Nullable
     public TerminalSession getCurrentSession() {
         Logger.logVerbose(LOG_TAG, "getCurrentSession called - mTerminalView: " + mTerminalView);
-        
+
         if (mTerminalView != null) {
             TerminalSession session = mTerminalView.getCurrentSession();
             Logger.logVerbose(LOG_TAG, "getCurrentSession returning: " + session);
@@ -1583,7 +1627,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
     public TermuxAppSharedProperties getProperties() {
         return mProperties;
     }
-    
+
     /**
      * Fragment-compatible Terminal Toolbar Page Adapter.
      * This is a modified version of TerminalToolbarViewPager.PageAdapter that works with TermuxFragment.
@@ -1615,7 +1659,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             if (position == 0) {
                 layout = inflater.inflate(R.layout.view_terminal_toolbar_extra_keys, collection, false);
                 ExtraKeysView extraKeysView = (ExtraKeysView) layout;
-                
+
                 // Set up the extra keys view client - create a simplified one
                 if (mFragment.getTermuxTerminalExtraKeys() != null) {
                     extraKeysView.setExtraKeysViewClient(mFragment.getTermuxTerminalExtraKeys());
@@ -1625,7 +1669,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                         mFragment.getTerminalToolbarDefaultHeight());
                 } else {
                     Logger.logWarn(LOG_TAG, "TermuxTerminalExtraKeys not initialized, creating basic extra keys client");
-                    
+
                     // Create a basic extra keys client that handles basic key input
                     extraKeysView.setExtraKeysViewClient(new com.termux.shared.termux.extrakeys.ExtraKeysView.IExtraKeysView() {
                         @Override
@@ -1635,7 +1679,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                             if (session != null && session.isRunning()) {
                                 String key = button.getKey();
                                 Logger.logInfo(LOG_TAG, "Extra key pressed: " + key);
-                                
+
                                 // Handle basic keys like arrow keys, ESC, TAB, etc.
                                 if ("UP".equals(key)) {
                                     session.write("\u001b[A"); // Up arrow
@@ -1658,17 +1702,17 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                                 }
                             }
                         }
-                        
+
                         @Override
                         public boolean performExtraKeyButtonHapticFeedback(View view, com.termux.shared.termux.extrakeys.ExtraKeyButton button, com.google.android.material.button.MaterialButton buttonView) {
                             return false; // No haptic feedback
                         }
                     });
-                    
+
                     // Set basic properties
                     extraKeysView.setButtonTextAllCaps(mFragment.getProperties().shouldExtraKeysTextBeAllCaps());
                     mFragment.setExtraKeysView(extraKeysView);
-                    
+
                     // Create basic extra keys info with common keys
                     try {
                         String basicExtraKeys = "[[\"ESC\",\"TAB\",\"CTRL\",\"ALT\",\"/\",\"-\",\"HOME\",\"UP\",\"END\"],[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"LEFT\",\"DOWN\",\"RIGHT\"]]";
@@ -1710,7 +1754,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             collection.removeView((View) view);
         }
     }
-    
+
     /**
      * Fragment-compatible Terminal Toolbar Page Change Listener.
      * This is a modified version of TerminalToolbarViewPager.OnPageChangeListener that works with TermuxFragment.
