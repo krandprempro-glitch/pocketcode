@@ -39,6 +39,7 @@ abstract class BaseDialog(
     private fun setupWindow() {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         window?.apply {
+            setGravity(android.view.Gravity.CENTER)
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
             

@@ -8,6 +8,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageView
+import android.graphics.BitmapFactory
+import android.widget.TextView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -448,7 +451,7 @@ class RemoteFileBrowserFragment : Fragment(),
     }
 
     private fun showAllBookmarksDialog() {
-        val bookmarks = viewModel.getBookmarks()
+        val bookmarks = viewModel.getBookmarks().toMutableList()
 
         if (bookmarks.isEmpty()) {
             AlertDialog.Builder(requireContext())
@@ -459,17 +462,31 @@ class RemoteFileBrowserFragment : Fragment(),
             return
         }
 
-        val bookmarkNames = bookmarks.map { "${it.displayName} (${it.fullPath})" }.toTypedArray()
+        com.termux.app.ui.dialogs.BookmarkManagementDialog.show(
+            requireContext(),
+            bookmarks,
+            object : com.termux.app.ui.dialogs.BookmarkManagementDialog.OnBookmarkManagementListener {
+                override fun onBookmarkNavigate(bookmark: com.termux.app.models.DirectoryBookmark) {
+                    viewModel.navigateToPath(bookmark.fullPath)
+                    closeDrawer()
+                }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("收藏夹 (${bookmarks.size} 项)")
-            .setItems(bookmarkNames) { _, which ->
-                val bookmark = bookmarks[which]
-                viewModel.navigateToPath(bookmark.fullPath)
-                closeDrawer()
+                override fun onBookmarkEdit(bookmark: com.termux.app.models.DirectoryBookmark) {
+                    viewModel.updateBookmark(bookmark)
+                    drawerFileAdapter.notifyDataSetChanged()
+                }
+
+                override fun onBookmarkDelete(bookmark: com.termux.app.models.DirectoryBookmark) {
+                    viewModel.removeBookmark(bookmark.fullPath)
+                    drawerFileAdapter.notifyDataSetChanged()
+                }
+
+                override fun onBookmarkAdd(path: String, name: String) {
+                    viewModel.addBookmark(path, name)
+                    drawerFileAdapter.notifyDataSetChanged()
+                }
             }
-            .setNegativeButton("关闭", null)
-            .show()
+        )
     }
 
     private fun showPathActionDialog() {
@@ -523,6 +540,8 @@ class RemoteFileBrowserFragment : Fragment(),
                 val name = editText.text.toString().trim().ifEmpty { defaultName }
                 viewModel.addBookmark(path, name)
                 LightToast.showShort(requireContext(), "已添加书签: $name")
+                // 刷新右侧列表以更新星标
+                drawerFileAdapter.notifyDataSetChanged()
             }
             .setNegativeButton("取消", null)
             .show()
@@ -535,6 +554,10 @@ class RemoteFileBrowserFragment : Fragment(),
 
     // DrawerFileAdapter.OnFileActionListener 实现
     override fun onFileClick(file: RemoteFileItem) {
+        if (!file.isDirectory && com.termux.app.utils.FileUtils.isImageFile(file.name)) {
+            showImagePreviewDialog(file)
+            return
+        }
         if (file.isDirectory) {
             viewModel.navigateToPath(file.path)
         } else {
@@ -576,8 +599,14 @@ class RemoteFileBrowserFragment : Fragment(),
 
         when {
             selectedOption.contains("进入目录") -> viewModel.navigateToPath(file.path)
-            selectedOption.contains("收藏目录") -> showAddBookmarkDialog(file.path)
-            selectedOption.contains("取消收藏") -> viewModel.removeBookmark(file.path)
+            selectedOption.contains("收藏目录") -> {
+                showAddBookmarkDialog(file.path)
+                drawerFileAdapter.notifyDataSetChanged()
+            }
+            selectedOption.contains("取消收藏") -> {
+                viewModel.removeBookmark(file.path)
+                drawerFileAdapter.notifyDataSetChanged()
+            }
             selectedOption.contains("下载文件") -> LightToast.showShort(requireContext(), "下载功能开发中...")
             selectedOption.contains("查看属性") -> showFileProperties(file)
         }
@@ -608,9 +637,12 @@ class RemoteFileBrowserFragment : Fragment(),
 
         if (isBookmarked(file.path)) {
             viewModel.removeBookmark(file.path)
+            LightToast.showShort(requireContext(), "已取消收藏")
         } else {
             viewModel.addBookmark(file.path, file.name)
+            LightToast.showShort(requireContext(), "已添加收藏")
         }
+        drawerFileAdapter.notifyDataSetChanged()
     }
 
     // SSHConfigDialog.OnSSHConfigListener 实现
@@ -684,6 +716,36 @@ class RemoteFileBrowserFragment : Fragment(),
                 binding.statusTextLeft.text = "就绪"
             }
         }
+    }
+
+    /**
+     * 图片预览弹窗
+     */
+    private fun showImagePreviewDialog(file: RemoteFileItem) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_image_preview, null)
+        val imageView = dialogView.findViewById<ImageView>(R.id.preview_image)
+        val titleView = dialogView.findViewById<TextView>(R.id.preview_title)
+        titleView.text = "${file.name}\n${file.path}"
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setPositiveButton("关闭", null)
+            .create()
+
+        dialog.setOnShowListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val bytes = withContext(Dispatchers.IO) { viewModel.readFileBytes(file.path) }
+                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    imageView.setImageBitmap(bmp)
+                } catch (e: Exception) {
+                    LightToast.showShort(requireContext(), "图片加载失败: ${e.message}")
+                    dialog.dismiss()
+                }
+            }
+        }
+        dialog.show()
+        dialog.window?.setDimAmount(0.6f)
     }
     
     /**

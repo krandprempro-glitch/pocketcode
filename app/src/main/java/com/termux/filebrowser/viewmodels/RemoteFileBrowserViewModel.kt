@@ -178,6 +178,19 @@ class RemoteFileBrowserViewModel : ViewModel() {
         }
     }
 
+    /**
+     * 更新书签（例如重命名）。保持原书签ID不变，直接覆盖保存。
+     */
+    fun updateBookmark(bookmark: DirectoryBookmark) {
+        val workspace = currentWorkspace ?: return
+        // 确保项目ID存在
+        if (bookmark.projectId == null || bookmark.projectId!!.isEmpty()) {
+            bookmark.projectId = workspace.id
+        }
+        workspaceManager?.addBookmark(bookmark.projectId, bookmark)
+        Logger.logInfo(LOG_TAG, "Bookmark updated: ${bookmark.displayName}")
+    }
+
     fun isPathBookmarked(path: String): Boolean {
         val workspace = currentWorkspace ?: return false
         return workspaceManager?.isBookmarked(workspace.id, path) ?: false
@@ -294,6 +307,25 @@ class RemoteFileBrowserViewModel : ViewModel() {
             sftpManager.readFileContent(filePath).await()
         } catch (e: Exception) {
             Logger.logError(LOG_TAG, "Failed to read file content: ${e.message}")
+            throw e
+        }
+    }
+
+    /**
+     * 读取远程文件字节（用于图片预览）
+     */
+    @Throws(Exception::class)
+    suspend fun readFileBytes(filePath: String): ByteArray {
+        Logger.logInfo(LOG_TAG, "Reading file bytes: $filePath")
+
+        if (!sftpManager.isConnected) {
+            throw IllegalStateException("未连接到服务器")
+        }
+
+        return try {
+            sftpManager.readFileBytes(filePath).await()
+        } catch (e: Exception) {
+            Logger.logError(LOG_TAG, "Failed to read file bytes: ${e.message}")
             throw e
         }
     }

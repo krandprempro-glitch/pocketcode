@@ -75,6 +75,18 @@
         <item name="colorPrimaryDark">@color/termux_color_primary_dark</item>
     </style>
 
+    <!-- Light Material dialog with blue primary for buttons -->
+    <style name="AppTheme.Dialog.Blue" parent="Theme.MaterialComponents.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <!-- Ensure blue tone for MD buttons -->
+        <item name="colorPrimary">@color/dark_primary</item>
+        <item name="colorPrimaryVariant">@color/dark_primary_variant</item>
+        <item name="colorSecondary">@color/dark_primary_variant</item>
+        <item name="colorAccent">@color/dark_primary</item>
+        <item name="android:colorAccent">@color/dark_primary</item>
+    </style>
+
     <!-- Dialog Animations -->
     <style name="DialogAnimation">
         <item name="android:windowEnterAnimation">@android:anim/fade_in</item>

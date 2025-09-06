@@ -326,6 +326,40 @@ public class SFTPConnectionManager {
         }).subscribeOn(Schedulers.io())
           .observeOn(AndroidSchedulers.mainThread());
     }
+
+    /**
+     * 读取二进制文件字节（用于图片等非文本内容）
+     */
+    public Single<byte[]> readFileBytes(String remoteFilePath) {
+        return Single.<byte[]>create(emitter -> {
+            try {
+                if (!isConnected) {
+                    throw new IllegalStateException("SFTP connection is not established");
+                }
+
+                Logger.logInfo(LOG_TAG, "Reading file bytes: " + remoteFilePath);
+
+                try (RemoteFile rf = sftpClient.open(remoteFilePath, EnumSet.of(OpenMode.READ))) {
+                    try (InputStream in = rf.new RemoteFileInputStream(0)) {
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = in.read(buf)) != -1) {
+                            baos.write(buf, 0, n);
+                        }
+                        byte[] content = baos.toByteArray();
+                        Logger.logInfo(LOG_TAG, "File bytes read successfully: " + remoteFilePath + ", bytes=" + content.length);
+                        emitter.onSuccess(content);
+                    }
+                }
+
+            } catch (Exception e) {
+                Logger.logError(LOG_TAG, "Failed to read file bytes: " + remoteFilePath + " - " + e.getMessage());
+                emitter.onError(e);
+            }
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
+    }
     
     /**
      * 下载文件到本地

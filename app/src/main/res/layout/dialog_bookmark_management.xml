@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="@android:color/white"
     android:padding="24dp">
 
-    <!-- 对话框标题 -->
     <TextView
         android:id="@+id/dialog_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="书签管理"
+        android:text="收藏夹管理"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/primary_text"
         android:layout_marginBottom="16dp" />
 
-    <!-- 书签列表 -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/bookmarks_list"
         android:layout_width="match_parent"
@@ -24,7 +24,6 @@
         android:layout_weight="1"
         android:scrollbars="vertical" />
 
-    <!-- 空状态布局 -->
     <LinearLayout
         android:id="@+id/empty_state_layout"
         android:layout_width="match_parent"
@@ -51,7 +50,6 @@
 
     </LinearLayout>
 
-    <!-- 对话框按钮 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -64,17 +62,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="添加书签"
-            style="?attr/materialButtonOutlinedStyle" />
+            android:text="添加"
+            style="?attr/materialButtonStyle"
+            app:backgroundTint="?attr/colorPrimary" />
 
-        <Button
-            android:id="@+id/clear_all_button"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="清空全部"
-            style="?attr/materialButtonOutlinedStyle" />
 
         <Button
             android:id="@+id/close_button"
@@ -83,7 +74,8 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:text="关闭"
-            style="?attr/materialButtonStyle" />
+            style="?attr/materialButtonStyle"
+            app:backgroundTint="?attr/colorPrimary" />
 
         <Button
             android:id="@+id/cancel_button"
@@ -91,7 +83,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="取消"
-            style="?attr/materialButtonOutlinedStyle" />
+            android:visibility="gone"
+            style="?attr/materialButtonStyle"
+            app:backgroundTint="?attr/colorPrimary" />
 
     </LinearLayout>
 

@@ -18,7 +18,7 @@ class BookmarkManagementDialog(
     context: Context,
     private val bookmarks: MutableList<DirectoryBookmark>,
     private val listener: OnBookmarkManagementListener
-) : BaseDialog(context), BookmarksAdapter.OnBookmarkActionListener {
+) : BaseDialog(context, R.style.AppTheme_Dialog_Blue), BookmarksAdapter.OnBookmarkActionListener {
 
     private lateinit var binding: DialogBookmarkManagementBinding
     private lateinit var bookmarksAdapter: BookmarksAdapter
@@ -55,11 +55,7 @@ class BookmarkManagementDialog(
             addBookmarkButton.setOnClickListener {
                 showAddBookmarkDialog()
             }
-            
-            // 清空所有书签按钮
-            clearAllButton.setOnClickListener {
-                showClearAllConfirmDialog()
-            }
+
         }
     }
 
@@ -79,7 +75,6 @@ class BookmarkManagementDialog(
             val isEmpty = bookmarks.isEmpty()
             emptyStateLayout.isVisible = isEmpty
             bookmarksList.isVisible = !isEmpty
-            clearAllButton.isVisible = !isEmpty
             
             if (isEmpty) {
                 emptyStateText.text = "还没有收藏任何目录\n\n点击「添加书签」按钮开始收藏您常用的目录"
@@ -89,8 +84,8 @@ class BookmarkManagementDialog(
 
     // BookmarksAdapter.OnBookmarkActionListener 实现
     override fun onBookmarkClick(bookmark: DirectoryBookmark) {
-        listener.onBookmarkNavigate(bookmark)
-        dismiss()
+        // 点击显示操作选项（跳转/重命名/删除），避免直接跳转
+        showBookmarkOptionsDialog(bookmark)
     }
 
     override fun onBookmarkLongClick(bookmark: DirectoryBookmark) {
