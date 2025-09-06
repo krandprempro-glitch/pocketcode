@@ -46,6 +46,9 @@ public class MainTabActivity extends AppCompatActivity {
         pagerAdapter = new TabPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
         
+        // Disable horizontal swipe gestures
+        viewPager.setUserInputEnabled(false);
+        
         // Connect TabLayout with ViewPager2
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
             switch (position) {
