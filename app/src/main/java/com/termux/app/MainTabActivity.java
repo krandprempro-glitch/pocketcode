@@ -45,6 +45,8 @@ public class MainTabActivity extends AppCompatActivity {
         
         pagerAdapter = new TabPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
+        // Disable horizontal swipe between tabs; allow only tab clicks/programmatic changes
+        viewPager.setUserInputEnabled(false);
     }
     
     private void setupTabs() {
