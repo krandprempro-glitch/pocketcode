@@ -18,6 +18,9 @@ ext {
 configurations {
     all {
         exclude group: "com.google.guava", module: "listenablefuture"
+        // Avoid Kotlin stdlib split duplicates when some deps pull jdk7/jdk8
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
     }
 }
 
@@ -51,6 +54,7 @@ android {
         // Kotlin Coroutines
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-rx3:1.6.1'
         
         // Android Architecture Components
         implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1"
@@ -63,8 +67,18 @@ android {
         implementation 'io.reactivex.rxjava3:rxjava:3.1.5'
         implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
         
-        // SSHJ for SSH/SFTP connections
-        implementation 'com.hierynomus:sshj:0.32.0'
+        // SSHJ for SSH/SFTP connections (use newer version with better Android compat)
+        implementation 'com.hierynomus:sshj:0.34.0'
+        // ED25519 support used by SSHJ on Android
+        implementation 'net.i2p.crypto:eddsa:0.3.0'
+        // BouncyCastle provider to supply ECDSA/ECDH algorithms on Android
+        implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+        
+        // Sora Editor for code viewing with syntax highlighting
+        // Keep versions aligned with existing API usage
+        implementation 'io.github.Rosemoe.sora-editor:editor:0.20.3'
+        implementation 'io.github.Rosemoe.sora-editor:language-java:0.20.3'
+        // Do not add language-universal here; universal is available via editor in this version
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")

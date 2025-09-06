@@ -33,6 +33,14 @@ import com.termux.shared.logger.Logger
 import kotlinx.coroutines.launch
 import java.util.Date
 
+// Sora Editor imports
+import io.github.rosemoe.sora.widget.CodeEditor
+import io.github.rosemoe.sora.lang.EmptyLanguage
+// Keep highlighting minimal to avoid missing language modules
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 /**
  * 远程文件浏览Fragment - Kotlin重构版本
  * 使用MVVM架构，DataBinding和现代Android开发最佳实践
@@ -55,6 +63,10 @@ class RemoteFileBrowserFragment : Fragment(),
     // 适配器
     private lateinit var drawerFileAdapter: DrawerFileAdapter
     private lateinit var drawerMenuAdapter: DrawerMenuAdapter
+
+    // 代码编辑器
+    private var codeEditor: CodeEditor? = null
+    private var currentViewedFile: RemoteFileItem? = null
 
     // 对话框
     private var sshConfigDialog: SSHConfigDialog? = null
@@ -92,6 +104,7 @@ class RemoteFileBrowserFragment : Fragment(),
     private fun initViews() {
         setupToolbar()
         setupDrawerLayout()
+        setupCodeEditor()
         updateConnectionStatus(false, "未连接")
     }
 
@@ -122,6 +135,35 @@ class RemoteFileBrowserFragment : Fragment(),
         val params = navView.layoutParams
         params.width = drawerWidth
         navView.layoutParams = params
+    }
+
+    private fun setupCodeEditor() {
+        codeEditor = binding.codeEditor
+        codeEditor?.apply {
+            // 设置为只读模式
+            isEditable = false
+            
+            // 启用行号
+            isLineNumberEnabled = true
+            
+            // Remove feature flags not available in current editor version
+            
+            // 配置深色主题
+            colorScheme = EditorColorScheme().apply {
+                applyDefault()
+                // 设置为深色主题以匹配Termux风格
+                setColor(EditorColorScheme.WHOLE_BACKGROUND, 0xFF1E1E1E.toInt())
+                setColor(EditorColorScheme.TEXT_NORMAL, 0xFFD4D4D4.toInt())
+                setColor(EditorColorScheme.LINE_NUMBER, 0xFF858585.toInt())
+                setColor(EditorColorScheme.LINE_DIVIDER, 0xFF2D2D30.toInt())
+                setColor(EditorColorScheme.CURRENT_LINE, 0xFF2A2A2A.toInt())
+            }
+            
+            // 初始语言设为空
+            setEditorLanguage(EmptyLanguage())
+        }
+        
+        Logger.logInfo(LOG_TAG, "Code editor initialized with dark theme")
     }
 
     private fun setupAdapters() {
@@ -278,6 +320,12 @@ class RemoteFileBrowserFragment : Fragment(),
         binding.apply {
             drawerLoadingProgress.visibility = if (state.isLoading) View.VISIBLE else View.GONE
             drawerEmptyState.visibility = if (state.isEmpty) View.VISIBLE else View.GONE
+
+            // 根据连接状态更新空状态提示文案
+            if (state.isEmpty) {
+                val emptyText = if (viewModel.isConnected()) "该目录为空" else "请先连接SSH服务器"
+                emptyStateText?.text = emptyText
+            }
 
             // 停止刷新动画
             if (!state.isLoading && drawerSwipeRefresh.isRefreshing) {
@@ -490,8 +538,8 @@ class RemoteFileBrowserFragment : Fragment(),
         if (file.isDirectory) {
             viewModel.navigateToPath(file.path)
         } else {
-            // 处理文件点击，可以打开文件或显示详情
-            showFileProperties(file)
+            // 处理文件点击，在主体区域显示代码
+            loadFileContent(file)
         }
     }
 
@@ -600,9 +648,96 @@ class RemoteFileBrowserFragment : Fragment(),
         viewModel.disconnect()
     }
 
+    /**
+     * 加载文件内容到代码编辑器
+     */
+    private fun loadFileContent(file: RemoteFileItem) {
+        if (!viewModel.isConnected()) {
+            LightToast.showShort(requireContext(), "请先连接SSH服务器")
+            return
+        }
+
+        // 检查文件大小限制(5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            LightToast.showShort(requireContext(), "文件过大，无法预览 (>5MB)")
+            return
+        }
+
+        currentViewedFile = file
+        
+        // 显示加载状态
+        binding.statusTextLeft.text = "正在加载文件..."
+        
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // 在后台线程读取文件内容
+                val content = withContext(Dispatchers.IO) {
+                    viewModel.readFileContent(file.path)
+                }
+                
+                // 在主线程更新UI
+                displayFileContent(file, content)
+                
+            } catch (e: Exception) {
+                Logger.logError(LOG_TAG, "Failed to load file content: ${e.message}")
+                LightToast.showShort(requireContext(), "文件加载失败: ${e.message}")
+                binding.statusTextLeft.text = "就绪"
+            }
+        }
+    }
+    
+    /**
+     * 在代码编辑器中显示文件内容
+     */
+    private fun displayFileContent(file: RemoteFileItem, content: String) {
+        codeEditor?.let { editor ->
+            // 设置文件内容
+            editor.setText(content)
+            
+            // 根据文件扩展名设置语言
+            val language = detectLanguageFromFile(file.name)
+            editor.setEditorLanguage(language)
+            
+            // 更新文件信息显示
+            binding.fileNameText.text = file.name
+            binding.fileSizeText.text = formatFileSize(content.length.toLong())
+            
+            // 显示代码查看器，隐藏欢迎页面
+            binding.welcomeLayout.visibility = View.GONE
+            binding.codeViewerContainer.visibility = View.VISIBLE
+            
+            // 更新状态栏
+            val lines = content.lines().size
+            binding.statusTextLeft.text = "文件已加载"
+            binding.statusTextRight.text = "$lines 行 | ${formatFileSize(content.length.toLong())}"
+            
+            Logger.logInfo(LOG_TAG, "File loaded: ${file.name}, ${content.length} chars, $lines lines")
+        }
+    }
+    
+    /**
+     * 根据文件扩展名检测语言类型
+     */
+    private fun detectLanguageFromFile(fileName: String): io.github.rosemoe.sora.lang.Language {
+        return EmptyLanguage()
+    }
+    
+    /**
+     * 格式化文件大小显示
+     */
+    private fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+            else -> "${bytes / (1024 * 1024)} MB"
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         sshConfigDialog?.dismiss()
+        codeEditor = null
+        currentViewedFile = null
         _binding = null
     }
 }

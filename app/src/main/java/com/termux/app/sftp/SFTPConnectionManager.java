@@ -4,22 +4,42 @@ import com.termux.app.models.RemoteFileItem;
 import com.termux.app.models.SSHConnectionConfig;
 import com.termux.shared.logger.Logger;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
-import java.net.UnknownHostException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
-import java.util.concurrent.TimeUnit;
+import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.DefaultConfig;
+import net.schmizz.sshj.common.Factory;
+import net.schmizz.sshj.common.SecurityUtils;
+import net.schmizz.sshj.sftp.FileMode;
+import net.schmizz.sshj.transport.kex.KeyExchange;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import java.security.Provider;
+import java.security.Security;
+import net.schmizz.sshj.sftp.OpenMode;
+import net.schmizz.sshj.sftp.RemoteFile;
+import net.schmizz.sshj.sftp.RemoteResourceInfo;
+import net.schmizz.sshj.sftp.Response;
+import net.schmizz.sshj.sftp.SFTPClient;
+import net.schmizz.sshj.sftp.SFTPException;
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 
 /**
  * SFTP连接管理器
@@ -51,9 +71,9 @@ public class SFTPConnectionManager {
         }
     }
     
-    // TODO: 添加SSHJ库支持后，将使用实际的SSH客户端
-    // private SSHClient sshClient;
-    // private SFTPClient sftpClient;
+    // SSHJ clients
+    private SSHClient sshClient;
+    private SFTPClient sftpClient;
     
     private ExecutorService executorService;
     private SSHConnectionConfig currentConfig;
@@ -88,52 +108,63 @@ public class SFTPConnectionManager {
         return Single.<Boolean>create(emitter -> {
             try {
                 Logger.logInfo(LOG_TAG, "Connecting to " + config.getHost() + ":" + config.getPort());
-                
+
                 currentConfig = config;
                 
-                // TODO: 实现实际的SFTP连接逻辑
-                // 这里应该使用SSHJ库建立连接
-                /*
-                sshClient = new SSHClient();
+                // 真实连接逻辑（SSHJ）
+                // 注册独立的 BouncyCastle 提供者（不依赖系统内置 BC），确保 ECDSA/ECDH 可用
+                try {
+                    Provider bc = new BouncyCastleProvider();
+                    Security.removeProvider(bc.getName());
+                    Security.insertProviderAt(bc, 1);
+                } catch (Throwable ignored) {}
+                // 避免 SSHJ 强制注册系统 BC（Android 内置 BC 不完整）
+                try { SecurityUtils.setRegisterBouncyCastle(false); } catch (Throwable ignored) {}
+                // 使用默认配置基础上，明确剔除 ECDH（仅保留 curve25519 / diffie-hellman），并去掉 ECDSA 签名工厂
+                DefaultConfig configObj = new DefaultConfig();
+                try {
+                    java.util.List<Factory.Named<KeyExchange>> kex =
+                            new java.util.ArrayList<>(configObj.getKeyExchangeFactories());
+                    java.util.Iterator<Factory.Named<KeyExchange>> it = kex.iterator();
+                    while (it.hasNext()) {
+                        String name = it.next().getName();
+                        String lower = name != null ? name.toLowerCase(java.util.Locale.ROOT) : "";
+                        if (!(lower.contains("curve25519") || lower.contains("diffie-hellman"))) {
+                            it.remove();
+                        }
+                    }
+                    configObj.setKeyExchangeFactories(kex);
+                } catch (Throwable ignored) {}
+                // 不再修改签名算法工厂（服务端已避免 ECDSA）
+                sshClient = new SSHClient(configObj);
                 sshClient.addHostKeyVerifier(new PromiscuousVerifier());
                 
-                // 设置连接超时
+                // 超时设置
                 sshClient.setConnectTimeout(30000);
                 sshClient.setTimeout(30000);
                 
                 sshClient.connect(config.getHost(), config.getPort());
                 
-                if (config.hasPrivateKey()) {
-                    sshClient.authPublickey(config.getUsername(), 
-                        sshClient.loadKeys(config.getPrivateKeyPath(), config.getPassword()));
-                } else {
+                // 简化：仅支持密码登录（后续可扩展私钥）
+                if (config.getPassword() != null) {
                     sshClient.authPassword(config.getUsername(), config.getPassword());
+                } else {
+                    sshClient.authPublickey(config.getUsername());
                 }
                 
                 sftpClient = sshClient.newSFTPClient();
-                */
                 
-                // 临时模拟连接过程，可能抛出不同类型的异常
-                Thread.sleep(1000);
-                
-                // 模拟随机错误用于测试
-                double rand = Math.random();
-                if (rand < 0.1 && config.getHost().equals("invalid.host")) {
-                    throw new UnknownHostException("主机地址无法解析: " + config.getHost());
-                } else if (rand < 0.1 && config.getPort() == 9999) {
-                    throw new ConnectException("连接被拒绝: " + config.getHost() + ":" + config.getPort());
-                } else if (rand < 0.1 && "wrongpass".equals(config.getPassword())) {
-                    throw new SecurityException("用户认证失败，用户名或密码错误");
-                } else if (rand < 0.05) {
-                    throw new SocketTimeoutException("连接超时，请检查网络连接");
+                // 获取用户家目录作为初始工作目录
+                try {
+                    currentWorkingDirectory = sftpClient.canonicalize(".");
+                } catch (Exception e) {
+                    currentWorkingDirectory = "/";
                 }
-                
+
                 isConnected = true;
-                currentWorkingDirectory = "/";
-                
-                Logger.logInfo(LOG_TAG, "SFTP connection established successfully");
+                Logger.logInfo(LOG_TAG, "SFTP connection established successfully, cwd=" + currentWorkingDirectory);
                 emitter.onSuccess(true);
-                
+
             } catch (UnknownHostException e) {
                 String errorMsg = "主机地址无效或无法解析: " + config.getHost();
                 Logger.logError(LOG_TAG, errorMsg);
@@ -176,19 +207,14 @@ public class SFTPConnectionManager {
         try {
             if (isConnected) {
                 Logger.logInfo(LOG_TAG, "Disconnecting SFTP connection");
-                
-                // TODO: 实现实际的断开连接逻辑
-                /*
                 if (sftpClient != null) {
-                    sftpClient.close();
+                    try { sftpClient.close(); } catch (Exception ignored) {}
                     sftpClient = null;
                 }
                 if (sshClient != null) {
-                    sshClient.disconnect();
+                    try { sshClient.disconnect(); } catch (Exception ignored) {}
                     sshClient = null;
                 }
-                */
-                
                 isConnected = false;
                 currentConfig = null;
                 currentWorkingDirectory = "/";
@@ -220,80 +246,37 @@ public class SFTPConnectionManager {
                 Logger.logInfo(LOG_TAG, "Listing files in directory: " + remotePath);
                 
                 List<RemoteFileItem> files = new ArrayList<>();
-                
-                // TODO: 实现实际的目录列表获取，包含SFTP异常处理
-                /*
                 try {
-                    for (RemoteResourceInfo resource : sftpClient.ls(remotePath)) {
-                        if (resource.getName().equals(".") || resource.getName().equals("..")) {
-                            continue;
-                        }
-                        
+                    for (RemoteResourceInfo res : sftpClient.ls(remotePath)) {
+                        String name = res.getName();
+                        if (".".equals(name) || "..".equals(name)) continue;
+
                         RemoteFileItem item = new RemoteFileItem();
-                        item.setName(resource.getName());
-                        item.setPath(normalizePath(remotePath, resource.getName()));
-                        item.setDirectory(resource.getAttributes().getType() == FileMode.Type.DIRECTORY);
-                        item.setSize(resource.getAttributes().getSize());
-                        item.setLastModified(resource.getAttributes().getMtime());
-                        item.setPermissions(resource.getAttributes().getPermissions().toString());
+                        item.setName(name);
+                        item.setPath(normalizePath(remotePath, name));
+                        FileMode.Type type = res.getAttributes().getType();
+                        item.setDirectory(type == FileMode.Type.DIRECTORY);
+                        Long size = res.getAttributes().getSize();
+                        if (size != null) item.setSize(size);
+                        Long mtime = res.getAttributes().getMtime();
+                        if (mtime != null) item.setLastModified(mtime);
+                        item.setPermissions(String.valueOf(res.getAttributes().getMode().getPermissionsMask()));
                         files.add(item);
                     }
                 } catch (SFTPException e) {
-                    if (e.getStatusCode() == Response.StatusCode.NO_SUCH_FILE) {
+                    Response.StatusCode code = e.getStatusCode();
+                    if (code == Response.StatusCode.NO_SUCH_FILE) {
                         throw new RuntimeException("目录不存在: " + remotePath);
-                    } else if (e.getStatusCode() == Response.StatusCode.PERMISSION_DENIED) {
+                    } else if (code == Response.StatusCode.PERMISSION_DENIED) {
                         throw new RuntimeException("权限不足，无法访问目录: " + remotePath);
                     } else {
                         throw new RuntimeException("无法读取目录内容: " + e.getMessage());
                     }
                 }
-                */
-                
-                // 临时模拟数据和错误
-                Thread.sleep(500);
-                
-                // 模拟目录不存在的情况
-                if (remotePath.equals("/nonexistent")) {
-                    throw new RuntimeException("目录不存在: " + remotePath);
-                }
-                // 模拟权限不足的情况
-                if (remotePath.equals("/root")) {
-                    throw new RuntimeException("权限不足，无法访问目录: " + remotePath);
-                }
-                
-                if (remotePath.equals("/")) {
-                    files.add(new RemoteFileItem("home", "/home", true));
-                    files.add(new RemoteFileItem("etc", "/etc", true));
-                    files.add(new RemoteFileItem("var", "/var", true));
-                    files.add(new RemoteFileItem("tmp", "/tmp", true));
-                    files.add(new RemoteFileItem("usr", "/usr", true));
-                } else if (remotePath.equals("/home")) {
-                    files.add(new RemoteFileItem("user", "/home/user", true));
-                    files.add(new RemoteFileItem("test.txt", "/home/test.txt", false));
-                } else if (remotePath.equals("/home/user")) {
-                    files.add(new RemoteFileItem("Documents", "/home/user/Documents", true));
-                    files.add(new RemoteFileItem("Downloads", "/home/user/Downloads", true));
-                    files.add(new RemoteFileItem("script.sh", "/home/user/script.sh", false));
-                    files.add(new RemoteFileItem("config.json", "/home/user/config.json", false));
-                }
-                
-                // 设置文件属性
-                for (RemoteFileItem file : files) {
-                    if (!file.isDirectory()) {
-                        file.setSize((long) (Math.random() * 1024 * 1024)); // 随机大小
-                        file.setLastModified(System.currentTimeMillis() / 1000 - (long) (Math.random() * 86400 * 30)); // 30天内的随机时间
-                        file.setPermissions("755");
-                    }
-                }
                 
                 Logger.logInfo(LOG_TAG, "Found " + files.size() + " items in directory: " + remotePath);
                 emitter.onSuccess(files);
-                
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                String errorMsg = "操作被中断";
-                Logger.logError(LOG_TAG, errorMsg);
-                emitter.onError(new RuntimeException(errorMsg));
+
             } catch (SecurityException e) {
                 String errorMsg = "权限不足，无法访问目录: " + remotePath;
                 Logger.logError(LOG_TAG, errorMsg);
@@ -322,35 +305,19 @@ public class SFTPConnectionManager {
                 
                 Logger.logInfo(LOG_TAG, "Reading file content: " + remoteFilePath);
                 
-                // TODO: 实现实际的文件读取逻辑
-                /*
-                try (InputStream inputStream = sftpClient.open(remoteFilePath).new RemoteFileInputStream();
-                     Scanner scanner = new Scanner(inputStream)) {
-                    
-                    StringBuilder content = new StringBuilder();
-                    while (scanner.hasNextLine()) {
-                        content.append(scanner.nextLine()).append("\n");
+                try (RemoteFile rf = sftpClient.open(remoteFilePath, EnumSet.of(OpenMode.READ))) {
+                    try (InputStream in = rf.new RemoteFileInputStream(0)) {
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = in.read(buf)) != -1) {
+                            baos.write(buf, 0, n);
+                        }
+                        String content = baos.toString(StandardCharsets.UTF_8.name());
+                        Logger.logInfo(LOG_TAG, "File content read successfully: " + remoteFilePath + ", bytes=" + baos.size());
+                        emitter.onSuccess(content);
                     }
-                    
-                    emitter.onSuccess(content.toString());
                 }
-                */
-                
-                // 临时模拟文件内容
-                Thread.sleep(300);
-                String content;
-                if (remoteFilePath.endsWith(".txt")) {
-                    content = "This is a sample text file.\nLine 2\nLine 3\n...";
-                } else if (remoteFilePath.endsWith(".sh")) {
-                    content = "#!/bin/bash\necho \"Hello World\"\n# This is a sample script";
-                } else if (remoteFilePath.endsWith(".json")) {
-                    content = "{\n  \"name\": \"sample\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Sample JSON file\"\n}";
-                } else {
-                    content = "Sample file content for: " + remoteFilePath;
-                }
-                
-                Logger.logInfo(LOG_TAG, "File content read successfully: " + remoteFilePath);
-                emitter.onSuccess(content);
                 
             } catch (Exception e) {
                 Logger.logError(LOG_TAG, "Failed to read file content: " + remoteFilePath + " - " + e.getMessage());
@@ -593,14 +560,8 @@ public class SFTPConnectionManager {
             }
             
             try {
-                // TODO: 实现实际的连接测试逻辑
-                /*
-                // 简单的连接测试，例如获取根目录
-                sftpClient.ls("/");
-                */
-                
-                // 临时模拟测试
-                Thread.sleep(100);
+                // 简单心跳：列目录
+                sftpClient.ls(".");
                 emitter.onSuccess(true);
                 
             } catch (Exception e) {

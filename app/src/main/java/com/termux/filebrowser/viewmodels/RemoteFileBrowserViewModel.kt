@@ -1,4 +1,4 @@
-package com.termux.filebrowser.viewmodels
+﻿package com.termux.filebrowser.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.rx3.await
 
 /**
  * RemoteFileBrowserFragment的ViewModel
@@ -200,8 +201,14 @@ class RemoteFileBrowserViewModel : ViewModel() {
         // 加载或创建工作区
         loadOrCreateWorkspace(config)
         
-        // 导航到根目录
-        navigateToPath("/")
+        // 导航到用户家目录（SFTP返回的当前工作目录），回退到根目录
+        val startPath = try {
+            val cwd = sftpManager.currentWorkingDirectory
+            if (cwd.isNullOrBlank()) "/" else cwd
+        } catch (e: Exception) {
+            "/"
+        }
+        navigateToPath(startPath)
     }
 
     private fun onConnectionFailed(error: String) {
@@ -268,6 +275,35 @@ class RemoteFileBrowserViewModel : ViewModel() {
             workspaceManager?.saveWorkspaceState(workspace)
         }
     }
+    
+    /**
+     * 读取远程文件内容
+     * @param filePath 文件路径
+     * @return 文件内容字符串
+     */
+    @Throws(Exception::class)
+    suspend fun readFileContent(filePath: String): String {
+        Logger.logInfo(LOG_TAG, "Reading file content: $filePath")
+        
+        if (!sftpManager.isConnected) {
+            throw IllegalStateException("未连接到服务器")
+        }
+        
+        return try {
+            // 使用RxJava Single转换为挂起函数
+            sftpManager.readFileContent(filePath).await()
+        } catch (e: Exception) {
+            Logger.logError(LOG_TAG, "Failed to read file content: ${e.message}")
+            throw e
+        }
+    }
+    
+    /**
+     * 检查是否已连接
+     */
+    fun isConnected(): Boolean {
+        return sftpManager.isConnected
+    }
 
     override fun onCleared() {
         super.onCleared()
@@ -282,3 +318,4 @@ class RemoteFileBrowserViewModel : ViewModel() {
         }
     }
 }
+

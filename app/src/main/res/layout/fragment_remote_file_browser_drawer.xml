@@ -113,12 +113,53 @@
                     android:textColor="#999999" />
             </LinearLayout>
             
-            <!-- 代码查看器容器 - 后续批次实现 -->
-            <FrameLayout
+            <!-- 代码查看器 - Sora Editor集成 -->
+            <LinearLayout
                 android:id="@+id/code_viewer_container"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:visibility="gone" />
+                android:orientation="vertical"
+                android:visibility="gone">
+                
+                <!-- 文件信息栏 -->
+                <LinearLayout
+                    android:id="@+id/file_info_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:orientation="horizontal"
+                    android:background="#F8F8F8"
+                    android:paddingHorizontal="12dp"
+                    android:gravity="center_vertical">
+                    
+                    <TextView
+                        android:id="@+id/file_name_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textSize="12sp"
+                        android:textColor="#333333"
+                        android:textStyle="bold"
+                        android:singleLine="true"
+                        android:ellipsize="middle" />
+                        
+                    <TextView
+                        android:id="@+id/file_size_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:textColor="#666666"
+                        android:layout_marginStart="12dp" />
+                </LinearLayout>
+                
+                <!-- Sora Code Editor -->
+                <io.github.rosemoe.sora.widget.CodeEditor
+                    android:id="@+id/code_editor"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@android:color/white" />
+                    
+            </LinearLayout>
                 
         </FrameLayout>
 
@@ -252,10 +293,11 @@
                         android:alpha="0.3" />
 
                     <TextView
+                        android:id="@+id/empty_state_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="请先连接SSH服务器"
+                        android:text="该目录为空"
                         android:textColor="#999999"
                         android:textSize="14sp" />
                 </LinearLayout>

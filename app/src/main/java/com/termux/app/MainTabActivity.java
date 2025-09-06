@@ -93,7 +93,7 @@ public class MainTabActivity extends AppCompatActivity {
                             if (fileFragment != null) {
                                 fileFragment.onSSHConnected(config);
                             }
-                            // 切换到文件浏览Tab
+                            // 切换到文件浏览
                             viewPager.setCurrentItem(1, true);
                         }
                         
