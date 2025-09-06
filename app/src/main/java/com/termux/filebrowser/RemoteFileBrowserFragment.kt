@@ -781,7 +781,40 @@ class RemoteFileBrowserFragment : Fragment(),
      * 根据文件扩展名检测语言类型
      */
     private fun detectLanguageFromFile(fileName: String): io.github.rosemoe.sora.lang.Language {
-        return EmptyLanguage()
+        val name = fileName.lowercase()
+        // Prefer specific languages when available on classpath; fall back gracefully
+        fun tryLoad(className: String): io.github.rosemoe.sora.lang.Language? {
+            return try {
+                val cls = Class.forName(className)
+                val ctor = cls.getDeclaredConstructor()
+                val obj = ctor.newInstance()
+                obj as? io.github.rosemoe.sora.lang.Language
+            } catch (_: Throwable) {
+                null
+            }
+        }
+
+        // Map extensions to languages. Vue falls back to JS highlighting for script blocks.
+        return when {
+            name.endsWith(".js") || name.endsWith(".jsx") || name.endsWith(".mjs") || name.endsWith(".cjs") ->
+                tryLoad("io.github.rosemoe.sora.langs.javascript.JavaScriptLanguage")
+                    ?: tryLoad("io.github.rosemoe.sora.langs.universal.UniversalLanguage")
+                    ?: EmptyLanguage()
+
+            name.endsWith(".vue") ->
+                // Basic highlighting: use JS if available; otherwise universal/plain
+                tryLoad("io.github.rosemoe.sora.langs.javascript.JavaScriptLanguage")
+                    ?: tryLoad("io.github.rosemoe.sora.langs.universal.UniversalLanguage")
+                    ?: EmptyLanguage()
+
+            name.endsWith(".java") || name.endsWith(".kt") || name.endsWith(".kts") ->
+                // Java/Kotlin: use JavaLanguage if present
+                tryLoad("io.github.rosemoe.sora.langs.java.JavaLanguage") ?: EmptyLanguage()
+
+            else ->
+                // Generic fallback gives some syntax coloring for C-like/JSON/etc if available
+                tryLoad("io.github.rosemoe.sora.langs.universal.UniversalLanguage") ?: EmptyLanguage()
+        }
     }
     
     /**

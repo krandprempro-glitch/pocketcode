@@ -250,6 +250,8 @@ public class SFTPConnectionManager {
                     for (RemoteResourceInfo res : sftpClient.ls(remotePath)) {
                         String name = res.getName();
                         if (".".equals(name) || "..".equals(name)) continue;
+                        // Skip hidden files and directories (names starting with '.')
+                        if (name != null && name.startsWith(".")) continue;
 
                         RemoteFileItem item = new RemoteFileItem();
                         item.setName(name);
