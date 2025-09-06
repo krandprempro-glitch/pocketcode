@@ -81,6 +81,7 @@ import com.termux.view.TerminalView;
 import com.termux.view.TerminalViewClient;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Terminal emulator fragment converted from TermuxActivity
@@ -970,9 +971,14 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             return;
         }
 
-        // Initialize Claude Code menu helper
-        // 暂时注释掉，稍后实现简化版本
-        // mClaudeCodeMenuHelper = new ClaudeCodeMenuHelper(getActivity());
+        // Initialize Claude Code menu helper - 使用Fragment的Activity context
+        try {
+            mClaudeCodeMenuHelper = new ClaudeCodeMenuHelper((TermuxActivity) getActivity());
+            Logger.logInfo(LOG_TAG, "Claude Code menu helper initialized successfully");
+        } catch (Exception e) {
+            Logger.logWarn(LOG_TAG, "Failed to initialize Claude Code menu helper, creating simplified version: " + e.getMessage());
+            mClaudeCodeMenuHelper = null; // 使用简化版本
+        }
 
         terminalCommandInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND || 
@@ -1005,6 +1011,9 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             claudeCodeMenuButton.setOnClickListener(v -> {
                 if (mClaudeCodeMenuHelper != null) {
                     mClaudeCodeMenuHelper.showMenu(claudeCodeMenuButton);
+                } else {
+                    // 简化版本的快捷指令菜单
+                    showSimpleClaudeCodeMenu(claudeCodeMenuButton, terminalCommandInput);
                 }
             });
         } else {
@@ -1040,6 +1049,72 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         }
         
         Logger.logInfo(LOG_TAG, "=== sendCommandToTerminal END ===");
+    }
+
+    /**
+     * 显示Claude Code快捷指令菜单，支持滚动并使用默认指令
+     */
+    private void showSimpleClaudeCodeMenu(ImageButton anchor, EditText commandInput) {
+        Logger.logInfo(LOG_TAG, "Showing Claude Code menu with default commands");
+        
+        // 使用ClaudeCodeMenuHelper的默认指令
+        List<ClaudeCodeMenuHelper.Command> commands = getDefaultCommands();
+        
+        // 转换为字符串数组供AlertDialog使用
+        String[] menuItems = new String[commands.size()];
+        for (int i = 0; i < commands.size(); i++) {
+            ClaudeCodeMenuHelper.Command cmd = commands.get(i);
+            menuItems[i] = cmd.command + " - " + cmd.description;
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Claude Code 快捷指令")
+               .setItems(menuItems, (dialog, which) -> {
+                   ClaudeCodeMenuHelper.Command selectedCommand = commands.get(which);
+                   String command = selectedCommand.command;
+                   
+                   // 将选择的命令填入输入框
+                   commandInput.setText(command);
+                   
+                   // 如果命令以空格结尾，光标移到末尾；否则全选
+                   if (command.endsWith(" ")) {
+                       commandInput.setSelection(command.length());
+                   } else {
+                       commandInput.selectAll();
+                   }
+                   
+                   commandInput.requestFocus();
+                   dialog.dismiss();
+               })
+               .setNegativeButton("取消", null);
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+    
+    /**
+     * 获取默认Claude Code指令列表
+     */
+    private List<ClaudeCodeMenuHelper.Command> getDefaultCommands() {
+        return Arrays.asList(
+            new ClaudeCodeMenuHelper.Command("/add-dir", "添加目录"),
+            new ClaudeCodeMenuHelper.Command("/agents", "代理管理"),
+            new ClaudeCodeMenuHelper.Command("/clear", "清屏"),
+            new ClaudeCodeMenuHelper.Command("/compact", "紧凑模式"),
+            new ClaudeCodeMenuHelper.Command("/config", "配置设置"),
+            new ClaudeCodeMenuHelper.Command("/doctor", "系统诊断"),
+            new ClaudeCodeMenuHelper.Command("/help", "获取帮助"),
+            new ClaudeCodeMenuHelper.Command("/init", "初始化"),
+            new ClaudeCodeMenuHelper.Command("/mcp", "MCP协议"),
+            new ClaudeCodeMenuHelper.Command("/memory", "内存管理"),
+            new ClaudeCodeMenuHelper.Command("/model", "模型设置"),
+            new ClaudeCodeMenuHelper.Command("/review", "代码审查"),
+            new ClaudeCodeMenuHelper.Command("/resume", "恢复会话"),
+            new ClaudeCodeMenuHelper.Command("thinkharder", "深度思考"),
+            new ClaudeCodeMenuHelper.Command("ultrathink", "超级思考"),
+            new ClaudeCodeMenuHelper.Command("!(bash)", "执行bash命令"),
+            new ClaudeCodeMenuHelper.Command("#(memory)", "访问记忆")
+        );
     }
 
     /**

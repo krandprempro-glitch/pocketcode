@@ -1,46 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/activity_termux_root_relative_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#000000">
+    android:background="#000000"
+    android:orientation="vertical">
 
     <!-- 简化版终端视图 -->
     <com.termux.view.TerminalView
         android:id="@+id/terminal_view"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:focusable="true"
-        android:focusableInTouchMode="true" />
+        android:layout_height="match_parent"
+        android:layout_above="@+id/terminal_input_container"
+        android:defaultFocusHighlightEnabled="false"
+        android:focusableInTouchMode="true"
+        android:scrollbarThumbVertical="@drawable/terminal_scroll_shape"
+        android:scrollbars="vertical" />
 
-    <!-- 底部工具栏 -->
+    <!-- 输入框容器 - 参考activity_termux的terminal_input_container -->
     <LinearLayout
+        android:id="@+id/terminal_input_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_above="@+id/terminal_toolbar_view_pager"
+        android:background="#2d3748"
+        android:elevation="4dp"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:background="#1E1E1E">
+        android:visibility="visible">
 
         <EditText
             android:id="@+id/terminal_command_input"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="32dp"
             android:layout_weight="1"
-            android:hint="输入命令"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#888888"
-            android:background="@android:color/transparent"
+            android:layout_gravity="center_vertical"
+            android:background="@drawable/terminal_input_background"
+            android:hint="输入命令..."
+            android:imeOptions="actionSend"
+            android:inputType="text"
+            android:paddingStart="12dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="4dp"
             android:singleLine="true"
-            android:imeOptions="actionSend" />
+            android:textColor="#ffffff"
+            android:textColorHint="#a0aec0"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/claude_code_menu_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_gravity="center_vertical"
+            android:background="@null"
+            android:contentDescription="Claude Code 指令菜单"
+            android:src="@drawable/ic_claude_code"
+            android:scaleType="center"
+            android:padding="4dp" />
 
         <ImageButton
             android:id="@+id/terminal_send_button"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_send"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="发送命令" />
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="4dp"
+            android:layout_gravity="center_vertical"
+            android:background="@null"
+            android:contentDescription="发送命令"
+            android:src="@drawable/ic_send"
+            android:tint="#ffffff"
+            android:scaleType="center"
+            android:padding="4dp" />
 
     </LinearLayout>
 
@@ -50,6 +83,7 @@
         android:layout_width="match_parent"
         android:layout_height="37.5dp"
         android:background="@color/black"
+        android:layout_alignParentBottom="true"
         android:visibility="visible" />
 
-</LinearLayout>
+</RelativeLayout>
