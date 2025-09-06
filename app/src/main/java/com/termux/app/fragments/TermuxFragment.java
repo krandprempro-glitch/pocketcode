@@ -847,16 +847,10 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             }
 
             // Check preference for showing terminal toolbar - same logic as TermuxActivity
-            boolean shouldShow = mPreferences.shouldShowTerminalToolbar();
-            Logger.logInfo(LOG_TAG, "shouldShowTerminalToolbar preference: " + shouldShow);
-            
-            if (shouldShow) {
-                terminalToolbarViewPager.setVisibility(View.VISIBLE);
-                Logger.logInfo(LOG_TAG, "Terminal toolbar visibility set to VISIBLE");
-            } else {
-                terminalToolbarViewPager.setVisibility(View.GONE);
-                Logger.logInfo(LOG_TAG, "Terminal toolbar visibility set to GONE (preference disabled)");
-            }
+            // For Fragment context, always force visible to ensure toolbar shows up
+            Logger.logInfo(LOG_TAG, "Forcing terminal toolbar to be visible in Fragment context");
+            terminalToolbarViewPager.setVisibility(View.VISIBLE);
+            Logger.logInfo(LOG_TAG, "Terminal toolbar visibility set to VISIBLE (forced)");
 
             ViewGroup.LayoutParams layoutParams = terminalToolbarViewPager.getLayoutParams();
             mTerminalToolbarDefaultHeight = layoutParams.height;
@@ -979,6 +973,30 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             Logger.logWarn(LOG_TAG, "Failed to initialize Claude Code menu helper, creating simplified version: " + e.getMessage());
             mClaudeCodeMenuHelper = null; // 使用简化版本
         }
+
+        // 设置输入框属性确保能弹出输入法
+        terminalCommandInput.setFocusable(true);
+        terminalCommandInput.setFocusableInTouchMode(true);
+        terminalCommandInput.setClickable(true);
+        
+        // 设置点击监听器确保获得焦点并弹出输入法
+        terminalCommandInput.setOnClickListener(v -> {
+            v.requestFocus();
+            InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+        
+        // 设置焦点监听器
+        terminalCommandInput.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
+                }
+            }
+        });
 
         terminalCommandInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND || 

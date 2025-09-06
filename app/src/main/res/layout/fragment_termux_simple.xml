@@ -7,23 +7,32 @@
     android:background="#000000"
     android:orientation="vertical">
 
-    <!-- 简化版终端视图 -->
+    <!-- 终端视图 - 占据顶部空间，底部留给输入框和工具栏 -->
     <com.termux.view.TerminalView
         android:id="@+id/terminal_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/terminal_input_container"
+        android:layout_above="@+id/terminal_toolbar_view_pager"
         android:defaultFocusHighlightEnabled="false"
         android:focusableInTouchMode="true"
         android:scrollbarThumbVertical="@drawable/terminal_scroll_shape"
         android:scrollbars="vertical" />
 
-    <!-- 输入框容器 - 参考activity_termux的terminal_input_container -->
+    <!-- 终端工具栏 - 包含方向键等控制按钮，位于输入框上方 -->
+    <androidx.viewpager.widget.ViewPager
+        android:id="@+id/terminal_toolbar_view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="75dp"
+        android:background="@color/black"
+        android:layout_above="@+id/terminal_input_container"
+        android:visibility="visible" />
+
+    <!-- 输入框容器 - 固定在最底部 -->
     <LinearLayout
         android:id="@+id/terminal_input_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/terminal_toolbar_view_pager"
+        android:layout_alignParentBottom="true"
         android:background="#2d3748"
         android:elevation="4dp"
         android:orientation="horizontal"
@@ -33,7 +42,7 @@
         <EditText
             android:id="@+id/terminal_command_input"
             android:layout_width="0dp"
-            android:layout_height="32dp"
+            android:layout_height="40dp"
             android:layout_weight="1"
             android:layout_gravity="center_vertical"
             android:background="@drawable/terminal_input_background"
@@ -51,8 +60,8 @@
 
         <ImageButton
             android:id="@+id/claude_code_menu_button"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:layout_marginStart="4dp"
             android:layout_marginEnd="4dp"
             android:layout_gravity="center_vertical"
@@ -64,8 +73,8 @@
 
         <ImageButton
             android:id="@+id/terminal_send_button"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:layout_marginStart="4dp"
             android:layout_gravity="center_vertical"
             android:background="@null"
@@ -76,14 +85,5 @@
             android:padding="4dp" />
 
     </LinearLayout>
-
-    <!-- 终端工具栏 - 包含方向键等控制按钮 -->
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/terminal_toolbar_view_pager"
-        android:layout_width="match_parent"
-        android:layout_height="37.5dp"
-        android:background="@color/black"
-        android:layout_alignParentBottom="true"
-        android:visibility="visible" />
 
 </RelativeLayout>
