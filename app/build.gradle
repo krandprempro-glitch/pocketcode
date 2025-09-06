@@ -74,11 +74,7 @@ android {
         // BouncyCastle provider to supply ECDSA/ECDH algorithms on Android
         implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
         
-        // Sora Editor for code viewing with syntax highlighting
-        // Keep versions aligned with existing API usage
-        implementation 'io.github.Rosemoe.sora-editor:editor:0.20.3'
-        implementation 'io.github.Rosemoe.sora-editor:language-java:0.20.3'
-        // Do not add language-universal here; universal is available via editor in this version
+        // Removed external code editor dependency; using TextView + Spannable highlighter
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")

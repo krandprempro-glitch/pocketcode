@@ -151,13 +151,58 @@
                         android:layout_marginStart="12dp" />
                 </LinearLayout>
                 
-                <!-- Sora Code Editor -->
-                <io.github.rosemoe.sora.widget.CodeEditor
-                    android:id="@+id/code_editor"
+                <!-- Code viewer with line numbers: shared vertical scroll, horizontal scroll only for code -->
+                <ScrollView
+                    android:id="@+id/code_scroll"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:background="@android:color/white" />
+                    android:fillViewport="true"
+                    android:scrollbars="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/code_scroller_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <!-- Gutter: line numbers (no horizontal scroll) -->
+                        <TextView
+                            android:id="@+id/code_line_numbers"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingLeft="8dp"
+                            android:paddingRight="8dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:gravity="end"
+                            android:textColor="#858585"
+                            android:fontFamily="monospace"
+                            android:background="#262626" />
+
+                        <!-- Code content: horizontal scrollable only for code text -->
+                        <HorizontalScrollView
+                            android:id="@+id/code_h_scroll"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fillViewport="true"
+                            android:scrollbars="horizontal">
+
+                            <TextView
+                                android:id="@+id/code_editor"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:paddingLeft="12dp"
+                                android:paddingRight="12dp"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="12dp"
+                                android:textIsSelectable="true"
+                                android:fontFamily="monospace"
+                                android:background="#1E1E1E"
+                                android:textColor="#D4D4D4" />
+                        </HorizontalScrollView>
+                    </LinearLayout>
+                </ScrollView>
                     
             </LinearLayout>
                 

@@ -34,15 +34,15 @@ import com.termux.filebrowser.adapters.DrawerMenuAdapter
 import com.termux.filebrowser.viewmodels.RemoteFileBrowserViewModel
 import com.termux.shared.logger.Logger
 import kotlinx.coroutines.launch
+import android.graphics.Typeface
 import java.util.Date
 
-// Sora Editor imports
-import io.github.rosemoe.sora.widget.CodeEditor
-import io.github.rosemoe.sora.lang.EmptyLanguage
-// Keep highlighting minimal to avoid missing language modules
-import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+// Simple highlighter utility
+import com.termux.filebrowser.highlight.SimpleSyntaxHighlighter
+
 
 /**
  * 远程文件浏览Fragment - Kotlin重构版本
@@ -67,8 +67,8 @@ class RemoteFileBrowserFragment : Fragment(),
     private lateinit var drawerFileAdapter: DrawerFileAdapter
     private lateinit var drawerMenuAdapter: DrawerMenuAdapter
 
-    // 代码编辑器
-    private var codeEditor: CodeEditor? = null
+    // 代码查看器（只读）
+    private var codeEditor: TextView? = null
     private var currentViewedFile: RemoteFileItem? = null
 
     // 对话框
@@ -143,31 +143,30 @@ class RemoteFileBrowserFragment : Fragment(),
     private fun setupCodeEditor() {
         codeEditor = binding.codeEditor
         codeEditor?.apply {
-            // 设置为只读模式
-            isEditable = false
-            
-            // 启用行号
-            isLineNumberEnabled = true
-            
-            // Remove feature flags not available in current editor version
-            
-            // 配置深色主题
-            colorScheme = EditorColorScheme().apply {
-                applyDefault()
-                // 设置为深色主题以匹配Termux风格
-                setColor(EditorColorScheme.WHOLE_BACKGROUND, 0xFF1E1E1E.toInt())
-                setColor(EditorColorScheme.TEXT_NORMAL, 0xFFD4D4D4.toInt())
-                setColor(EditorColorScheme.LINE_NUMBER, 0xFF858585.toInt())
-                setColor(EditorColorScheme.LINE_DIVIDER, 0xFF2D2D30.toInt())
-                setColor(EditorColorScheme.CURRENT_LINE, 0xFF2A2A2A.toInt())
-            }
-            
-            // 初始语言设为空
-            setEditorLanguage(EmptyLanguage())
+            // 只读可选文本
+            setTextIsSelectable(true)
+            isFocusable = true
+            isFocusableInTouchMode = true
+            // 水平滚动与内边距
+            // 水平滚动交给外层 HorizontalScrollView
+            setPadding(16, 16, 16, 16)
+            // 暗色主题配色 + 等宽字体
+            setBackgroundColor(0xFF1E1E1E.toInt())
+            setTextColor(0xFFD4D4D4.toInt())
+            typeface = Typeface.MONOSPACE
         }
-        
-        Logger.logInfo(LOG_TAG, "Code editor initialized with dark theme")
+
+        // 配置行号栏样式
+        binding.codeLineNumbers?.apply {
+            setBackgroundColor(0xFF262626.toInt())
+            setTextColor(0xFF858585.toInt())
+            typeface = Typeface.MONOSPACE
+        }
+
+        Logger.logInfo(LOG_TAG, "TextView code viewer initialized in read-only mode")
     }
+
+    // 已迁移到 CodeView 简单高亮，无需 TextMate 初始化
 
     private fun setupAdapters() {
         // 抽屉文件适配器
@@ -753,12 +752,14 @@ class RemoteFileBrowserFragment : Fragment(),
      */
     private fun displayFileContent(file: RemoteFileItem, content: String) {
         codeEditor?.let { editor ->
-            // 设置文件内容
-            editor.setText(content)
-            
-            // 根据文件扩展名设置语言
-            val language = detectLanguageFromFile(file.name)
-            editor.setEditorLanguage(language)
+            // 根据文件扩展名生成高亮文本并显示
+            val highlighted = SimpleSyntaxHighlighter.build(content, file.name)
+            editor.setText(highlighted)
+            // 设置行号
+            val lineCount = content.lines().size
+            val numbers = buildLineNumbers(lineCount)
+            binding.codeLineNumbers?.text = numbers
+            adjustGutterWidth(lineCount)
             
             // 更新文件信息显示
             binding.fileNameText.text = file.name
@@ -776,46 +777,27 @@ class RemoteFileBrowserFragment : Fragment(),
             Logger.logInfo(LOG_TAG, "File loaded: ${file.name}, ${content.length} chars, $lines lines")
         }
     }
-    
-    /**
-     * 根据文件扩展名检测语言类型
-     */
-    private fun detectLanguageFromFile(fileName: String): io.github.rosemoe.sora.lang.Language {
-        val name = fileName.lowercase()
-        // Prefer specific languages when available on classpath; fall back gracefully
-        fun tryLoad(className: String): io.github.rosemoe.sora.lang.Language? {
-            return try {
-                val cls = Class.forName(className)
-                val ctor = cls.getDeclaredConstructor()
-                val obj = ctor.newInstance()
-                obj as? io.github.rosemoe.sora.lang.Language
-            } catch (_: Throwable) {
-                null
-            }
+
+    private fun buildLineNumbers(lines: Int): String {
+        if (lines <= 0) return "1"
+        val sb = StringBuilder()
+        for (i in 1..lines) {
+            sb.append(i)
+            if (i != lines) sb.append('\n')
         }
-
-        // Map extensions to languages. Vue falls back to JS highlighting for script blocks.
-        return when {
-            name.endsWith(".js") || name.endsWith(".jsx") || name.endsWith(".mjs") || name.endsWith(".cjs") ->
-                tryLoad("io.github.rosemoe.sora.langs.javascript.JavaScriptLanguage")
-                    ?: tryLoad("io.github.rosemoe.sora.langs.universal.UniversalLanguage")
-                    ?: EmptyLanguage()
-
-            name.endsWith(".vue") ->
-                // Basic highlighting: use JS if available; otherwise universal/plain
-                tryLoad("io.github.rosemoe.sora.langs.javascript.JavaScriptLanguage")
-                    ?: tryLoad("io.github.rosemoe.sora.langs.universal.UniversalLanguage")
-                    ?: EmptyLanguage()
-
-            name.endsWith(".java") || name.endsWith(".kt") || name.endsWith(".kts") ->
-                // Java/Kotlin: use JavaLanguage if present
-                tryLoad("io.github.rosemoe.sora.langs.java.JavaLanguage") ?: EmptyLanguage()
-
-            else ->
-                // Generic fallback gives some syntax coloring for C-like/JSON/etc if available
-                tryLoad("io.github.rosemoe.sora.langs.universal.UniversalLanguage") ?: EmptyLanguage()
-        }
+        return sb.toString()
     }
+
+    private fun adjustGutterWidth(lineCount: Int) {
+        val view = binding.codeLineNumbers ?: return
+        val digits = lineCount.coerceAtLeast(1).toString().length
+        val charWidth = view.paint.measureText("9")
+        val paddingPx = (view.resources.displayMetrics.density * 12).toInt()
+        val minWidth = (charWidth * digits).toInt() + paddingPx * 2
+        if (view.minWidth < minWidth) view.minWidth = minWidth
+    }
+    
+    // 语言检测与高亮由 SimpleSyntaxHighlighter 处理
     
     /**
      * 格式化文件大小显示
