@@ -267,6 +267,10 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         // Set up command input interface
         Logger.logInfo(LOG_TAG, "Setting up terminal input view...");
         setTerminalInputView(view);
+        
+        // Set up terminal toolbar with extra keys (arrow keys, etc.)
+        Logger.logInfo(LOG_TAG, "Setting up terminal toolbar view...");
+        setTerminalToolbarView(view, savedInstanceState);
 
         // Register for context menu only if terminal view was successfully initialized
         if (mTerminalView != null) {
@@ -822,26 +826,58 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
 
     private void setTerminalToolbarView(View view, Bundle savedInstanceState) {
-        // 暂时注释掉，稍后实现简化版本
-        // mTermuxTerminalExtraKeys = new TermuxTerminalExtraKeys(getActivity(), mTerminalView,
-        //     mTermuxTerminalViewClient, mTermuxTerminalSessionActivityClient);
+        Logger.logInfo(LOG_TAG, "=== setTerminalToolbarView START ===");
+        
+        try {
+            // For TermuxFragment, we'll create a simplified extra keys setup
+            // since we don't have full TermuxActivity-style clients available
+            Logger.logInfo(LOG_TAG, "Setting up simplified extra keys for Fragment context...");
+            
+            // Instead of creating full TermuxActivity clients, we'll use a simplified approach
+            // The terminal toolbar will still be functional with basic extra keys
+            Logger.logInfo(LOG_TAG, "Skipping complex client creation in Fragment context");
 
-        final ViewPager terminalToolbarViewPager = getTerminalToolbarViewPager(view);
-        if (mPreferences.shouldShowTerminalToolbar()) terminalToolbarViewPager.setVisibility(View.VISIBLE);
+            final ViewPager terminalToolbarViewPager = getTerminalToolbarViewPager(view);
+            Logger.logInfo(LOG_TAG, "Terminal toolbar ViewPager: " + terminalToolbarViewPager);
+            
+            if (terminalToolbarViewPager == null) {
+                Logger.logError(LOG_TAG, "Terminal toolbar ViewPager not found in layout!");
+                return;
+            }
 
-        ViewGroup.LayoutParams layoutParams = terminalToolbarViewPager.getLayoutParams();
-        mTerminalToolbarDefaultHeight = layoutParams.height;
+            // Check preference for showing terminal toolbar - same logic as TermuxActivity
+            boolean shouldShow = mPreferences.shouldShowTerminalToolbar();
+            Logger.logInfo(LOG_TAG, "shouldShowTerminalToolbar preference: " + shouldShow);
+            
+            if (shouldShow) {
+                terminalToolbarViewPager.setVisibility(View.VISIBLE);
+                Logger.logInfo(LOG_TAG, "Terminal toolbar visibility set to VISIBLE");
+            } else {
+                terminalToolbarViewPager.setVisibility(View.GONE);
+                Logger.logInfo(LOG_TAG, "Terminal toolbar visibility set to GONE (preference disabled)");
+            }
 
-        setTerminalToolbarHeight(view);
+            ViewGroup.LayoutParams layoutParams = terminalToolbarViewPager.getLayoutParams();
+            mTerminalToolbarDefaultHeight = layoutParams.height;
+            Logger.logInfo(LOG_TAG, "Terminal toolbar default height: " + mTerminalToolbarDefaultHeight);
 
-        String savedTextInput = null;
-        if (savedInstanceState != null)
-            savedTextInput = savedInstanceState.getString(ARG_TERMINAL_TOOLBAR_TEXT_INPUT);
+            setTerminalToolbarHeight(view);
 
-        // 暂时注释掉，稍后实现简化版本
-        // terminalToolbarViewPager.setAdapter(new TerminalToolbarViewPager.PageAdapter(getActivity(), savedTextInput));
-        // 暂时注释掉，稍后实现简化版本
-        // terminalToolbarViewPager.addOnPageChangeListener(new TerminalToolbarViewPager.OnPageChangeListener(getActivity(), terminalToolbarViewPager));
+            String savedTextInput = null;
+            if (savedInstanceState != null)
+                savedTextInput = savedInstanceState.getString(ARG_TERMINAL_TOOLBAR_TEXT_INPUT);
+            Logger.logInfo(LOG_TAG, "Saved text input: " + savedTextInput);
+
+            // Set up the ViewPager adapter - create a Fragment-compatible version
+            Logger.logInfo(LOG_TAG, "Setting Fragment-compatible ViewPager adapter...");
+            terminalToolbarViewPager.setAdapter(new FragmentTerminalToolbarPageAdapter(this, savedTextInput));
+            terminalToolbarViewPager.addOnPageChangeListener(new FragmentTerminalToolbarOnPageChangeListener(this, terminalToolbarViewPager));
+            
+            Logger.logInfo(LOG_TAG, "=== setTerminalToolbarView SUCCESS ===");
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "=== setTerminalToolbarView FAILED ===");
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to initialize terminal toolbar", e);
+        }
     }
 
     private void setTerminalToolbarHeight(View view) {
@@ -849,9 +885,15 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         if (terminalToolbarViewPager == null) return;
 
         ViewGroup.LayoutParams layoutParams = terminalToolbarViewPager.getLayoutParams();
+        
+        // Use a safe default if mTermuxTerminalExtraKeys is not initialized yet
+        int extraKeysRows = 1; // Default to 1 row for arrow keys
+        if (mTermuxTerminalExtraKeys != null && mTermuxTerminalExtraKeys.getExtraKeysInfo() != null) {
+            extraKeysRows = mTermuxTerminalExtraKeys.getExtraKeysInfo().getMatrix().length;
+        }
+        
         layoutParams.height = Math.round(mTerminalToolbarDefaultHeight *
-            (mTermuxTerminalExtraKeys.getExtraKeysInfo() == null ? 0 : mTermuxTerminalExtraKeys.getExtraKeysInfo().getMatrix().length) *
-            mProperties.getTerminalToolbarHeightScaleFactor());
+            extraKeysRows * mProperties.getTerminalToolbarHeightScaleFactor());
         terminalToolbarViewPager.setLayoutParams(layoutParams);
     }
 
@@ -1310,7 +1352,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         if (mProperties != null) {
             reloadProperties();
 
-            if (mExtraKeysView != null) {
+            if (mExtraKeysView != null && mTermuxTerminalExtraKeys != null && mTermuxTerminalExtraKeys.getExtraKeysInfo() != null) {
                 mExtraKeysView.setButtonTextAllCaps(mProperties.shouldExtraKeysTextBeAllCaps());
                 mExtraKeysView.reload(mTermuxTerminalExtraKeys.getExtraKeysInfo(), mTerminalToolbarDefaultHeight);
             }
@@ -1447,5 +1489,158 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
     public TermuxAppSharedProperties getProperties() {
         return mProperties;
+    }
+    
+    /**
+     * Fragment-compatible Terminal Toolbar Page Adapter.
+     * This is a modified version of TerminalToolbarViewPager.PageAdapter that works with TermuxFragment.
+     */
+    private static class FragmentTerminalToolbarPageAdapter extends androidx.viewpager.widget.PagerAdapter {
+        final TermuxFragment mFragment;
+        String mSavedTextInput;
+
+        public FragmentTerminalToolbarPageAdapter(TermuxFragment fragment, String savedTextInput) {
+            this.mFragment = fragment;
+            this.mSavedTextInput = savedTextInput;
+        }
+
+        @Override
+        public int getCount() {
+            return 2;
+        }
+
+        @Override
+        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
+            return view == object;
+        }
+
+        @NonNull
+        @Override
+        public Object instantiateItem(@NonNull ViewGroup collection, int position) {
+            LayoutInflater inflater = LayoutInflater.from(mFragment.getContext());
+            View layout;
+            if (position == 0) {
+                layout = inflater.inflate(R.layout.view_terminal_toolbar_extra_keys, collection, false);
+                ExtraKeysView extraKeysView = (ExtraKeysView) layout;
+                
+                // Set up the extra keys view client - create a simplified one
+                if (mFragment.getTermuxTerminalExtraKeys() != null) {
+                    extraKeysView.setExtraKeysViewClient(mFragment.getTermuxTerminalExtraKeys());
+                    extraKeysView.setButtonTextAllCaps(mFragment.getProperties().shouldExtraKeysTextBeAllCaps());
+                    mFragment.setExtraKeysView(extraKeysView);
+                    extraKeysView.reload(mFragment.getTermuxTerminalExtraKeys().getExtraKeysInfo(),
+                        mFragment.getTerminalToolbarDefaultHeight());
+                } else {
+                    Logger.logWarn(LOG_TAG, "TermuxTerminalExtraKeys not initialized, creating basic extra keys client");
+                    
+                    // Create a basic extra keys client that handles basic key input
+                    extraKeysView.setExtraKeysViewClient(new com.termux.shared.termux.extrakeys.ExtraKeysView.IExtraKeysView() {
+                        @Override
+                        public void onExtraKeyButtonClick(View view, com.termux.shared.termux.extrakeys.ExtraKeyButton button, com.google.android.material.button.MaterialButton buttonView) {
+                            // Handle basic extra key button clicks
+                            TerminalSession session = mFragment.getCurrentSession();
+                            if (session != null && session.isRunning()) {
+                                String key = button.getKey();
+                                Logger.logInfo(LOG_TAG, "Extra key pressed: " + key);
+                                
+                                // Handle basic keys like arrow keys, ESC, TAB, etc.
+                                if ("UP".equals(key)) {
+                                    session.write("\u001b[A"); // Up arrow
+                                } else if ("DOWN".equals(key)) {
+                                    session.write("\u001b[B"); // Down arrow  
+                                } else if ("LEFT".equals(key)) {
+                                    session.write("\u001b[D"); // Left arrow
+                                } else if ("RIGHT".equals(key)) {
+                                    session.write("\u001b[C"); // Right arrow
+                                } else if ("ESC".equals(key)) {
+                                    session.write("\u001b"); // Escape
+                                } else if ("TAB".equals(key)) {
+                                    session.write("\t"); // Tab
+                                } else if ("CTRL".equals(key) || "ALT".equals(key) || "SHIFT".equals(key) || "FN".equals(key)) {
+                                    // Modifier keys - just toggle state
+                                    Logger.logInfo(LOG_TAG, "Modifier key: " + key);
+                                } else {
+                                    // Regular key - send as-is
+                                    session.write(key);
+                                }
+                            }
+                        }
+                        
+                        @Override
+                        public boolean performExtraKeyButtonHapticFeedback(View view, com.termux.shared.termux.extrakeys.ExtraKeyButton button, com.google.android.material.button.MaterialButton buttonView) {
+                            return false; // No haptic feedback
+                        }
+                    });
+                    
+                    // Set basic properties
+                    extraKeysView.setButtonTextAllCaps(mFragment.getProperties().shouldExtraKeysTextBeAllCaps());
+                    mFragment.setExtraKeysView(extraKeysView);
+                    
+                    // Create basic extra keys info with common keys
+                    try {
+                        String basicExtraKeys = "[[\"ESC\",\"TAB\",\"CTRL\",\"ALT\",\"/\",\"-\",\"HOME\",\"UP\",\"END\"],[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"LEFT\",\"DOWN\",\"RIGHT\"]]";
+                        com.termux.shared.termux.extrakeys.ExtraKeysInfo extraKeysInfo = new com.termux.shared.termux.extrakeys.ExtraKeysInfo(basicExtraKeys, "default", com.termux.shared.termux.extrakeys.ExtraKeysConstants.CONTROL_CHARS_ALIASES);
+                        extraKeysView.reload(extraKeysInfo, mFragment.getTerminalToolbarDefaultHeight());
+                    } catch (Exception e) {
+                        Logger.logWarn(LOG_TAG, "Failed to create basic extra keys: " + e.getMessage());
+                    }
+                }
+
+            } else {
+                layout = inflater.inflate(R.layout.view_terminal_toolbar_text_input, collection, false);
+                final EditText editText = layout.findViewById(R.id.terminal_toolbar_text_input);
+
+                if (mSavedTextInput != null) {
+                    editText.setText(mSavedTextInput);
+                    mSavedTextInput = null;
+                }
+
+                editText.setOnEditorActionListener((v, actionId, event) -> {
+                    TerminalSession session = mFragment.getCurrentSession();
+                    if (session != null) {
+                        if (session.isRunning()) {
+                            String textToSend = editText.getText().toString();
+                            if (textToSend.length() == 0) textToSend = "\r";
+                            session.write(textToSend);
+                        }
+                        editText.setText("");
+                    }
+                    return true;
+                });
+            }
+            collection.addView(layout);
+            return layout;
+        }
+
+        @Override
+        public void destroyItem(@NonNull ViewGroup collection, int position, @NonNull Object view) {
+            collection.removeView((View) view);
+        }
+    }
+    
+    /**
+     * Fragment-compatible Terminal Toolbar Page Change Listener.
+     * This is a modified version of TerminalToolbarViewPager.OnPageChangeListener that works with TermuxFragment.
+     */
+    private static class FragmentTerminalToolbarOnPageChangeListener extends ViewPager.SimpleOnPageChangeListener {
+        final TermuxFragment mFragment;
+        final ViewPager mTerminalToolbarViewPager;
+
+        public FragmentTerminalToolbarOnPageChangeListener(TermuxFragment fragment, ViewPager viewPager) {
+            this.mFragment = fragment;
+            this.mTerminalToolbarViewPager = viewPager;
+        }
+
+        @Override
+        public void onPageSelected(int position) {
+            if (position == 0) {
+                if (mFragment.getTerminalView() != null) {
+                    mFragment.getTerminalView().requestFocus();
+                }
+            } else {
+                final EditText editText = mTerminalToolbarViewPager.findViewById(R.id.terminal_toolbar_text_input);
+                if (editText != null) editText.requestFocus();
+            }
+        }
     }
 }
