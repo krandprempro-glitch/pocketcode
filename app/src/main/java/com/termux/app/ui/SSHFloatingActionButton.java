@@ -42,34 +42,46 @@ public class SSHFloatingActionButton extends RelativeLayout {
     }
 
     private void init() {
-        // 创建ImageView作为FAB图标
-        mFabIcon = new ImageView(getContext());
-        mFabIcon.setImageResource(R.drawable.ic_ssh);
-        mFabIcon.setBackground(null);
-        mFabIcon.setScaleType(ImageView.ScaleType.CENTER);
-        mFabIcon.setPadding(8, 8, 8, 8);
-        
-        // 设置布局参数 - 极简化按钮尺寸
-        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
-            (int) (24 * getResources().getDisplayMetrics().density),
-            (int) (24 * getResources().getDisplayMetrics().density)
-        );
-        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        layoutParams.setMargins(0, 
-            (int) (16 * getResources().getDisplayMetrics().density),
-            (int) (16 * getResources().getDisplayMetrics().density), 0);
-        
-        mFabIcon.setLayoutParams(layoutParams);
-        
-        // 添加触摸事件处理拖动和点击
-        mFabIcon.setOnTouchListener(this::handleTouch);
-        
-        // 设置初始状态 - 移除阴影效果
-        mFabIcon.setElevation(0);
-        mFabIcon.setStateListAnimator(null); // 禁用默认状态动画
-        
-        addView(mFabIcon);
+        try {
+            // 创建ImageView作为FAB图标
+            mFabIcon = new ImageView(getContext());
+            mFabIcon.setImageResource(R.drawable.ic_ssh);
+            mFabIcon.setBackground(null);
+            mFabIcon.setScaleType(ImageView.ScaleType.CENTER);
+            mFabIcon.setPadding(8, 8, 8, 8);
+            
+            // 设置布局参数 - 极简化按钮尺寸
+            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
+                (int) (24 * getResources().getDisplayMetrics().density),
+                (int) (24 * getResources().getDisplayMetrics().density)
+            );
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+            layoutParams.setMargins(0, 
+                (int) (16 * getResources().getDisplayMetrics().density),
+                (int) (16 * getResources().getDisplayMetrics().density), 0);
+            
+            mFabIcon.setLayoutParams(layoutParams);
+            
+            // 添加触摸事件处理拖动和点击
+            mFabIcon.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    return handleTouch(v, event);
+                }
+            });
+            
+            // 设置初始状态 - 移除阴影效果
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                mFabIcon.setElevation(0);
+                mFabIcon.setStateListAnimator(null); // 禁用默认状态动画
+            }
+            
+            addView(mFabIcon);
+        } catch (Exception e) {
+            // 如果初始化失败，创建一个简单的空视图
+            android.util.Log.e("SSHFloatingActionButton", "Failed to initialize FAB", e);
+        }
     }
     
     /**
@@ -134,6 +146,7 @@ public class SSHFloatingActionButton extends RelativeLayout {
      * 点击动画效果
      */
     private void animateClick() {
+        if (mFabIcon == null) return;
         mFabIcon.animate()
                 .scaleX(0.9f)
                 .scaleY(0.9f)
@@ -142,12 +155,14 @@ public class SSHFloatingActionButton extends RelativeLayout {
                 .setListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationEnd(Animator animation) {
-                        mFabIcon.animate()
-                                .scaleX(1.0f)
-                                .scaleY(1.0f)
-                                .setDuration(100)
-                                .setListener(null)
-                                .start();
+                        if (mFabIcon != null) {
+                            mFabIcon.animate()
+                                    .scaleX(1.0f)
+                                    .scaleY(1.0f)
+                                    .setDuration(100)
+                                    .setListener(null)
+                                    .start();
+                        }
                     }
                 })
                 .start();
@@ -157,7 +172,7 @@ public class SSHFloatingActionButton extends RelativeLayout {
      * 显示FAB
      */
     public void show() {
-        if (mIsVisible) return;
+        if (mIsVisible || mFabIcon == null) return;
         
         mIsVisible = true;
         setVisibility(View.VISIBLE);
@@ -175,7 +190,7 @@ public class SSHFloatingActionButton extends RelativeLayout {
      * 隐藏FAB
      */
     public void hide() {
-        if (!mIsVisible) return;
+        if (!mIsVisible || mFabIcon == null) return;
         
         mIsVisible = false;
         mFabIcon.animate()

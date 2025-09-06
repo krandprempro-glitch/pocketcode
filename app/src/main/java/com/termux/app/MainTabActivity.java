@@ -1,10 +1,11 @@
 package com.termux.app;
 
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
@@ -12,6 +13,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.termux.R;
 import com.termux.app.fragments.SSHConnectionFragment;
+import com.termux.app.fragments.TermuxFragment;
 import com.termux.filebrowser.RemoteFileBrowserFragment;
 import com.termux.app.fragments.GitChangesFragment;
 import com.termux.app.fragments.SettingsFragment;
@@ -19,42 +21,37 @@ import com.termux.app.models.SSHConnectionConfig;
 
 /**
  * 主Tab界面Activity
- * 包含4个Tab页面：SSH连接、SFTP文件浏览、Git变更、设置
+ * 包含4个Tab页面：终端、SFTP文件浏览、Git变更、设置
+ * 所有Tab都使用Fragment实现
  */
 public class MainTabActivity extends AppCompatActivity {
     private TabLayout tabLayout;
     private ViewPager2 viewPager;
     private TabPagerAdapter pagerAdapter;
-    
-    private SSHConnectionFragment sshFragment;
-    private RemoteFileBrowserFragment fileFragment;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Use standard tabs layout without hybrid approach
         setContentView(R.layout.activity_main_tabs);
         
-        initViews();
-        setupTabs();
-        setupFragmentCommunication();
+        initTabViews();
     }
     
-    private void initViews() {
+    private void initTabViews() {
         tabLayout = findViewById(R.id.tab_layout);
         viewPager = findViewById(R.id.view_pager);
         
         pagerAdapter = new TabPagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
-        // Disable horizontal swipe between tabs; allow only tab clicks/programmatic changes
-        viewPager.setUserInputEnabled(false);
-    }
-    
-    private void setupTabs() {
+        
+        // Connect TabLayout with ViewPager2
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
             switch (position) {
                 case 0:
-                    tab.setText("SSH连接");
-                    tab.setIcon(android.R.drawable.ic_dialog_info);
+                    tab.setText("终端");
+                    tab.setIcon(android.R.drawable.ic_menu_manage);
                     break;
                 case 1:
                     tab.setText("文件浏览");
@@ -70,56 +67,13 @@ public class MainTabActivity extends AppCompatActivity {
                     break;
             }
         }).attach();
-        
-        // 默认选中Tab1 (SSH连接)
-        viewPager.setCurrentItem(0, false);
     }
     
     /**
-     * 设置Fragment之间的通信
-     */
-    private void setupFragmentCommunication() {
-        // 延迟执行，等待Fragment创建完成
-        viewPager.post(() -> {
-            try {
-                sshFragment = (SSHConnectionFragment) getSupportFragmentManager()
-                        .findFragmentByTag("f0");
-                fileFragment = (RemoteFileBrowserFragment) getSupportFragmentManager()
-                        .findFragmentByTag("f1");
-                        
-                if (sshFragment != null) {
-                    sshFragment.setOnSSHConfigListener(new SSHConnectionFragment.OnSSHConfigListener() {
-                        @Override
-                        public void onSSHConnect(SSHConnectionConfig config) {
-                            // SSH连接成功，通知文件浏览Fragment
-                            if (fileFragment != null) {
-                                fileFragment.onSSHConnected(config);
-                            }
-                            // 切换到文件浏览
-                            viewPager.setCurrentItem(1, true);
-                        }
-                        
-                        @Override
-                        public void onSSHDisconnect() {
-                            // SSH断开连接，通知文件浏览Fragment
-                            if (fileFragment != null) {
-                                fileFragment.onSSHDisconnected();
-                            }
-                        }
-                    });
-                }
-            } catch (Exception e) {
-                // Fragment可能还未创建，稍后再试
-                viewPager.postDelayed(this::setupFragmentCommunication, 100);
-            }
-        });
-    }
-    
-    /**
-     * Tab页面适配器
+     * Tab页面适配器 - 包含所有4个Fragment
      */
     private static class TabPagerAdapter extends FragmentStateAdapter {
-        
+
         public TabPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
             super(fragmentActivity);
         }
@@ -129,22 +83,21 @@ public class MainTabActivity extends AppCompatActivity {
         public Fragment createFragment(int position) {
             switch (position) {
                 case 0:
-                    return new SSHConnectionFragment();
+                    return new TermuxFragment(); // Terminal tab
                 case 1:
-                    return new RemoteFileBrowserFragment();
+                    return new RemoteFileBrowserFragment(); // File browser tab
                 case 2:
-                    return new GitChangesFragment(); // 占位Fragment
+                    return new GitChangesFragment(); // Git changes tab
                 case 3:
-                    return new SettingsFragment(); // 占位Fragment
+                    return new SettingsFragment(); // Settings tab
                 default:
-                    return new RemoteFileBrowserFragment();
+                    return new TermuxFragment();
             }
         }
 
         @Override
         public int getItemCount() {
-            return 4;
+            return 4; // All 4 tabs are fragments now
         }
     }
-
 }

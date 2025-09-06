@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000">
+
+    <!-- 简化版终端视图 -->
+    <com.termux.view.TerminalView
+        android:id="@+id/terminal_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <!-- 底部工具栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#1E1E1E">
+
+        <EditText
+            android:id="@+id/terminal_command_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="输入命令"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#888888"
+            android:background="@android:color/transparent"
+            android:singleLine="true"
+            android:imeOptions="actionSend" />
+
+        <ImageButton
+            android:id="@+id/terminal_send_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_menu_send"
+            android:background="?android:attr/selectableItemBackground"
+            android:contentDescription="发送命令" />
+
+    </LinearLayout>
+
+</LinearLayout>
