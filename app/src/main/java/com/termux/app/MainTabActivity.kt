@@ -12,7 +12,8 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.termux.R
 import com.termux.app.configuration.fragments.ConfigurationMainFragment
-import com.termux.app.floating.managers.FloatingWindowManager
+import com.termux.app.floating.views.FloatingActionButton
+import com.termux.app.ui.SSHConfigDialog
 import com.termux.app.fragments.GitChangesFragment
 import com.termux.app.fragments.SSHConnectionFragment
 import com.termux.app.fragments.TermuxFragment
@@ -28,7 +29,7 @@ class MainTabActivity : AppCompatActivity() {
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
     private lateinit var pagerAdapter: TabPagerAdapter
-    private lateinit var floatingManager: FloatingWindowManager
+    private var floatingActionButton: FloatingActionButton? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +38,7 @@ class MainTabActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main_tabs)
         
         initTabViews()
-        initFloatingWindow()
+        initFloatingButton()
         handleIntent(intent)
     }
     
@@ -74,11 +75,65 @@ class MainTabActivity : AppCompatActivity() {
         }.attach()
     }
     
-    private fun initFloatingWindow() {
-        floatingManager = FloatingWindowManager.getInstance(this)
+    private fun initFloatingButton() {
+        floatingActionButton = FloatingActionButton(this)
+        floatingActionButton?.setOnFloatingActionListener(object : FloatingActionButton.OnFloatingActionListener {
+            override fun onMenuToggle(isVisible: Boolean) {
+                // 菜单切换
+            }
+            
+            override fun onSSHConnectionClicked() {
+                showSSHConnectionDialog()
+            }
+            
+            override fun onRunCommandClicked() {
+                showRunCommandDialog()
+            }
+            
+            override fun onQuickSettingsClicked() {
+                // 跳转到配置页面
+                tabLayout.getTabAt(3)?.select()
+            }
+        })
         
-        // 应用启动时恢复悬浮按钮状态
-        floatingManager.onAppStarted()
+        // 显示悬浮按钮
+        floatingActionButton?.show()
+    }
+    
+    private fun showSSHConnectionDialog() {
+        val sshDialog = SSHConfigDialog(this)
+        sshDialog.setOnSSHConfigListener(object : SSHConfigDialog.OnSSHConfigListener {
+            override fun onSSHConnect(config: com.termux.app.models.SSHConnectionConfig?) {
+                // 连接SSH服务器
+                config?.let {
+                    // 切换到文件浏览tab
+                    tabLayout.getTabAt(1)?.select()
+                    // TODO: 这里可以进一步集成SSH连接逻辑
+                }
+            }
+            
+            override fun onSSHConfigSaved(config: com.termux.app.models.SSHConnectionConfig?) {
+                // 配置保存成功
+            }
+            
+            override fun onSSHConfigDeleted(configName: String?) {
+                // 配置删除成功
+            }
+            
+            override fun onDialogClosed() {
+                // 对话框关闭
+            }
+        })
+        sshDialog.show()
+    }
+    
+    private fun showRunCommandDialog() {
+        // 显示运行命令dialog
+        android.app.AlertDialog.Builder(this)
+            .setTitle("运行命令")
+            .setMessage("运行命令功能开发中...")
+            .setPositiveButton("确定", null)
+            .show()
     }
     
     private fun handleIntent(intent: Intent?) {
@@ -93,7 +148,7 @@ class MainTabActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        floatingManager.onAppStopped()
+        floatingActionButton?.hide()
     }
     
     /**

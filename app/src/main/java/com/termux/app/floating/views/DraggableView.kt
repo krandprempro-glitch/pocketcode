@@ -52,10 +52,10 @@ abstract class DraggableView(context: Context) : FrameLayout(context) {
             PixelFormat.TRANSLUCENT
         )
         
-        // 默认位置：右下角
+        // 默认位置：右上角
         layoutParams.gravity = Gravity.TOP or Gravity.START
         layoutParams.x = screenWidth - dpToPx(60) // 距离右边缘60dp
-        layoutParams.y = screenHeight - dpToPx(120) // 距离底部120dp
+        layoutParams.y = dpToPx(60) // 距离顶部60dp
     }
     
     private fun setupTouchListener() {

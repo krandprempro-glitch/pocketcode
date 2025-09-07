@@ -10,6 +10,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.button.MaterialButton;
+
 import com.termux.R;
 import com.termux.app.models.SSHConnectionConfig;
 
@@ -71,10 +73,10 @@ public class SSHConfigAdapter extends RecyclerView.Adapter<SSHConfigAdapter.Conf
     class ConfigViewHolder extends RecyclerView.ViewHolder {
         private final TextView mNameText;
         private final TextView mDetailsText;
-        private final ImageButton mConnectButton;
-        private final ImageButton mDeleteButton;
-        private final ImageButton mEditButton;
-        private final ImageButton mTestButton;
+        private final MaterialButton mConnectButton;
+        private final MaterialButton mDeleteButton;
+        private final MaterialButton mEditButton;
+        private final MaterialButton mTestButton;
 
         public ConfigViewHolder(@NonNull View itemView) {
             super(itemView);
