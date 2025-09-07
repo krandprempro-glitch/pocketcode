@@ -16,7 +16,7 @@ import com.termux.app.fragments.SSHConnectionFragment;
 import com.termux.app.fragments.TermuxFragment;
 import com.termux.filebrowser.RemoteFileBrowserFragment;
 import com.termux.app.fragments.GitChangesFragment;
-import com.termux.app.fragments.SettingsFragment;
+import com.termux.app.configuration.fragments.ConfigurationMainFragment;
 import com.termux.app.models.SSHConnectionConfig;
 
 /**
@@ -65,7 +65,7 @@ public class MainTabActivity extends AppCompatActivity {
                     tab.setIcon(android.R.drawable.ic_menu_recent_history);
                     break;
                 case 3:
-                    tab.setText("设置");
+                    tab.setText("配置");
                     tab.setIcon(android.R.drawable.ic_menu_preferences);
                     break;
             }
@@ -92,7 +92,7 @@ public class MainTabActivity extends AppCompatActivity {
                 case 2:
                     return new GitChangesFragment(); // Git changes tab
                 case 3:
-                    return new SettingsFragment(); // Settings tab
+                    return new ConfigurationMainFragment(); // Configuration tab
                 default:
                     return new TermuxFragment();
             }
