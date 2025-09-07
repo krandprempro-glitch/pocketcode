@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import com.termux.R
 import com.termux.app.MainTabActivity
 import com.termux.app.floating.views.FloatingActionButton
+import com.termux.app.floating.extensions.FloatingActionExtensions
 
 /**
  * 悬浮窗服务
@@ -58,11 +59,13 @@ class FloatingWindowService : Service() {
     
     private var floatingButton: FloatingActionButton? = null
     private lateinit var permissionService: FloatingPermissionService
+    private lateinit var actionExtensions: FloatingActionExtensions
     private var isFloatingVisible = false
     
     override fun onCreate() {
         super.onCreate()
         permissionService = FloatingPermissionService(this)
+        actionExtensions = FloatingActionExtensions(this)
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -98,15 +101,15 @@ class FloatingWindowService : Service() {
                     }
                     
                     override fun onSSHConnectionClicked() {
-                        handleSSHConnectionAction()
+                        actionExtensions.handleSSHConnectionAction()
                     }
                     
                     override fun onRunCommandClicked() {
-                        handleRunCommandAction()
+                        actionExtensions.handleRunCommandAction()
                     }
                     
                     override fun onQuickSettingsClicked() {
-                        handleQuickSettingsAction()
+                        actionExtensions.handleQuickSettingsAction()
                     }
                 })
             }
@@ -130,26 +133,6 @@ class FloatingWindowService : Service() {
         }
     }
     
-    private fun handleSSHConnectionAction() {
-        // TODO: 在Phase 4中实现
-        val intent = Intent(this, MainTabActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
-    }
-    
-    private fun handleRunCommandAction() {
-        // TODO: 在Phase 4中实现
-        Toast.makeText(this, "运行命令功能", Toast.LENGTH_SHORT).show()
-    }
-    
-    private fun handleQuickSettingsAction() {
-        val intent = Intent(this, MainTabActivity::class.java).apply {
-            putExtra("navigate_to", "configuration")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
-    }
     
     private fun showPermissionNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

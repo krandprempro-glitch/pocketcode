@@ -78,4 +78,30 @@
         <item name="android:windowLightNavigationBar">false</item>
     </style>
 
+    <!-- Configuration Activities Dark theme with coordinated status bar -->
+    <style name="Theme.ConfigurationActivity.Dark" parent="Theme.TermuxApp.DayNight.NoActionBar">
+        <!-- Primary brand colors. -->
+        <item name="colorPrimary">@color/dark_primary</item>
+        <item name="colorPrimaryVariant">@color/dark_primary_variant</item>
+        <item name="colorOnPrimary">@color/white</item>
+        
+        <!-- Secondary brand colors. -->
+        <item name="colorSecondary">@color/dark_secondary</item>
+        <item name="colorOnSecondary">@color/black</item>
+        
+        <!-- Background colors. -->
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        
+        <!-- Status bar coordination with toolbar -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@color/dark_tab_background</item>
+        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
 </resources>

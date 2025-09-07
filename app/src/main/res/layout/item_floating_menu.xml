@@ -13,8 +13,7 @@
         android:id="@+id/iv_menu_icon"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:src="@drawable/ic_placeholder"
-        android:tint="?attr/colorOnSurface" />
+        android:src="@drawable/ic_placeholder" />
 
     <TextView
         android:id="@+id/tv_menu_text"
@@ -24,6 +23,6 @@
         android:layout_marginStart="12dp"
         android:text="菜单项"
         android:textSize="14sp"
-        android:textColor="?attr/colorOnSurface" />
+        android:textColor="@color/text_primary" />
 
 </LinearLayout>

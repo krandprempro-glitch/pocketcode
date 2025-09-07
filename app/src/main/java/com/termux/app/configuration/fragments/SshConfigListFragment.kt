@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.termux.R
 import com.termux.app.configuration.adapters.SshConfigAdapter
-import com.termux.app.configuration.managers.ConfigNavigationManager
+import com.termux.app.configuration.activities.SshConfigDetailActivity
 import com.termux.app.models.SSHConfigManager
 import com.termux.app.models.SSHConnectionConfig
 import com.termux.app.ssh.SSHConnectionManager
@@ -37,7 +37,6 @@ class SshConfigListFragment : Fragment() {
     private lateinit var btnNewConfig: MaterialButton
     
     private lateinit var sshConfigManager: SSHConfigManager
-    private lateinit var navigationManager: ConfigNavigationManager
     
     override fun onCreateView(
         inflater: LayoutInflater, 
@@ -61,14 +60,14 @@ class SshConfigListFragment : Fragment() {
         btnNewConfig = view.findViewById(R.id.btn_new_ssh_config)
         
         sshConfigManager = SSHConfigManager.getInstance(requireContext())
-        navigationManager = ConfigNavigationManager.getInstance(requireActivity())
     }
     
     private fun setupRecyclerView() {
         adapter = SshConfigAdapter(requireContext())
         adapter.setOnConfigActionListener(object : SshConfigAdapter.OnConfigActionListener {
             override fun onEditConfig(config: SSHConnectionConfig) {
-                navigationManager.navigateToSSHConfigDetail(config.name)
+                val intent = SshConfigDetailActivity.newIntent(requireContext(), config.name)
+                startActivity(intent)
             }
             
             override fun onDeleteConfig(config: SSHConnectionConfig) {
@@ -90,7 +89,8 @@ class SshConfigListFragment : Fragment() {
     
     private fun setupClickListeners() {
         btnNewConfig.setOnClickListener {
-            navigationManager.navigateToSSHConfigDetail(null)
+            val intent = SshConfigDetailActivity.newIntent(requireContext(), null)
+            startActivity(intent)
         }
     }
     

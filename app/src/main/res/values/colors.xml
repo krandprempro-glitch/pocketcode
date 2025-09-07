@@ -83,4 +83,10 @@
     <color name="language_rust">#000000</color>
     <color name="language_cpp">#00599C</color>
     <color name="language_custom">#607D8B</color>
+    
+    <!-- Execution result colors -->
+    <color name="success_color">#4CAF50</color>
+    <color name="error_color">#F44336</color>
+    <color name="warning_color">#FF9800</color>
+    <color name="secondary_text_color">#757575</color>
 </resources>

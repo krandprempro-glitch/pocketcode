@@ -9,21 +9,23 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.termux.R
 import com.termux.app.configuration.adapters.ConfigurationMainAdapter
-import com.termux.app.configuration.managers.ConfigNavigationManager
+import com.termux.app.configuration.activities.SshConfigListActivity
+import com.termux.app.configuration.activities.RunConfigListActivity
+import com.termux.app.configuration.activities.GlobalSettingsActivity
 import com.termux.app.configuration.models.ConfigurationItem
+import android.widget.Toast
 
 class ConfigurationMainFragment : Fragment() {
     
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: ConfigurationMainAdapter
-    private lateinit var navigationManager: ConfigNavigationManager
     
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_configuration_main, container, false)
+        return inflater.inflate(R.layout.fragment_configuration_main_simple, container, false)
     }
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -31,7 +33,6 @@ class ConfigurationMainFragment : Fragment() {
         
         initViews(view)
         setupRecyclerView()
-        setupNavigation()
     }
     
     private fun initViews(view: View) {
@@ -51,14 +52,25 @@ class ConfigurationMainFragment : Fragment() {
         adapter.setItems(ConfigurationItem.DEFAULT_ITEMS.toList())
     }
     
-    private fun setupNavigation() {
-        // 使用childFragmentManager来管理子Fragment的导航
-        // ViewPager2中的Fragment应该使用自己的FragmentManager来管理子Fragment
-        navigationManager = ConfigNavigationManager(childFragmentManager, android.R.id.content)
-    }
-    
     private fun onConfigurationItemClicked(item: ConfigurationItem) {
-        navigationManager.navigateByConfigType(item.type)
+        when (item.type) {
+            ConfigurationItem.ConfigurationType.SSH_CONFIG -> {
+                val intent = SshConfigListActivity.newIntent(requireContext())
+                startActivity(intent)
+            }
+            ConfigurationItem.ConfigurationType.RUN_CONFIG -> {
+                val intent = RunConfigListActivity.newIntent(requireContext())
+                startActivity(intent)
+            }
+            ConfigurationItem.ConfigurationType.GLOBAL_SETTINGS -> {
+                val intent = GlobalSettingsActivity.newIntent(requireContext())
+                startActivity(intent)
+            }
+            ConfigurationItem.ConfigurationType.ABOUT -> {
+                // TODO: Phase 2实现关于页面
+                Toast.makeText(requireContext(), "关于页面(Phase 2将实现)", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
     
     companion object {

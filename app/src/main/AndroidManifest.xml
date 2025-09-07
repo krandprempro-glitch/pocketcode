@@ -115,6 +115,42 @@
             android:label="@string/title_activity_termux_settings"
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
+        <!-- Configuration Management Activities -->
+        <activity
+            android:name=".app.configuration.activities.SshConfigListActivity"
+            android:exported="false"
+            android:label="SSH配置"
+            android:parentActivityName=".app.MainTabActivity"
+            android:theme="@style/Theme.ConfigurationActivity.Dark" />
+
+        <activity
+            android:name=".app.configuration.activities.SshConfigDetailActivity"
+            android:exported="false"
+            android:label="SSH配置详情"
+            android:parentActivityName=".app.configuration.activities.SshConfigListActivity"
+            android:theme="@style/Theme.ConfigurationActivity.Dark" />
+
+        <activity
+            android:name=".app.configuration.activities.RunConfigListActivity"
+            android:exported="false"
+            android:label="运行配置"
+            android:parentActivityName=".app.MainTabActivity"
+            android:theme="@style/Theme.ConfigurationActivity.Dark" />
+
+        <activity
+            android:name=".app.configuration.activities.RunConfigDetailActivity"
+            android:exported="false"
+            android:label="运行配置详情"
+            android:parentActivityName=".app.configuration.activities.RunConfigListActivity"
+            android:theme="@style/Theme.ConfigurationActivity.Dark" />
+
+        <activity
+            android:name=".app.configuration.activities.GlobalSettingsActivity"
+            android:exported="false"
+            android:label="全局设置"
+            android:parentActivityName=".app.MainTabActivity"
+            android:theme="@style/Theme.ConfigurationActivity.Dark" />
+
         <activity
             android:name=".shared.activities.ReportActivity"
             android:theme="@style/Theme.MarkdownViewActivity.DayNight"

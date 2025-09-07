@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.termux.R
 import com.termux.app.configuration.adapters.RunConfigAdapter
-import com.termux.app.configuration.managers.ConfigNavigationManager
+import com.termux.app.configuration.activities.RunConfigDetailActivity
 import com.termux.app.configuration.managers.RunConfigurationManager
 import com.termux.app.configuration.models.RunConfiguration
 import com.termux.app.configuration.utils.CommandBuilder
@@ -42,7 +42,6 @@ class RunConfigListFragment : Fragment() {
     private lateinit var tvEmptyState: TextView
     
     private lateinit var configManager: RunConfigurationManager
-    private lateinit var navigationManager: ConfigNavigationManager
     
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,14 +66,14 @@ class RunConfigListFragment : Fragment() {
         tvEmptyState = view.findViewById(R.id.tv_empty_state)
         
         configManager = RunConfigurationManager.getInstance(requireContext())
-        navigationManager = ConfigNavigationManager.getInstance(requireActivity())
     }
     
     private fun setupRecyclerView() {
         adapter = RunConfigAdapter(requireContext())
         adapter.setOnConfigActionListener(object : RunConfigAdapter.OnConfigActionListener {
             override fun onEditConfig(config: RunConfiguration) {
-                navigationManager.navigateToRunConfigDetail(config.id)
+                val intent = RunConfigDetailActivity.newIntent(requireContext(), config.id)
+                startActivity(intent)
             }
             
             override fun onDeleteConfig(config: RunConfiguration) {
@@ -100,7 +99,8 @@ class RunConfigListFragment : Fragment() {
     
     private fun setupClickListeners() {
         btnNewConfig.setOnClickListener {
-            navigationManager.navigateToRunConfigDetail(null)
+            val intent = RunConfigDetailActivity.newIntent(requireContext(), null)
+            startActivity(intent)
         }
     }
     
