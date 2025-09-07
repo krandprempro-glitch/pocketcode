@@ -2,8 +2,13 @@ package com.termux.app.configuration.managers
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import com.termux.app.configuration.models.ConfigurationItem
+import com.termux.app.configuration.fragments.SshConfigListFragment
+import com.termux.app.configuration.fragments.SshConfigDetailFragment
+import com.termux.app.configuration.fragments.RunConfigListFragment
+import com.termux.app.configuration.fragments.RunConfigDetailFragment
 
 class ConfigNavigationManager(
     private val fragmentManager: FragmentManager,
@@ -17,46 +22,47 @@ class ConfigNavigationManager(
         const val TAG_RUN_CONFIG_DETAIL = "run_config_detail"
         const val TAG_GLOBAL_SETTINGS = "global_settings"
         const val TAG_ABOUT = "about"
+        
+        private var instance: ConfigNavigationManager? = null
+        
+        fun getInstance(activity: FragmentActivity): ConfigNavigationManager {
+            return instance ?: ConfigNavigationManager(
+                activity.supportFragmentManager,
+                android.R.id.content // 使用默认容器
+            ).also { instance = it }
+        }
     }
     
     /**
      * 导航到SSH配置列表
      */
     fun navigateToSSHConfigList() {
-        // TODO: 在Phase 2实现
-        // val fragment = SshConfigListFragment()
-        // replaceFragment(fragment, TAG_SSH_CONFIG_LIST, true)
-        showPlaceholder("SSH配置列表")
+        val fragment = SshConfigListFragment.newInstance()
+        replaceFragment(fragment, TAG_SSH_CONFIG_LIST, true)
     }
     
     /**
      * 导航到SSH配置详情
      */
-    fun navigateToSSHConfigDetail(configId: String?) {
-        // TODO: 在Phase 2实现
-        // val fragment = SshConfigDetailFragment.newInstance(configId)
-        // replaceFragment(fragment, TAG_SSH_CONFIG_DETAIL, true)
-        showPlaceholder("SSH配置详情: $configId")
+    fun navigateToSSHConfigDetail(configName: String?) {
+        val fragment = SshConfigDetailFragment.newInstance(configName)
+        replaceFragment(fragment, TAG_SSH_CONFIG_DETAIL, true)
     }
     
     /**
      * 导航到运行配置列表
      */
     fun navigateToRunConfigList() {
-        // TODO: 在Phase 2实现
-        // val fragment = RunConfigListFragment()
-        // replaceFragment(fragment, TAG_RUN_CONFIG_LIST, true)
-        showPlaceholder("运行配置列表")
+        val fragment = RunConfigListFragment.newInstance()
+        replaceFragment(fragment, TAG_RUN_CONFIG_LIST, true)
     }
     
     /**
      * 导航到运行配置详情
      */
     fun navigateToRunConfigDetail(configId: String?) {
-        // TODO: 在Phase 2实现
-        // val fragment = RunConfigDetailFragment.newInstance(configId)
-        // replaceFragment(fragment, TAG_RUN_CONFIG_DETAIL, true)
-        showPlaceholder("运行配置详情: $configId")
+        val fragment = RunConfigDetailFragment.newInstance(configId)
+        replaceFragment(fragment, TAG_RUN_CONFIG_DETAIL, true)
     }
     
     /**

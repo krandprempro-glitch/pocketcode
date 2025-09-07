@@ -9,6 +9,10 @@ enum class LanguageType(
     PYTHON("Python", "python", arrayOf("python app.py", "python manage.py runserver", "gunicorn app:app", "flask run")),
     JAVA("Java", "java", arrayOf("java -jar app.jar", "mvn spring-boot:run", "gradle bootRun", "./gradlew bootRun")),
     GO("Go", "go", arrayOf("go run main.go", "go run .", "./app", "go build && ./app")),
+    PHP("PHP", "php", arrayOf("php index.php", "php artisan serve", "composer serve")),
+    RUBY("Ruby", "ruby", arrayOf("ruby app.rb", "rails server", "bundle exec rails s")),
+    RUST("Rust", "rust", arrayOf("cargo run", "cargo build", "./target/debug/app")),
+    CPP("C++", "cpp", arrayOf("./main", "make && ./main", "g++ main.cpp -o main && ./main")),
     CUSTOM("自定义", "custom", arrayOf());
     
     companion object {

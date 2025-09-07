@@ -29,6 +29,8 @@ public class SSHConfigAdapter extends RecyclerView.Adapter<SSHConfigAdapter.Conf
         void onConfigClick(SSHConnectionConfig config);
         void onConfigDelete(SSHConnectionConfig config);
         void onConfigConnect(SSHConnectionConfig config);
+        void onConfigEdit(SSHConnectionConfig config);
+        void onConfigTest(SSHConnectionConfig config);
     }
 
     public SSHConfigAdapter(Context context) {
@@ -71,13 +73,17 @@ public class SSHConfigAdapter extends RecyclerView.Adapter<SSHConfigAdapter.Conf
         private final TextView mDetailsText;
         private final ImageButton mConnectButton;
         private final ImageButton mDeleteButton;
+        private final ImageButton mEditButton;
+        private final ImageButton mTestButton;
 
         public ConfigViewHolder(@NonNull View itemView) {
             super(itemView);
-            mNameText = itemView.findViewById(R.id.text_config_name);
-            mDetailsText = itemView.findViewById(R.id.text_config_details);
-            mConnectButton = itemView.findViewById(R.id.btn_config_connect);
-            mDeleteButton = itemView.findViewById(R.id.btn_config_delete);
+            mNameText = itemView.findViewById(R.id.tv_config_name);
+            mDetailsText = itemView.findViewById(R.id.tv_host_info);
+            mConnectButton = itemView.findViewById(R.id.btn_use);
+            mDeleteButton = itemView.findViewById(R.id.btn_delete);
+            mEditButton = itemView.findViewById(R.id.btn_edit);
+            mTestButton = itemView.findViewById(R.id.btn_test);
         }
 
         public void bind(SSHConnectionConfig config) {
@@ -102,6 +108,20 @@ public class SSHConfigAdapter extends RecyclerView.Adapter<SSHConfigAdapter.Conf
             mDeleteButton.setOnClickListener(v -> {
                 if (mListener != null) {
                     mListener.onConfigDelete(config);
+                }
+            });
+
+            // 编辑按钮
+            mEditButton.setOnClickListener(v -> {
+                if (mListener != null) {
+                    mListener.onConfigEdit(config);
+                }
+            });
+
+            // 测试按钮
+            mTestButton.setOnClickListener(v -> {
+                if (mListener != null) {
+                    mListener.onConfigTest(config);
                 }
             });
         }

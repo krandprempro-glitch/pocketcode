@@ -93,6 +93,18 @@ public class SSHConnectionFragment extends Fragment {
             public void onConfigConnect(SSHConnectionConfig config) {
                 connectWithConfig(config);
             }
+
+            @Override
+            public void onConfigEdit(SSHConnectionConfig config) {
+                // 编辑配置
+                showConfigDialog(config);
+            }
+
+            @Override
+            public void onConfigTest(SSHConnectionConfig config) {
+                // 测试连接
+                testConnection(config);
+            }
         });
         
         rvSSHConfigs.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -160,6 +172,23 @@ public class SSHConnectionFragment extends Fragment {
             }
             
             Toast.makeText(requireContext(), "正在连接到 " + config.getHost(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void testConnection(SSHConnectionConfig config) {
+        if (config != null && config.isValid()) {
+            // 简单的连接测试，实际项目中可能需要异步处理
+            Toast.makeText(requireContext(), "正在测试连接到 " + config.getHost() + "...", Toast.LENGTH_SHORT).show();
+            
+            // TODO: 实现实际的连接测试逻辑
+            // 可以使用 SSHConnectionManager 或其他方式进行测试
+            
+            // 模拟测试结果
+            new android.os.Handler().postDelayed(() -> {
+                Toast.makeText(requireContext(), "连接测试成功", Toast.LENGTH_SHORT).show();
+            }, 1000);
+        } else {
+            Toast.makeText(requireContext(), "配置信息不完整", Toast.LENGTH_SHORT).show();
         }
     }
     

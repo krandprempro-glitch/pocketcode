@@ -57,4 +57,30 @@
     
     <!-- Background selectors -->
     <color name="breadcrumb_item_selector">#E8E8E8</color>
+    
+    <!-- Configuration UI colors -->
+    <color name="background">#FAFAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="primary">#2196F3</color>
+    <color name="error">#F44336</color>
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    
+    <!-- Text colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_tertiary">#BDBDBD</color>
+    <color name="text_success">#4CAF50</color>
+    <color name="text_warning">#FF9800</color>
+    <color name="text_error">#F44336</color>
+    
+    <!-- Language type colors -->
+    <color name="language_nodejs">#68BC71</color>
+    <color name="language_python">#3776AB</color>
+    <color name="language_java">#ED8B00</color>
+    <color name="language_go">#00ADD8</color>
+    <color name="language_php">#777BB4</color>
+    <color name="language_ruby">#CC342D</color>
+    <color name="language_rust">#000000</color>
+    <color name="language_cpp">#00599C</color>
+    <color name="language_custom">#607D8B</color>
 </resources>

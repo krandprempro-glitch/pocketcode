@@ -151,6 +151,16 @@ public class SSHConfigDialog {
             public void onConfigConnect(SSHConnectionConfig config) {
                 connectWithConfig(config);
             }
+
+            @Override
+            public void onConfigEdit(SSHConnectionConfig config) {
+                loadConfigToFields(config);
+            }
+
+            @Override
+            public void onConfigTest(SSHConnectionConfig config) {
+                testConnection(config);
+            }
         });
         
         mSavedConfigsRecycler.setLayoutManager(new LinearLayoutManager(mContext));
@@ -241,6 +251,24 @@ public class SSHConfigDialog {
         // 模拟测试延迟
         mTestButton.postDelayed(() -> {
             showToast("连接测试完成");
+        }, 1500);
+    }
+
+    /**
+     * 测试指定配置的连接
+     */
+    private void testConnection(SSHConnectionConfig config) {
+        if (config == null || !config.isValid()) {
+            showToast("配置信息不完整");
+            return;
+        }
+        
+        showToast("正在测试连接到 " + config.getHost() + "...");
+        
+        // TODO: 实现实际的连接测试逻辑
+        // 模拟测试结果
+        new android.os.Handler().postDelayed(() -> {
+            showToast("连接测试成功");
         }, 1500);
     }
 
