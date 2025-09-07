@@ -9,6 +9,7 @@ import com.termux.app.configuration.fragments.SshConfigListFragment
 import com.termux.app.configuration.fragments.SshConfigDetailFragment
 import com.termux.app.configuration.fragments.RunConfigListFragment
 import com.termux.app.configuration.fragments.RunConfigDetailFragment
+import com.termux.app.configuration.fragments.GlobalSettingsFragment
 
 class ConfigNavigationManager(
     private val fragmentManager: FragmentManager,
@@ -69,10 +70,8 @@ class ConfigNavigationManager(
      * 导航到全局设置
      */
     fun navigateToGlobalSettings() {
-        // TODO: 在Phase 2实现
-        // val fragment = GlobalSettingsFragment()
-        // replaceFragment(fragment, TAG_GLOBAL_SETTINGS, true)
-        showPlaceholder("全局设置")
+        val fragment = GlobalSettingsFragment.newInstance()
+        replaceFragment(fragment, TAG_GLOBAL_SETTINGS, true)
     }
     
     /**
