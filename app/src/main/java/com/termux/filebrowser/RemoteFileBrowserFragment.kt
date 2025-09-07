@@ -809,6 +809,24 @@ class RemoteFileBrowserFragment : Fragment(),
             else -> "${bytes / (1024 * 1024)} MB"
         }
     }
+    
+    /**
+     * 从外部同步SSH连接状态（由MainTabActivity调用）
+     */
+    fun syncConnectionFromExternal(config: SSHConnectionConfig) {
+        Logger.logInfo(LOG_TAG, "Syncing external SSH connection: ${config.host}")
+        
+        // 通过ViewModel同步连接状态
+        viewModel.syncExternalConnection(config)
+        
+        // 连接成功后，刷新当前目录的文件列表
+        viewModel.refreshCurrentDirectory()
+        
+        // 如果抽屉已关闭，可以选择性地自动展开抽屉显示文件
+        if (!binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

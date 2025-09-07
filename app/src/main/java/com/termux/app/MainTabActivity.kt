@@ -13,7 +13,12 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.termux.R
 import com.termux.app.configuration.fragments.ConfigurationMainFragment
 import com.termux.app.floating.views.FloatingActionButton
+import android.widget.Toast
 import com.termux.app.ui.SSHConfigDialog
+import com.termux.app.sftp.SFTPConnectionManager
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.schedulers.Schedulers
 import com.termux.app.fragments.GitChangesFragment
 import com.termux.app.fragments.SSHConnectionFragment
 import com.termux.app.fragments.TermuxFragment
@@ -30,6 +35,7 @@ class MainTabActivity : AppCompatActivity() {
     private lateinit var viewPager: ViewPager2
     private lateinit var pagerAdapter: TabPagerAdapter
     private var floatingActionButton: FloatingActionButton? = null
+    private val disposables = CompositeDisposable()
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,20 +110,20 @@ class MainTabActivity : AppCompatActivity() {
         val sshDialog = SSHConfigDialog(this)
         sshDialog.setOnSSHConfigListener(object : SSHConfigDialog.OnSSHConfigListener {
             override fun onSSHConnect(config: com.termux.app.models.SSHConnectionConfig?) {
-                // 连接SSH服务器
+                // 直接执行SSH连接
                 config?.let {
-                    // 切换到文件浏览tab
-                    tabLayout.getTabAt(1)?.select()
-                    // TODO: 这里可以进一步集成SSH连接逻辑
+                    connectToSSH(it)
                 }
             }
             
             override fun onSSHConfigSaved(config: com.termux.app.models.SSHConnectionConfig?) {
                 // 配置保存成功
+                Toast.makeText(this@MainTabActivity, "SSH配置已保存", Toast.LENGTH_SHORT).show()
             }
             
             override fun onSSHConfigDeleted(configName: String?) {
                 // 配置删除成功
+                Toast.makeText(this@MainTabActivity, "SSH配置已删除: $configName", Toast.LENGTH_SHORT).show()
             }
             
             override fun onDialogClosed() {
@@ -125,6 +131,41 @@ class MainTabActivity : AppCompatActivity() {
             }
         })
         sshDialog.show()
+    }
+    
+    private fun connectToSSH(config: com.termux.app.models.SSHConnectionConfig) {
+        // 显示连接中提示
+        Toast.makeText(this, "正在连接到 ${config.name} (${config.host}:${config.port})", Toast.LENGTH_SHORT).show()
+        
+        // 使用SFTP连接管理器进行真实连接
+        val sftpManager = SFTPConnectionManager.getInstance()
+        
+        val disposable = sftpManager.connect(config)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                { success ->
+                    if (success) {
+                        Toast.makeText(this@MainTabActivity, "SSH连接成功: ${config.name}", Toast.LENGTH_LONG).show()
+                        // 同步更新RemoteFileBrowserFragment的抽屉文件显示
+                        syncRemoteFileBrowserConnection(config)
+                    } else {
+                        Toast.makeText(this@MainTabActivity, "SSH连接失败: 连接未建立", Toast.LENGTH_LONG).show()
+                    }
+                },
+                { error ->
+                    val errorMsg = when (error) {
+                        is java.net.UnknownHostException -> "主机不可达: ${config.host}"
+                        is java.net.ConnectException -> "连接被拒绝: ${config.host}:${config.port}"
+                        is java.net.SocketTimeoutException -> "连接超时"
+                        is java.lang.SecurityException -> "认证失败，请检查用户名和密码"
+                        else -> "连接失败: ${error.message}"
+                    }
+                    Toast.makeText(this@MainTabActivity, errorMsg, Toast.LENGTH_LONG).show()
+                }
+            )
+        
+        disposables.add(disposable)
     }
     
     private fun showRunCommandDialog() {
@@ -149,6 +190,19 @@ class MainTabActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         floatingActionButton?.hide()
+        disposables.clear()
+    }
+    
+    /**
+     * 同步更新RemoteFileBrowserFragment的抽屉文件显示
+     */
+    private fun syncRemoteFileBrowserConnection(config: com.termux.app.models.SSHConnectionConfig) {
+        // 获取当前显示的Fragment
+        val currentFragment = pagerAdapter.getCurrentFragment(1) // Tab1是文件浏览
+        if (currentFragment is RemoteFileBrowserFragment) {
+            // 通过Fragment的ViewModel同步连接状态和加载文件列表
+            currentFragment.syncConnectionFromExternal(config)
+        }
     }
     
     /**
@@ -156,15 +210,28 @@ class MainTabActivity : AppCompatActivity() {
      */
     private class TabPagerAdapter(@NonNull fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
         
+        private val fragmentList = mutableListOf<Fragment?>(null, null, null, null)
+        
+        fun getCurrentFragment(position: Int): Fragment? {
+            return fragmentList.getOrNull(position)
+        }
+        
         @NonNull
         override fun createFragment(position: Int): Fragment {
-            return when (position) {
+            val fragment = when (position) {
                 0 -> TermuxFragment() // Terminal tab
                 1 -> RemoteFileBrowserFragment() // File browser tab
                 2 -> GitChangesFragment() // Git changes tab
                 3 -> ConfigurationMainFragment() // Configuration tab
                 else -> TermuxFragment()
             }
+            
+            // 保存Fragment引用用于后续同步
+            if (position < fragmentList.size) {
+                fragmentList[position] = fragment
+            }
+            
+            return fragment
         }
         
         override fun getItemCount(): Int {
