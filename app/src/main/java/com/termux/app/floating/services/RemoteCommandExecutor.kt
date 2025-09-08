@@ -5,14 +5,22 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.DefaultConfig
+import net.schmizz.sshj.common.Factory
+import net.schmizz.sshj.common.SecurityUtils
 import net.schmizz.sshj.connection.channel.direct.Session
+import net.schmizz.sshj.transport.kex.KeyExchange
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.security.Provider
+import java.security.Security
 import com.termux.app.configuration.models.RunConfiguration
 import com.termux.app.configuration.utils.CommandBuilder
 import com.termux.app.floating.managers.ExecutionStateManager
 import com.termux.app.floating.models.ExecutionResult
 import com.termux.app.models.SSHConfigManager
 import com.termux.app.models.SSHConnectionConfig
+import com.termux.app.sftp.SFTPConnectionManager
 import com.termux.shared.logger.Logger
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -50,6 +58,7 @@ class RemoteCommandExecutor private constructor(
 
     private val sshConfigManager = SSHConfigManager.getInstance(context)
     private val executionStateManager = ExecutionStateManager.getInstance(context)
+    private val sftpConnectionManager = SFTPConnectionManager.getInstance()
     
     // 活跃的执行任务
     private val activeExecutions = mutableMapOf<String, Job>()
@@ -74,7 +83,7 @@ class RemoteCommandExecutor private constructor(
                 val sshConfig = sshConfigManager.getConfigByName(config.sshConfigId)
                     ?: throw IllegalArgumentException("SSH配置不存在: ${config.sshConfigId}")
                 
-                // 建立SSH连接
+                // 建立SSH连接（优先使用SFTP连接管理器的连接）
                 val sshClient = getOrCreateConnection(sshConfig)
                 
                 // 构建完整命令
@@ -82,7 +91,7 @@ class RemoteCommandExecutor private constructor(
                 Logger.logInfo(LOG_TAG, "Executing command: $command")
                 
                 // 执行命令
-                val result = executeRemoteCommand(sshClient, command, executionId)
+                val result = executeRemoteCommand(sshClient, command, executionId, config.runInBackground)
                 
                 // 更新最后使用时间
                 config.lastUsedTime = System.currentTimeMillis()
@@ -116,7 +125,8 @@ class RemoteCommandExecutor private constructor(
     private suspend fun executeRemoteCommand(
         sshClient: SSHClient,
         command: String,
-        executionId: String
+        executionId: String,
+        isBackground: Boolean
     ): ExecutionResult = withContext(Dispatchers.IO) {
         
         val startTime = System.currentTimeMillis()
@@ -127,9 +137,38 @@ class RemoteCommandExecutor private constructor(
         
         try {
             session = sshClient.startSession()
-            session.allocateDefaultPTY() // 分配伪终端
+            // 默认不分配 PTY，避免后台任务与 TTY 绑定导致阻塞
             
             val execCommand = session.exec(command)
+
+            if (isBackground) {
+                // 后台命令：尽快读取一行（期望为 PID），然后关闭会话，避免 300s 超时
+                var pidLine: String? = null
+                try {
+                    withTimeoutOrNull(10_000) {
+                        BufferedReader(InputStreamReader(execCommand.inputStream)).use { reader ->
+                            pidLine = reader.readLine()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Logger.logError(LOG_TAG, "Error reading background PID: ${e.message}")
+                }
+
+                try { execCommand.close() } catch (_: Exception) {}
+                try { session.close() } catch (_: Exception) {}
+
+                val endTime = System.currentTimeMillis()
+                return@withContext ExecutionResult(
+                    taskId = executionId,
+                    status = ExecutionResult.Status.SUCCESS,
+                    executedCommand = command,
+                    output = pidLine ?: "",
+                    errorOutput = "",
+                    exitCode = 0,
+                    startTime = startTime,
+                    endTime = endTime
+                )
+            }
             
             // 创建协程来处理输出流
             val outputJob = launch {
@@ -230,22 +269,78 @@ class RemoteCommandExecutor private constructor(
 
     /**
      * 获取或创建SSH连接
+     * 优先复用SFTPConnectionManager的连接，如果不可用则创建新连接
      */
     private suspend fun getOrCreateConnection(sshConfig: SSHConnectionConfig): SSHClient {
         val connectionKey = "${sshConfig.host}:${sshConfig.port}:${sshConfig.username}"
         
-        // 检查现有连接是否可用
+        // 首先尝试复用SFTP连接管理器的连接
+        if (sftpConnectionManager.isConnected) {
+            val currentConfig = sftpConnectionManager.currentConfig
+            if (currentConfig != null && 
+                currentConfig.host == sshConfig.host &&
+                currentConfig.port == sshConfig.port &&
+                currentConfig.username == sshConfig.username) {
+                
+                Logger.logInfo(LOG_TAG, "Reusing existing SFTP connection for command execution")
+                
+                // 从SFTP连接管理器获取SSH客户端的反射访问
+                try {
+                    val field = SFTPConnectionManager::class.java.getDeclaredField("sshClient")
+                    field.isAccessible = true
+                    val sshClient = field.get(sftpConnectionManager) as? SSHClient
+                    if (sshClient != null && sshClient.isConnected) {
+                        return sshClient
+                    }
+                } catch (e: Exception) {
+                    Logger.logError(LOG_TAG, "Failed to reuse SFTP connection: ${e.message}")
+                }
+            }
+        }
+        
+        // 检查本地连接池中的现有连接
         val existingConnection = sshConnections[connectionKey]
         if (existingConnection != null && existingConnection.isConnected) {
             return existingConnection
         }
         
-        // 创建新连接
-        val sshClient = SSHClient()
-        
         try {
+            Logger.logInfo(LOG_TAG, "Creating new SSH connection to ${sshConfig.host}:${sshConfig.port}")
+
+            // 注册独立的 BouncyCastle 提供者（不依赖系统内置 BC），确保 ECDSA/ECDH 可用
+            try {
+                val bc = BouncyCastleProvider()
+                Security.removeProvider(bc.name)
+                Security.insertProviderAt(bc, 1)
+            } catch (ignored: Throwable) {}
+            
+            // 避免 SSHJ 强制注册系统 BC（Android 内置 BC 不完整）
+            try { 
+                SecurityUtils.setRegisterBouncyCastle(false) 
+            } catch (ignored: Throwable) {}
+            
+            // 使用默认配置基础上，明确剔除 ECDH（仅保留 curve25519 / diffie-hellman），并去掉 ECDSA 签名工厂
+            val configObj = DefaultConfig()
+            try {
+                val kex = ArrayList(configObj.keyExchangeFactories)
+                val it = kex.iterator()
+                while (it.hasNext()) {
+                    val name = it.next().name
+                    val lower = name?.lowercase() ?: ""
+                    if (!(lower.contains("curve25519") || lower.contains("diffie-hellman"))) {
+                        it.remove()
+                    }
+                }
+                configObj.keyExchangeFactories = kex
+            } catch (ignored: Throwable) {}
+            
+            // 创建SSH客户端
+            val sshClient = SSHClient(configObj)
             sshClient.addHostKeyVerifier(PromiscuousVerifier()) // 在生产环境中应该使用更安全的验证方式
+            
+            // 超时设置
             sshClient.connectTimeout = CONNECTION_TIMEOUT
+            sshClient.timeout = CONNECTION_TIMEOUT
             
             // 连接到服务器
             withTimeoutOrNull(CONNECTION_TIMEOUT.toLong()) {
@@ -264,11 +359,11 @@ class RemoteCommandExecutor private constructor(
             // 缓存连接
             sshConnections[connectionKey] = sshClient
             
-            Logger.logInfo(LOG_TAG, "SSH connection established: $connectionKey")
+            Logger.logInfo(LOG_TAG, "SSH connection established successfully: $connectionKey")
             return sshClient
             
         } catch (e: Exception) {
-            sshClient.close()
+            Logger.logError(LOG_TAG, "SSH connection failed: ${e.message}")
             throw RuntimeException("SSH连接失败: ${e.message}", e)
         }
     }

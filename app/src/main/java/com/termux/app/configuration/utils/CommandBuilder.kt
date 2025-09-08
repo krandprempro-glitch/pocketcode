@@ -33,23 +33,26 @@ object CommandBuilder {
      * 构建后台运行命令
      */
     fun buildBackgroundCommand(config: RunConfiguration): String {
-        val basicCommand = buildBasicCommand(config)
-        
         if (!config.runInBackground) {
-            return basicCommand
+            return buildBasicCommand(config)
         }
-        
-        val cmd = StringBuilder()
-        cmd.append("nohup $basicCommand")
-        
-        // 添加日志输出
+        // cd 到项目目录（包含工作子目录）
+        val cd = StringBuilder()
+        cd.append("cd ${config.projectPath}")
+        if (config.workingDir.isNotBlank() && config.workingDir != ".") {
+            cd.append("/${config.workingDir}")
+        }
+
+        // 环境变量 + nohup 命令主体；确保脱离标准输入
+        val run = StringBuilder()
+        if (config.envVariables.isNotBlank()) {
+            run.append("${config.envVariables} ")
+        }
         val logFile = config.logFileName.ifBlank { ConfigurationConstants.DEFAULT_LOG_FILE }
-        cmd.append(" > $logFile 2>&1 &")
-        
-        // 保存PID
-        cmd.append(" echo \$! > .pid")
-        
-        return cmd.toString()
+        // 注意：这里需要在远端 shell 展开 $!，因此不要转义 $，在 Kotlin 中使用 ${'$'} 生成字面量 $
+        run.append("nohup ${config.command} > $logFile 2>&1 < /dev/null & echo ${'$'}! > .pid")
+
+        return "${cd} && ${run}"
     }
     
     /**
