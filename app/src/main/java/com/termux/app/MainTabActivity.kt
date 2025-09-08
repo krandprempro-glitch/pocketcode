@@ -8,6 +8,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.termux.R
@@ -58,8 +60,25 @@ class MainTabActivity : AppCompatActivity() {
         // Disable horizontal swipe gestures
         viewPager.isUserInputEnabled = false
         
-        // Connect TabLayout with ViewPager2
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+        // Disable all ViewPager2 animations completely
+        try {
+            val recyclerViewField = ViewPager2::class.java.getDeclaredField("mRecyclerView")
+            recyclerViewField.isAccessible = true
+            val recyclerView = recyclerViewField.get(viewPager) as RecyclerView
+            
+            // Remove all animations
+            recyclerView.itemAnimator = null
+            recyclerView.overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+            
+            // Disable the scroll animation duration
+            val scrollDurationField = ViewPager2::class.java.getDeclaredField("mScrollEventAdapter")
+            scrollDurationField.isAccessible = true
+        } catch (e: Exception) {
+            // Ignore reflection errors
+        }
+        
+        // Connect TabLayout with ViewPager2 and override tab selection behavior
+        val mediator = TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             when (position) {
                 0 -> {
                     tab.text = "终端"
@@ -78,7 +97,20 @@ class MainTabActivity : AppCompatActivity() {
                     tab.setIcon(android.R.drawable.ic_menu_preferences)
                 }
             }
-        }.attach()
+        }
+        mediator.attach()
+        
+        // Override tab selection to disable animation
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                tab?.let {
+                    // Force immediate switch without animation
+                    viewPager.setCurrentItem(it.position, false)
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
     
     private fun initFloatingButton() {
