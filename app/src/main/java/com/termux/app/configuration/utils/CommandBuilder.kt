@@ -82,14 +82,47 @@ object CommandBuilder {
      * 构建完整命令(包含Kill+Run)
      */
     fun buildCompleteCommand(config: RunConfiguration): String {
-        val killCommand = generateKillCommand(config)
-        val runCommand = if (config.runInBackground) {
-            buildBackgroundCommand(config)
-        } else {
-            buildBasicCommand(config)
+        // 前台命令不附带 pkill，避免自杀式匹配（如 pkill -f "ls -la" 命中当前 shell）
+        if (!config.runInBackground) {
+            return buildBasicCommand(config)
         }
-        
+
+        val killCommand = generateKillCommand(config)
+        val runCommand = buildBackgroundCommand(config)
         return "$killCommand; $runCommand"
+    }
+
+    /**
+     * 构建查看日志命令（tail -n）
+     */
+    fun buildTailLogCommand(config: RunConfiguration, lines: Int = 200): String {
+        val cd = StringBuilder()
+        cd.append("cd ${config.projectPath}")
+        if (config.workingDir.isNotBlank() && config.workingDir != ".") {
+            cd.append("/${config.workingDir}")
+        }
+        val logFile = config.logFileName.ifBlank { ConfigurationConstants.DEFAULT_LOG_FILE }
+        val run = StringBuilder()
+        if (config.envVariables.isNotBlank()) run.append("${config.envVariables} ")
+        run.append("tail -n ${lines.coerceAtLeast(1)} $logFile")
+        return "${cd} && ${run}"
+    }
+
+    /**
+     * 构建停止命令（通过 .pid 杀进程）
+     */
+    fun buildStopCommand(config: RunConfiguration): String {
+        val cd = StringBuilder()
+        cd.append("cd ${config.projectPath}")
+        if (config.workingDir.isNotBlank() && config.workingDir != ".") {
+            cd.append("/${config.workingDir}")
+        }
+        val sb = StringBuilder()
+        sb.append("[ -f .pid ] && (kill $(cat .pid) 2>/dev/null || true); ")
+        sb.append("sleep 0.5; ")
+        sb.append("[ -f .pid ] && (kill -9 $(cat .pid) 2>/dev/null || true); ")
+        sb.append("rm -f .pid 2>/dev/null || true")
+        return "${cd} && ${sb}"
     }
     
     /**

@@ -52,24 +52,20 @@ class FloatingActionButton(context: Context) : DraggableView(context) {
         return true
     }
     
+    private var menuOverlay: FloatingMenuOverlay? = null
+
     private fun toggleMenu() {
-        showAlertDialog()
-    }
-    
-    private fun showAlertDialog() {
-        val items = arrayOf("SSH连接", "运行命令", "快捷设置")
-        
-        AlertDialog.Builder(context)
-            .setTitle("悬浮菜单")
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> actionListener?.onSSHConnectionClicked()
-                    1 -> actionListener?.onRunCommandClicked()
-                    2 -> actionListener?.onQuickSettingsClicked()
-                }
+        if (menuOverlay == null) {
+            menuOverlay = FloatingMenuOverlay(context).apply {
+                setOnMenuSelectListener(object : FloatingMenuOverlay.OnMenuSelectListener {
+                    override fun onSSHConnection() { actionListener?.onSSHConnectionClicked() }
+                    override fun onRunCommand() { actionListener?.onRunCommandClicked() }
+                    override fun onQuickSettings() { actionListener?.onQuickSettingsClicked() }
+                })
             }
-            .setNegativeButton("取消", null)
-            .show()
+        }
+        menuOverlay?.show()
+        actionListener?.onMenuToggle(true)
     }
     
     override fun onDragStart() {

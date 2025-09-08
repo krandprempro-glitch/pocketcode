@@ -65,12 +65,7 @@ class FloatingActionExtensions(private val context: Context) {
         )
         
         // 显示执行结果对话框
-        showExecutionResultDialog(initialResult) { action ->
-            when (action) {
-                ExecutionAction.RERUN -> executeRunConfiguration(config)
-                ExecutionAction.VIEW_LOG -> showLogDialog(initialResult.output)
-            }
-        }
+        showExecutionResultDialog(initialResult, config)
         
         // 异步执行命令
         GlobalScope.launch(Dispatchers.IO) {
@@ -103,23 +98,71 @@ class FloatingActionExtensions(private val context: Context) {
      */
     private fun showExecutionResultDialog(
         result: ExecutionResult,
-        onAction: (ExecutionAction) -> Unit
+        config: RunConfiguration
     ) {
         currentExecutionDialog?.dismiss()
         
         currentExecutionDialog = ExecutionResultDialog(context, result).apply {
             setOnResultActionListener(object : ExecutionResultDialog.OnResultActionListener {
                 override fun onViewLogRequested(output: String) {
-                    onAction(ExecutionAction.VIEW_LOG)
+                    if (config.runInBackground) {
+                        // 后台：tail 远端日志
+                        GlobalScope.launch(Dispatchers.IO) {
+                            val preview = runTailLog(config)
+                            withContext(Dispatchers.Main) {
+                                showLogDialog(preview)
+                            }
+                        }
+                    } else {
+                        // 前台：直接展示此次输出
+                        showLogDialog(output)
+                    }
                 }
-                
+
                 override fun onReExecuteRequested() {
-                    onAction(ExecutionAction.RERUN)
+                    executeRunConfiguration(config)
+                }
+
+                override fun onStopRequested() {
+                    if (config.runInBackground) {
+                        GlobalScope.launch(Dispatchers.IO) {
+                            val stopped = stopByPid(config)
+                            withContext(Dispatchers.Main) {
+                                val msg = if (stopped) "已发送停止信号" else "未发现.pid或停止失败"
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        Toast.makeText(context, "前台命令无需停止", Toast.LENGTH_SHORT).show()
+                    }
                 }
             })
-            
+
             show()
         }
+    }
+
+    private suspend fun runTailLog(config: RunConfiguration): String {
+        val lines = 200
+        val tailCmd = com.termux.app.configuration.utils.CommandBuilder.buildTailLogCommand(config, lines)
+        val tempConfig = config.copy(
+            id = System.currentTimeMillis().toString(),
+            command = tailCmd.substringAfter("&& "), // 避免额外包装
+            runInBackground = false
+        )
+        val result = remoteCommandExecutor.executeConfiguration(tempConfig)
+        return result.output.ifBlank { result.errorOutput.ifBlank { result.errorMessage } }
+    }
+
+    private suspend fun stopByPid(config: RunConfiguration): Boolean {
+        val stopCmd = com.termux.app.configuration.utils.CommandBuilder.buildStopCommand(config)
+        val tempConfig = config.copy(
+            id = System.currentTimeMillis().toString(),
+            command = stopCmd.substringAfter("&& "),
+            runInBackground = false
+        )
+        val result = remoteCommandExecutor.executeConfiguration(tempConfig)
+        return result.isSuccess()
     }
     
     /**
@@ -202,6 +245,6 @@ class FloatingActionExtensions(private val context: Context) {
      * 执行操作类型
      */
     private enum class ExecutionAction {
-        RERUN, VIEW_LOG
+        RERUN, VIEW_LOG, STOP
     }
 }
