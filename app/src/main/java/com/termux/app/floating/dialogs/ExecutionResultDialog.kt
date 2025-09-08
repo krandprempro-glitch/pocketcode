@@ -32,7 +32,7 @@ class ExecutionResultDialog(
     private var actionListener: OnResultActionListener? = null
     
     interface OnResultActionListener {
-        fun onViewLogRequested(logFilePath: String)
+        fun onViewLogRequested(output: String)
         fun onReExecuteRequested()
     }
     
@@ -66,9 +66,12 @@ class ExecutionResultDialog(
     
     private fun displayResult() {
         when (executionResult.status) {
-            ExecutionResult.Status.EXECUTING -> showExecutingState()
+            ExecutionResult.Status.EXECUTING,
+            ExecutionResult.Status.RUNNING -> showExecutingState()
             ExecutionResult.Status.SUCCESS -> showSuccessState()
-            ExecutionResult.Status.ERROR -> showErrorState()
+            ExecutionResult.Status.ERROR,
+            ExecutionResult.Status.FAILED -> showErrorState()
+            ExecutionResult.Status.CANCELLED -> showCancelledState()
             ExecutionResult.Status.TIMEOUT -> showTimeoutState()
         }
     }
@@ -97,19 +100,15 @@ class ExecutionResultDialog(
         
         val message = buildString {
             append("✅ SSH连接成功\n")
-            
-            if (executionResult.killedPrevious) {
-                append("✅ 已终止前一次进程\n")
-            }
-            
             append("✅ 命令执行成功")
             
-            if (executionResult.processId > 0) {
-                append("\n📝 进程ID: ${executionResult.processId}")
+            if (executionResult.exitCode != 0) {
+                append("\n📝 退出码: ${executionResult.exitCode}")
             }
             
-            if (!TextUtils.isEmpty(executionResult.logFilePath)) {
-                append("\n📄 日志文件: ${executionResult.logFilePath}")
+            val duration = executionResult.getDuration()
+            if (duration > 0) {
+                append("\n⏱️ 执行时长: ${executionResult.getFormattedDuration()}")
             }
         }
         
@@ -146,24 +145,38 @@ class ExecutionResultDialog(
         btnViewLog.isEnabled = false
     }
     
+    private fun showCancelledState() {
+        progressBar.visibility = View.GONE
+        ivResultIcon.visibility = View.VISIBLE
+        ivResultIcon.setImageResource(R.drawable.ic_error_circle)
+        ivResultIcon.setColorFilter(ContextCompat.getColor(context, R.color.warning_color))
+        
+        tvResultTitle.text = "执行已取消"
+        tvResultMessage.text = "⏹️ 命令执行已被用户取消"
+        
+        btnReExecute.isEnabled = true
+        btnViewLog.isEnabled = !TextUtils.isEmpty(executionResult.output)
+    }
+    
     private fun showTimeoutState() {
         progressBar.visibility = View.GONE
         ivResultIcon.visibility = View.VISIBLE
-        ivResultIcon.setImageResource(R.drawable.ic_timeout_circle)
+        ivResultIcon.setImageResource(R.drawable.ic_error_circle)
         ivResultIcon.setColorFilter(ContextCompat.getColor(context, R.color.warning_color))
         
         tvResultTitle.text = "执行超时"
         tvResultMessage.text = "⏰ 命令执行超时，可能仍在后台运行"
         
         btnReExecute.isEnabled = true
-        btnViewLog.isEnabled = !TextUtils.isEmpty(executionResult.logFilePath)
+        btnViewLog.isEnabled = !executionResult.output.isNullOrEmpty()
     }
     
     private fun setupListeners() {
         btnClose.setOnClickListener { dismiss() }
         
         btnViewLog.setOnClickListener {
-            actionListener?.onViewLogRequested(executionResult.logFilePath)
+            // 显示详细的输出日志
+            actionListener?.onViewLogRequested(executionResult.output ?: "")
         }
         
         btnReExecute.setOnClickListener {

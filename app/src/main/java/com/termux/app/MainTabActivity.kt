@@ -201,12 +201,9 @@ class MainTabActivity : AppCompatActivity() {
     }
     
     private fun showRunCommandDialog() {
-        // 显示运行命令dialog
-        android.app.AlertDialog.Builder(this)
-            .setTitle("运行命令")
-            .setMessage("运行命令功能开发中...")
-            .setPositiveButton("确定", null)
-            .show()
+        // 使用完整的运行命令功能
+        val actionExtensions = com.termux.app.floating.extensions.FloatingActionExtensions(this)
+        actionExtensions.handleRunCommandAction()
     }
     
     private fun handleIntent(intent: Intent?) {

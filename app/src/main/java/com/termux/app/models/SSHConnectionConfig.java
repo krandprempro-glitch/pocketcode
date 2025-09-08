@@ -8,11 +8,14 @@ import org.json.JSONObject;
  * SSH连接配置数据模型
  */
 public class SSHConnectionConfig {
+    private String id;          // 配置唯一标识符
     private String name;        // 配置名称
     private String host;        // 主机IP地址
     private int port;           // 端口号，默认22
     private String username;    // 用户名
     private String password;    // 密码
+    private String privateKeyPath; // 私钥文件路径
+    private Integer connectionTimeout; // 连接超时时间(秒)
 
     public SSHConnectionConfig() {
         this.port = 22; // 默认SSH端口
@@ -27,6 +30,9 @@ public class SSHConnectionConfig {
     }
 
     // Getters and Setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
@@ -41,6 +47,12 @@ public class SSHConnectionConfig {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getPrivateKeyPath() { return privateKeyPath; }
+    public void setPrivateKeyPath(String privateKeyPath) { this.privateKeyPath = privateKeyPath; }
+
+    public Integer getConnectionTimeout() { return connectionTimeout; }
+    public void setConnectionTimeout(Integer connectionTimeout) { this.connectionTimeout = connectionTimeout; }
 
     /**
      * 获取显示名称
@@ -89,11 +101,14 @@ public class SSHConnectionConfig {
     public String toJson() {
         try {
             JSONObject json = new JSONObject();
+            json.put("id", id);
             json.put("name", name);
             json.put("host", host);
             json.put("port", port);
             json.put("username", username);
             json.put("password", password);
+            json.put("privateKeyPath", privateKeyPath);
+            json.put("connectionTimeout", connectionTimeout);
             return json.toString();
         } catch (JSONException e) {
             return null;
@@ -107,11 +122,16 @@ public class SSHConnectionConfig {
         try {
             JSONObject json = new JSONObject(jsonString);
             SSHConnectionConfig config = new SSHConnectionConfig();
+            config.setId(json.optString("id"));
             config.setName(json.optString("name"));
             config.setHost(json.optString("host"));
             config.setPort(json.optInt("port", 22));
             config.setUsername(json.optString("username"));
             config.setPassword(json.optString("password"));
+            config.setPrivateKeyPath(json.optString("privateKeyPath"));
+            if (json.has("connectionTimeout") && !json.isNull("connectionTimeout")) {
+                config.setConnectionTimeout(json.optInt("connectionTimeout"));
+            }
             return config;
         } catch (JSONException e) {
             return null;

@@ -19,17 +19,25 @@ data class ExecutionResult(
     
     enum class Status {
         EXECUTING,   // 正在执行
+        RUNNING,     // 正在运行 (别名)
         SUCCESS,     // 执行成功
         ERROR,       // 执行失败
-        TIMEOUT      // 执行超时
+        FAILED,      // 执行失败 (别名)
+        TIMEOUT,     // 执行超时
+        CANCELLED    // 执行取消
+    }
+    
+    // 检查状态是否已完成
+    fun Status.isFinished(): Boolean {
+        return this in listOf(Status.SUCCESS, Status.ERROR, Status.FAILED, Status.TIMEOUT, Status.CANCELLED)
     }
     
     // 工具方法
     fun isSuccess(): Boolean = status == Status.SUCCESS
     
-    fun isRunning(): Boolean = status == Status.EXECUTING
+    fun isRunning(): Boolean = status == Status.EXECUTING || status == Status.RUNNING
     
-    fun isError(): Boolean = status == Status.ERROR || status == Status.TIMEOUT
+    fun isError(): Boolean = status == Status.ERROR || status == Status.FAILED || status == Status.TIMEOUT
     
     fun getDuration(): Long {
         return if (endTime > 0 && startTime > 0) {
