@@ -52,19 +52,21 @@ class FloatingActionButton(context: Context) : DraggableView(context) {
         return true
     }
     
-    private var menuOverlay: FloatingMenuOverlay? = null
+    private var menuDialog: OverlayMenuDialog? = null
 
     private fun toggleMenu() {
-        if (menuOverlay == null) {
-            menuOverlay = FloatingMenuOverlay(context).apply {
-                setOnMenuSelectListener(object : FloatingMenuOverlay.OnMenuSelectListener {
-                    override fun onSSHConnection() { actionListener?.onSSHConnectionClicked() }
-                    override fun onRunCommand() { actionListener?.onRunCommandClicked() }
-                    override fun onQuickSettings() { actionListener?.onQuickSettingsClicked() }
-                })
-            }
+        if (menuDialog?.isShowing == true) {
+            menuDialog?.dismiss()
+            return
         }
-        menuOverlay?.show()
+        menuDialog = OverlayMenuDialog(context).apply {
+            setOnMenuSelectListener(object : OverlayMenuDialog.OnMenuSelectListener {
+                override fun onSSHConnection() { actionListener?.onSSHConnectionClicked() }
+                override fun onRunCommand() { actionListener?.onRunCommandClicked() }
+                override fun onQuickSettings() { actionListener?.onQuickSettingsClicked() }
+            })
+            show()
+        }
         actionListener?.onMenuToggle(true)
     }
     
