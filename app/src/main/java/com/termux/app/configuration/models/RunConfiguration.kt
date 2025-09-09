@@ -9,6 +9,7 @@ data class RunConfiguration(
     var command: String = "",
     var workingDir: String = ".",
     var envVariables: String = "",
+    var port: Int = 0,
     var runInBackground: Boolean = true,
     var logFileName: String = "app.log",
     var createdTime: Long = System.currentTimeMillis(),

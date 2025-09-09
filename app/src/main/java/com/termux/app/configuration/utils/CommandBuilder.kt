@@ -59,6 +59,23 @@ object CommandBuilder {
      * 生成Kill命令
      */
     fun generateKillCommand(config: RunConfiguration): String {
+        // 优先使用端口号杀进程
+        if (config.port > 0) {
+            val port = config.port
+            val killByPort = StringBuilder()
+            // 初始化 PID 为空
+            killByPort.append("PID=\"\"; ")
+            // lsof 优先
+            killByPort.append("command -v lsof >/dev/null 2>&1 && PID=${'$'}(lsof -ti tcp:$port 2>/dev/null | head -n1); ")
+            // ss 回退
+            killByPort.append("if [ -z \"${'$'}PID\" ] && command -v ss >/dev/null 2>&1; then PID=${'$'}(ss -lptn 2>/dev/null | awk -v p=:$port '\${'$'}4 ~ p { if (match(\${'$'}NF, /pid=[0-9]+/)) { print substr(\${'$'}NF,RSTART+4,RLENGTH-4); exit } }'); fi; ")
+            // netstat 回退
+            killByPort.append("if [ -z \"${'$'}PID\" ] && command -v netstat >/dev/null 2>&1; then PID=${'$'}(netstat -lntp 2>/dev/null | awk -v p=:$port '\${'$'}4 ~ p { split(\${'$'}7,a,\"/\"); print a[1]; exit }'); fi; ")
+            // 发送 kill 信号
+            killByPort.append("if [ -n \"${'$'}PID\" ]; then kill \"${'$'}PID\" 2>/dev/null || true; sleep 0.5; kill -9 \"${'$'}PID\" 2>/dev/null || true; fi")
+            return killByPort.toString()
+        }
+
         return when (config.languageType) {
             com.termux.app.configuration.models.LanguageType.NODEJS -> {
                 "pkill -f \"${config.command}\" 2>/dev/null || true"
@@ -112,6 +129,11 @@ object CommandBuilder {
      * 构建停止命令（通过 .pid 杀进程）
      */
     fun buildStopCommand(config: RunConfiguration): String {
+        // 如果配置了端口，使用端口查找PID停止；否则回退到 .pid
+        if (config.port > 0) {
+            return generateKillCommand(config)
+        }
+
         val cd = StringBuilder()
         cd.append("cd ${config.projectPath}")
         if (config.workingDir.isNotBlank() && config.workingDir != ".") {

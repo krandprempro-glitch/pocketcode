@@ -56,6 +56,7 @@ class RunConfigDetailFragment : Fragment() {
     private lateinit var etCommand: TextInputEditText
     private lateinit var etWorkingDir: TextInputEditText
     private lateinit var etEnvVariables: TextInputEditText
+    private lateinit var etPort: TextInputEditText
     private lateinit var etLogFileName: TextInputEditText
     private lateinit var spSSHConfig: Spinner
     private lateinit var spLanguageType: Spinner
@@ -127,6 +128,7 @@ class RunConfigDetailFragment : Fragment() {
         etCommand = view.findViewById(R.id.et_command)
         etWorkingDir = view.findViewById(R.id.et_working_dir)
         etEnvVariables = view.findViewById(R.id.et_env_variables)
+        etPort = view.findViewById(R.id.et_port)
         etLogFileName = view.findViewById(R.id.et_log_file_name)
         spSSHConfig = view.findViewById(R.id.sp_ssh_config)
         spLanguageType = view.findViewById(R.id.sp_language_type)
@@ -153,7 +155,10 @@ class RunConfigDetailFragment : Fragment() {
         spSSHConfig.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selectedSSH = sshAdapter.getItem(position)
-                selectedSSH?.let { updateProjectPathOptions(it.name) }
+                selectedSSH?.let {
+                    updateProjectPathOptions(it.name)
+                    updateCommandPreview()
+                }
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -169,7 +174,10 @@ class RunConfigDetailFragment : Fragment() {
         spLanguageType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selectedType = languageAdapter.getItem(position)
-                selectedType?.let { updateCommandSuggestions(it) }
+                selectedType?.let {
+                    updateCommandSuggestions(it)
+                    updateCommandPreview()
+                }
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -179,6 +187,14 @@ class RunConfigDetailFragment : Fragment() {
     private fun setupProjectPathSpinner() {
         pathAdapter = PathBookmarkSpinnerAdapter(requireContext())
         spProjectPath.adapter = pathAdapter
+
+        spProjectPath.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                updateCommandPreview()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
     
     /**
@@ -195,7 +211,19 @@ class RunConfigDetailFragment : Fragment() {
                     "该SSH连接暂无收藏路径，请先在文件浏览器中添加收藏",
                     Toast.LENGTH_LONG
                 ).show()
+            } else {
+                // 如果是编辑模式且已有项目路径，尝试恢复选择
+                currentConfig?.let { cfg ->
+                    if (!cfg.projectPath.isNullOrBlank()) {
+                        val index = bookmarks.indexOfFirst { it.fullPath == cfg.projectPath }
+                        if (index >= 0) {
+                            spProjectPath.setSelection(index)
+                        }
+                    }
+                }
             }
+            // 刷新命令预览
+            updateCommandPreview()
         } catch (e: Exception) {
             Logger.logError(LOG_TAG, "Failed to update project path options: ${e.message}")
         }
@@ -228,6 +256,7 @@ class RunConfigDetailFragment : Fragment() {
         etCommand.addTextChangedListener(previewUpdater)
         etWorkingDir.addTextChangedListener(previewUpdater)
         etEnvVariables.addTextChangedListener(previewUpdater)
+        etPort.addTextChangedListener(previewUpdater)
         etLogFileName.addTextChangedListener(previewUpdater)
     }
     
@@ -344,6 +373,9 @@ class RunConfigDetailFragment : Fragment() {
         config.command = etCommand.text.toString().trim()
         config.workingDir = etWorkingDir.text.toString().trim().ifEmpty { "." }
         config.envVariables = etEnvVariables.text.toString().trim()
+        // 端口（可选）
+        val portText = etPort.text?.toString()?.trim().orEmpty()
+        config.port = portText.toIntOrNull()?.coerceIn(1, 65535) ?: 0
         config.runInBackground = swRunInBackground.isChecked
         config.logFileName = etLogFileName.text.toString().trim().ifEmpty { 
             ConfigurationConstants.DEFAULT_LOG_FILE 
@@ -398,10 +430,31 @@ class RunConfigDetailFragment : Fragment() {
             etEnvVariables.setText(config.envVariables)
             etLogFileName.setText(config.logFileName)
             swRunInBackground.isChecked = config.runInBackground
+            if (config.port > 0) {
+                etPort.setText(config.port.toString())
+            } else {
+                etPort.setText("")
+            }
             
             // 设置Spinner选中项
             setSpinnerSelection(spLanguageType, config.languageType)
-            // SSH配置和项目路径的选择需要在适配器准备好后设置
+            // 恢复 SSH 与 项目路径选择
+            try {
+                // SSH 根据名称匹配
+                val sshIndex = sshAdapter.let { adapter ->
+                    (0 until adapter.count).firstOrNull { i ->
+                        adapter.getItem(i)?.name == config.sshConfigId
+                    } ?: -1
+                }
+                if (sshIndex >= 0) {
+                    spSSHConfig.setSelection(sshIndex)
+                }
+
+                // 项目路径将在 updateProjectPathOptions 中按当前配置恢复
+                // 如果当前 SSH 下没有对应书签，保持默认选择
+            } catch (e: Exception) {
+                Logger.logError(LOG_TAG, "Failed to restore spinner selections: ${e.message}")
+            }
         }
     }
     
