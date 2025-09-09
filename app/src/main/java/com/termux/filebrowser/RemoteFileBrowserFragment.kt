@@ -102,6 +102,8 @@ class RemoteFileBrowserFragment : Fragment(),
         
         // 在Fragment恢复时记录抽屉状态用于调试
         Logger.logInfo(LOG_TAG, "Fragment resumed, drawer open: ${binding.drawerLayout.isDrawerOpen(GravityCompat.START)}")
+        // Re-measure drawer to avoid scrim-without-drawer after tab switches
+        binding.navView.requestLayout()
     }
 
     override fun onAttach(context: Context) {
@@ -168,6 +170,8 @@ class RemoteFileBrowserFragment : Fragment(),
         val params = navView.layoutParams
         params.width = drawerWidth
         navView.layoutParams = params
+        // Ensure drawer remeasures after dynamic width change
+        navView.requestLayout()
     }
 
     private fun setupCodeEditor() {
