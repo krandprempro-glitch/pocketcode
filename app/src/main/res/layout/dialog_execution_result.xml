@@ -2,13 +2,14 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@color/rc_background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="12dp">
 
         <!-- 结果状态 -->
         <LinearLayout
@@ -50,7 +51,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/rc_surface"
+            app:strokeColor="@color/rc_card_stroke"
+            app:strokeWidth="1dp">
 
             <TextView
                 android:id="@+id/tv_result_message"
@@ -69,7 +73,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
             app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/rc_surface"
+            app:strokeColor="@color/rc_card_stroke"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -89,10 +96,11 @@
                     android:id="@+id/tv_command_output"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="pkill -f 'npm run dev' 2>/dev/null; cd /var/www/vue-app &amp;&amp; nohup npm run dev > app.log 2>&amp;1 &amp;"
+                    android:text=""
                     android:textSize="12sp"
                     android:fontFamily="monospace"
-                    android:background="@color/surface"
+                    android:background="@drawable/bg_code_block"
+                    android:textColor="@color/rc_code_text"
                     android:padding="12dp"
                     android:textIsSelectable="true"
                     android:maxHeight="200dp"
@@ -102,44 +110,76 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 按钮区域 -->
-        <LinearLayout
+        <!-- 按钮区域（横向滚动，防止换行） -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
+            android:scrollbars="none"
+            android:fillViewport="true">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_stop"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="停止"
-                android:layout_marginEnd="8dp" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_gravity="center_horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_view_log"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="查看日志"
-                android:layout_marginEnd="8dp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_stop"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="停止"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:layout_marginEnd="12dp"
+                    app:backgroundTint="@color/rc_button_black"
+                    android:textColor="@color/rc_button_black_text" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_re_execute"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="重新执行"
-                android:layout_marginEnd="8dp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_view_log"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="查看日志"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:layout_marginEnd="12dp"
+                    app:backgroundTint="@color/rc_button_black"
+                    android:textColor="@color/rc_button_black_text" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_close"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="关闭" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_re_execute"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="重新执行"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:layout_marginEnd="12dp"
+                    app:backgroundTint="@color/rc_button_black"
+                    android:textColor="@color/rc_button_black_text" />
 
-        </LinearLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_close"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="关闭"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    app:backgroundTint="@color/rc_button_black"
+                    android:textColor="@color/rc_button_black_text" />
+
+            </LinearLayout>
+        </HorizontalScrollView>
 
     </LinearLayout>
 

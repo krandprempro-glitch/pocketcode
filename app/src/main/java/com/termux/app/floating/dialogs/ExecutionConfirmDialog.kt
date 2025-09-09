@@ -46,7 +46,8 @@ class ExecutionConfirmDialog(
         setContentView(R.layout.dialog_execution_confirm)
         
         window?.let { window ->
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            val width = (context.resources.displayMetrics.widthPixels * 0.9).toInt()
+            window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
             window.setGravity(Gravity.CENTER)
         }
         

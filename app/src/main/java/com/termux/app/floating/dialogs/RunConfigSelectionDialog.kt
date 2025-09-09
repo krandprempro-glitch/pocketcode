@@ -38,7 +38,8 @@ class RunConfigSelectionDialog(context: Context) : Dialog(context, R.style.Theme
         
         // 设置对话框属性
         window?.let { window ->
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            val width = (context.resources.displayMetrics.widthPixels * 0.9).toInt()
+            window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
             window.setGravity(Gravity.CENTER)
             window.setBackgroundDrawableResource(R.drawable.bg_dialog_rounded)
         }
