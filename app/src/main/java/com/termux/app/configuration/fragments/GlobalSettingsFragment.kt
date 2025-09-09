@@ -41,8 +41,7 @@ class GlobalSettingsFragment : Fragment() {
     
     private lateinit var floatingManager: FloatingWindowManager
     private lateinit var permissionService: FloatingPermissionService
-    private lateinit var floatingToggle: Switch
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -56,7 +55,6 @@ class GlobalSettingsFragment : Fragment() {
         
         initManagers()
         initViews(view)
-        setupFloatingToggle()
     }
     
     private fun initManagers() {
@@ -65,7 +63,6 @@ class GlobalSettingsFragment : Fragment() {
     }
     
     private fun initViews(view: View) {
-        floatingToggle = view.findViewById(R.id.switch_floating_window)
 
         view.findViewById<Button>(R.id.btn_quick_test_pwd)?.setOnClickListener {
             runQuickTest("pwd")
@@ -74,35 +71,7 @@ class GlobalSettingsFragment : Fragment() {
             runQuickTest("ls -la")
         }
     }
-    
-    private fun setupFloatingToggle() {
-        // 设置初始状态
-        floatingToggle.isChecked = floatingManager.isFloatingEnabled()
-        
-        // 设置开关监听器
-        floatingToggle.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                enableFloating()
-            } else {
-                disableFloating()
-            }
-        }
-    }
-    
-    private fun enableFloating() {
-        if (permissionService.hasOverlayPermission()) {
-            floatingManager.enableFloating()
-        } else {
-            // 需要权限，先取消选中
-            floatingToggle.isChecked = false
-            // 请求权限
-            requestFloatingPermission()
-        }
-    }
 
-    private fun disableFloating() {
-        floatingManager.disableFloating()
-    }
 
     private fun runQuickTest(command: String) {
         val context = requireContext()
@@ -171,7 +140,6 @@ class GlobalSettingsFragment : Fragment() {
             object : FloatingPermissionService.OnPermissionResultListener {
                 override fun onPermissionResult(granted: Boolean) {
                     if (granted) {
-                        floatingToggle.isChecked = true
                         floatingManager.enableFloating()
                     }
                 }
@@ -185,7 +153,6 @@ class GlobalSettingsFragment : Fragment() {
         if (requestCode == REQUEST_OVERLAY_PERMISSION) {
             val granted = permissionService.hasOverlayPermission()
             if (granted) {
-                floatingToggle.isChecked = true
                 floatingManager.enableFloating()
             }
         }
