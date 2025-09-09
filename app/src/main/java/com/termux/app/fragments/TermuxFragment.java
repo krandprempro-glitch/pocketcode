@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.ContextMenu;
@@ -37,6 +38,7 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.InputDevice;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 
@@ -83,6 +85,7 @@ import com.termux.shared.termux.theme.TermuxThemeUtils;
 import com.termux.shared.theme.NightMode;
 import com.termux.shared.view.ViewUtils;
 import com.termux.terminal.TerminalSession;
+import com.termux.terminal.TerminalEmulator;
 import com.termux.terminal.TerminalSessionClient;
 import com.termux.shared.termux.shell.command.runner.terminal.TermuxSession;
 import com.termux.shared.termux.terminal.TermuxTerminalSessionClientBase;
@@ -662,7 +665,63 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
                 @Override
                 public void onSingleTapUp(MotionEvent e) {
-                    // Handle single tap if needed
+                    Logger.logInfo(LOG_TAG, "=== TERMINAL TAP DEBUG START ===");
+                    Logger.logInfo(LOG_TAG, "Terminal view available: " + (mTerminalView != null));
+                    
+                    // 参考TermuxActivity实现，点击终端时弹出输入法
+                    if (mTerminalView != null) {
+                        TerminalSession currentSession = mTerminalView.getCurrentSession();
+                        Logger.logInfo(LOG_TAG, "Current session available: " + (currentSession != null));
+                        
+                        if (currentSession != null) {
+                            TerminalEmulator term = currentSession.getEmulator();
+                            Logger.logInfo(LOG_TAG, "Terminal emulator available: " + (term != null));
+                            
+                            if (term != null) {
+                                boolean mouseTracking = term.isMouseTrackingActive();
+                                boolean isMouseEvent = e.isFromSource(InputDevice.SOURCE_MOUSE);
+                                Logger.logInfo(LOG_TAG, "Mouse tracking active: " + mouseTracking);
+                                Logger.logInfo(LOG_TAG, "Is mouse event: " + isMouseEvent);
+                                
+                                // 检查是否不是鼠标追踪且不是鼠标事件
+                                if (!mouseTracking && !isMouseEvent) {
+                                    Logger.logInfo(LOG_TAG, "Conditions met for showing keyboard");
+                                    // 弹出软键盘
+                                    if (getActivity() != null) {
+                                        Logger.logInfo(LOG_TAG, "Activity available: true");
+                                        InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                                        if (imm != null) {
+                                            Logger.logInfo(LOG_TAG, "InputMethodManager available: true");
+                                            Logger.logInfo(LOG_TAG, "Requesting focus and showing soft input...");
+                                            mTerminalView.requestFocus();
+                                            boolean result = imm.showSoftInput(mTerminalView, InputMethodManager.SHOW_IMPLICIT);
+                                            Logger.logInfo(LOG_TAG, "showSoftInput() returned: " + result);
+                                            
+                                            // 尝试强制显示
+                                            if (!result) {
+                                                Logger.logInfo(LOG_TAG, "First attempt failed, trying SHOW_FORCED...");
+                                                boolean forcedResult = imm.showSoftInput(mTerminalView, InputMethodManager.SHOW_FORCED);
+                                                Logger.logInfo(LOG_TAG, "showSoftInput(SHOW_FORCED) returned: " + forcedResult);
+                                            }
+                                        } else {
+                                            Logger.logError(LOG_TAG, "InputMethodManager is null");
+                                        }
+                                    } else {
+                                        Logger.logError(LOG_TAG, "Activity is null");
+                                    }
+                                } else {
+                                    Logger.logInfo(LOG_TAG, "Conditions NOT met - mouse tracking: " + mouseTracking + ", mouse event: " + isMouseEvent);
+                                }
+                            } else {
+                                Logger.logError(LOG_TAG, "Terminal emulator is null");
+                            }
+                        } else {
+                            Logger.logError(LOG_TAG, "Current session is null");
+                        }
+                    } else {
+                        Logger.logError(LOG_TAG, "Terminal view is null");
+                    }
+                    Logger.logInfo(LOG_TAG, "=== TERMINAL TAP DEBUG END ===");
                 }
 
                 @Override
@@ -1042,18 +1101,22 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         Logger.logInfo(LOG_TAG, "=== sendCommandToTerminal START ===");
         Logger.logInfo(LOG_TAG, "Command to send: '" + command + "'");
 
-        if (command == null || command.trim().isEmpty()) {
-            Logger.logWarn(LOG_TAG, "Empty command - nothing to send");
-            return;
-        }
-
         TerminalSession currentSession = getCurrentSession();
         Logger.logInfo(LOG_TAG, "Current session: " + currentSession);
 
         if (currentSession != null && currentSession.isRunning()) {
             Logger.logInfo(LOG_TAG, "Session is running, sending command...");
-            byte[] commandBytes = (command.trim() + "\r").getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            currentSession.write(commandBytes, 0, commandBytes.length);
+
+            // 如果命令为空或只有空格，只发送回车
+            if (command == null || command.trim().isEmpty()) {
+                Logger.logInfo(LOG_TAG, "Empty command - sending just Enter key");
+                byte[] enterBytes = "\r".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                currentSession.write(enterBytes, 0, enterBytes.length);
+            } else {
+                // 有内容的命令，发送命令+回车
+                byte[] commandBytes = (command.trim() + "\r").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                currentSession.write(commandBytes, 0, commandBytes.length);
+            }
             Logger.logInfo(LOG_TAG, "Command sent successfully");
         } else {
             Logger.logError(LOG_TAG, "Cannot send command - session is null or not running");
@@ -1064,6 +1127,33 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         }
 
         Logger.logInfo(LOG_TAG, "=== sendCommandToTerminal END ===");
+    }
+
+    /**
+     * 从Extra Keys调用Claude Code菜单的公共方法
+     */
+    public void openClaudeCodeMenuFromExtraKeys() {
+        Logger.logInfo(LOG_TAG, "Opening Claude Code menu from Extra Keys");
+        
+        if (mClaudeCodeMenuHelper != null) {
+            ImageButton claudeCodeButton = getView().findViewById(R.id.claude_code_menu_button);
+            if (claudeCodeButton != null) {
+                mClaudeCodeMenuHelper.showMenu(claudeCodeButton);
+                Logger.logInfo(LOG_TAG, "Claude Code menu opened successfully via helper");
+            } else {
+                Logger.logWarn(LOG_TAG, "Claude Code menu button not found");
+            }
+        } else {
+            // 使用简化版菜单
+            Logger.logInfo(LOG_TAG, "Using simplified Claude Code menu");
+            ImageButton claudeCodeButton = getView().findViewById(R.id.claude_code_menu_button);
+            EditText commandInput = getView().findViewById(R.id.terminal_command_input);
+            if (claudeCodeButton != null && commandInput != null) {
+                showSimpleClaudeCodeMenu(claudeCodeButton, commandInput);
+            } else {
+                Logger.logWarn(LOG_TAG, "UI elements not found for simplified menu");
+            }
+        }
     }
 
     /**
@@ -1153,6 +1243,8 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
         // 3. 系统指令类 (第三类)
         List<ClaudeCodeMenuHelper.Command> systemCommands = Arrays.asList(
+            new ClaudeCodeMenuHelper.Command("codex --dangerously-bypass-approvals-and-sandbox", "codex"),
+            new ClaudeCodeMenuHelper.Command("claude", "claude")
 
         );
         groups.add(new CommandGroupAdapter.CommandGroup(
@@ -1640,76 +1732,371 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         @NonNull
         @Override
         public Object instantiateItem(@NonNull ViewGroup collection, int position) {
+            Logger.logInfo(LOG_TAG, "*** FragmentTerminalToolbarPageAdapter.instantiateItem called ***");
+            Logger.logInfo(LOG_TAG, "Position: " + position + ", Collection: " + collection);
+            Logger.logInfo(LOG_TAG, "Fragment context: " + mFragment.getContext());
+            
             LayoutInflater inflater = LayoutInflater.from(mFragment.getContext());
             View layout;
             if (position == 0) {
+                Logger.logInfo(LOG_TAG, "*** CREATING EXTRA KEYS VIEW (position 0) ***");
                 layout = inflater.inflate(R.layout.view_terminal_toolbar_extra_keys, collection, false);
+                Logger.logInfo(LOG_TAG, "Layout inflated: " + layout);
+                
                 ExtraKeysView extraKeysView = (ExtraKeysView) layout;
+                Logger.logInfo(LOG_TAG, "ExtraKeysView cast: " + extraKeysView);
 
-                // Set up the extra keys view client - create a simplified one
-                if (mFragment.getTermuxTerminalExtraKeys() != null) {
-                    extraKeysView.setExtraKeysViewClient(mFragment.getTermuxTerminalExtraKeys());
-                    extraKeysView.setButtonTextAllCaps(mFragment.getProperties().shouldExtraKeysTextBeAllCaps());
-                    mFragment.setExtraKeysView(extraKeysView);
-                    extraKeysView.reload(mFragment.getTermuxTerminalExtraKeys().getExtraKeysInfo(),
-                        mFragment.getTerminalToolbarDefaultHeight());
-                } else {
-                    Logger.logWarn(LOG_TAG, "TermuxTerminalExtraKeys not initialized, creating basic extra keys client");
+                // Set basic properties FIRST
+                extraKeysView.setButtonTextAllCaps(mFragment.getProperties().shouldExtraKeysTextBeAllCaps());
+                mFragment.setExtraKeysView(extraKeysView);
 
-                    // Create a basic extra keys client that handles basic key input
-                    extraKeysView.setExtraKeysViewClient(new com.termux.shared.termux.extrakeys.ExtraKeysView.IExtraKeysView() {
+                // Create basic extra keys info with common keys and reload FIRST
+                try {
+                    String basicExtraKeys = "[[\"ESC\",\"TAB\",\"CTRL\",\"C\",\"UP\"],[\"ALT\",\"SHIFT\",\"/\",\"LEFT\",\"DOWN\",\"RIGHT\"]]";
+                    com.termux.shared.termux.extrakeys.ExtraKeysInfo extraKeysInfo = new com.termux.shared.termux.extrakeys.ExtraKeysInfo(basicExtraKeys, "default", com.termux.shared.termux.extrakeys.ExtraKeysConstants.CONTROL_CHARS_ALIASES);
+                    extraKeysView.reload(extraKeysInfo, mFragment.getTerminalToolbarDefaultHeight());
+                    Logger.logInfo(LOG_TAG, "ExtraKeysView reloaded successfully");
+                } catch (Exception e) {
+                    Logger.logWarn(LOG_TAG, "Failed to create basic extra keys: " + e.getMessage());
+                }
+
+                // CRITICAL: Set our custom client AFTER reload to ensure it's not overridden
+                Logger.logInfo(LOG_TAG, "*** SETTING CUSTOM CLIENT AFTER RELOAD ***");
+                Logger.logInfo(LOG_TAG, "*** CREATING CUSTOM EXTRA KEYS CLIENT ***");
+                
+                // 创建我们的自定义客户端实例
+                com.termux.shared.termux.extrakeys.ExtraKeysView.IExtraKeysView customClient = new com.termux.shared.termux.extrakeys.ExtraKeysView.IExtraKeysView() {
+                    
+                    // 构造函数中的测试日志
+                    {
+                        Logger.logInfo(LOG_TAG, "*** CUSTOM CLIENT CONSTRUCTOR CALLED - CLIENT INSTANCE CREATED ***");
+                    }
+                        
                         @Override
                         public void onExtraKeyButtonClick(View view, com.termux.shared.termux.extrakeys.ExtraKeyButton button, com.google.android.material.button.MaterialButton buttonView) {
-                            // Handle basic extra key button clicks
+                            Logger.logInfo(LOG_TAG, "*** CUSTOM CLIENT HANDLING KEY CLICK ***");
+                            Logger.logInfo(LOG_TAG, "=== ExtraKey Button Click START ===");
+                            
+                            // 首先检查button和key是否为null
+                            if (button == null) {
+                                Logger.logError(LOG_TAG, "ExtraKeyButton is NULL - cannot process");
+                                return;
+                            }
+                            
+                            String key = button.getKey();
+                            if (key == null) {
+                                Logger.logError(LOG_TAG, "Key is NULL from button - cannot process");
+                                return;
+                            }
+                            
+                            Logger.logInfo(LOG_TAG, "Button: " + button + ", ButtonView: " + buttonView);
+                            Logger.logInfo(LOG_TAG, "Raw key value: '" + key + "' (length=" + key.length() + ")");
+                            
                             TerminalSession session = mFragment.getCurrentSession();
-                            if (session != null && session.isRunning()) {
-                                String key = button.getKey();
-                                Logger.logInfo(LOG_TAG, "Extra key pressed: " + key);
-
-                                // Handle basic keys like arrow keys, ESC, TAB, etc.
-                                if ("UP".equals(key)) {
-                                    session.write("\u001b[A"); // Up arrow
-                                } else if ("DOWN".equals(key)) {
-                                    session.write("\u001b[B"); // Down arrow  
-                                } else if ("LEFT".equals(key)) {
-                                    session.write("\u001b[D"); // Left arrow
-                                } else if ("RIGHT".equals(key)) {
-                                    session.write("\u001b[C"); // Right arrow
-                                } else if ("ESC".equals(key)) {
-                                    session.write("\u001b"); // Escape
-                                } else if ("TAB".equals(key)) {
-                                    session.write("\t"); // Tab
-                                } else if ("CTRL".equals(key) || "ALT".equals(key) || "SHIFT".equals(key) || "FN".equals(key)) {
-                                    // Modifier keys - just toggle state
-                                    Logger.logInfo(LOG_TAG, "Modifier key: " + key);
-                                } else {
-                                    // Regular key - send as-is
-                                    session.write(key);
+                            Logger.logInfo(LOG_TAG, "Terminal session status: " + (session != null ? (session.isRunning() ? "RUNNING" : "NOT_RUNNING") : "NULL"));
+                            
+                            // 从原生ExtraKeysView系统读取特殊按键状态
+                            boolean ctrlActive = false;
+                            boolean altActive = false; 
+                            boolean shiftActive = false;
+                            
+                            // 获取ExtraKeysView实例来读取特殊按键状态
+                            if (mFragment.getExtraKeysView() != null) {
+                                try {
+                                    // 读取CTRL状态
+                                    Boolean ctrlState = mFragment.getExtraKeysView().readSpecialButton(
+                                        com.termux.shared.termux.extrakeys.SpecialButton.CTRL, false);
+                                    ctrlActive = (ctrlState != null && ctrlState);
+                                    
+                                    // 读取ALT状态  
+                                    Boolean altState = mFragment.getExtraKeysView().readSpecialButton(
+                                        com.termux.shared.termux.extrakeys.SpecialButton.ALT, false);
+                                    altActive = (altState != null && altState);
+                                    
+                                    // 读取SHIFT状态
+                                    Boolean shiftState = mFragment.getExtraKeysView().readSpecialButton(
+                                        com.termux.shared.termux.extrakeys.SpecialButton.SHIFT, false);  
+                                    shiftActive = (shiftState != null && shiftState);
+                                    
+                                } catch (Exception e) {
+                                    Logger.logWarn(LOG_TAG, "Failed to read special button states: " + e.getMessage());
                                 }
                             }
+                            
+                            Logger.logInfo(LOG_TAG, "Key pressed: '" + key + "' | Native modifier states -> Ctrl: " + ctrlActive + ", Alt: " + altActive + ", Shift: " + shiftActive);
+                            
+                            // 只有当session运行时才处理按键
+                            if (session != null && session.isRunning()) {
+                                // 使用正确的方式处理组合键和普通键
+                                Logger.logInfo(LOG_TAG, "Processing key: '" + key + "'");
+                                
+                                // 特殊处理Ctrl+C组合键
+                                if (ctrlActive && ("C".equals(key) || "c".equals(key))) {
+                                    Logger.logInfo(LOG_TAG, "Detected Ctrl+C combination - sending interrupt signal");
+                                    // 发送Ctrl+C中断信号 (ASCII 3)
+                                    if (session != null) {
+                                        byte[] interruptBytes = new byte[]{3}; // Ctrl+C = ASCII 3
+                                        session.write(interruptBytes, 0, 1);
+                                        Logger.logInfo(LOG_TAG, "Ctrl+C interrupt signal sent successfully");
+                                    }
+                                    // 重置修饰键状态 - 使用原生系统
+                                    Logger.logInfo(LOG_TAG, "Resetting modifier states after Ctrl+C");
+                                    resetNativeModifierStates();
+                                } else if (shiftActive && "TAB".equals(key)) {
+                                    // 特殊处理Shift+Tab组合键 - 发送到终端
+                                    Logger.logInfo(LOG_TAG, "Detected Shift+Tab combination - sending to terminal");
+                                    
+                                    // Shift+Tab在终端中通常是反向Tab (backtab)
+                                    // 发送ESC[Z序列，这是标准的反向Tab转义序列
+                                    if (session != null) {
+                                        byte[] backtabBytes = "\u001b[Z".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                                        session.write(backtabBytes, 0, backtabBytes.length);
+                                        Logger.logInfo(LOG_TAG, "Shift+Tab (backtab) sequence sent to terminal");
+                                    }
+                                    
+                                    // 重置修饰键状态 - 使用原生系统
+                                    Logger.logInfo(LOG_TAG, "Resetting modifier states after Shift+Tab");
+                                    resetNativeModifierStates();
+                                } else if (ctrlActive && "/".equals(key)) {
+                                    // 特殊处理Ctrl+/ 组合键 - 打开Claude Code菜单  
+                                    Logger.logInfo(LOG_TAG, "Detected Ctrl+/ combination - opening Claude Code menu");
+                                    // 通过Fragment的方法来访问Claude Code菜单
+                                    mFragment.openClaudeCodeMenuFromExtraKeys();
+                                    // 重置修饰键状态 - 使用原生系统
+                                    Logger.logInfo(LOG_TAG, "Resetting modifier states after Ctrl+/");
+                                    resetNativeModifierStates();
+                                } else if (ctrlActive || altActive || shiftActive) {
+                                    // 其他组合键或修饰键+普通键处理
+                                    handleKeyInput(key, ctrlActive, altActive, shiftActive, session);
+                                    Logger.logInfo(LOG_TAG, "Resetting modifier states after modifier key combination");
+                                    resetNativeModifierStates();
+                                } else {
+                                    // 普通按键处理，无需重置修饰键
+                                    handleKeyInput(key, false, false, false, session);
+                                }
+                            } else {
+                                Logger.logWarn(LOG_TAG, "Cannot process key - terminal session is not available or not running");
+                            }
+                            Logger.logInfo(LOG_TAG, "=== ExtraKey Button Click END ===");
+                        }
+                        
+                        private void updateButtonState(com.google.android.material.button.MaterialButton button, boolean pressed) {
+                            Logger.logInfo(LOG_TAG, "*** updateButtonState START ***");
+                            Logger.logInfo(LOG_TAG, "Updating button state: " + (button != null ? button.getText() : "null") + " -> " + (pressed ? "PRESSED" : "RELEASED"));
+                            if (button != null) {
+                                button.setSelected(pressed);
+                                if (pressed) {
+                                    button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // 绿色表示激活
+                                    Logger.logInfo(LOG_TAG, "Button visual state set to ACTIVE (green)");
+                                } else {
+                                    button.setBackgroundTintList(null); // 恢复默认颜色
+                                    Logger.logInfo(LOG_TAG, "Button visual state set to DEFAULT");
+                                }
+                                Logger.logInfo(LOG_TAG, "Button state update completed successfully");
+                            } else {
+                                Logger.logWarn(LOG_TAG, "Cannot update button state - button is null");
+                            }
+                            Logger.logInfo(LOG_TAG, "*** updateButtonState END ***");
+                        }
+                        
+                        private void handleKeyInput(String key, boolean ctrlDown, boolean altDown, boolean shiftDown, TerminalSession session) {
+                            Logger.logInfo(LOG_TAG, ">>> HANDLE KEY INPUT START <<<");
+                            Logger.logInfo(LOG_TAG, "Input key: '" + key + "' | Modifiers -> Ctrl: " + ctrlDown + ", Alt: " + altDown + ", Shift: " + shiftDown);
+                            
+                            // 通过Fragment引用获取TerminalView
+                            TerminalView terminalView = mFragment.getTerminalView();
+                            Logger.logInfo(LOG_TAG, "TerminalView availability: " + (terminalView != null ? "AVAILABLE" : "NULL"));
+                            
+                            // 首先检查是否是特殊按键，使用KeyEvent处理
+                            Integer keyCode = getKeyCodeForString(key);
+                            Logger.logInfo(LOG_TAG, "KeyCode lookup for '" + key + "': " + (keyCode != null ? keyCode + " (SPECIAL_KEY)" : "null (REGULAR_CHAR)"));
+                            
+                            if (keyCode != null) {
+                                // 特殊按键处理路径
+                                int metaState = 0;
+                                if (ctrlDown) {
+                                    metaState |= KeyEvent.META_CTRL_ON | KeyEvent.META_CTRL_LEFT_ON;
+                                    Logger.logInfo(LOG_TAG, "Added CTRL to metaState");
+                                }
+                                if (altDown) {
+                                    metaState |= KeyEvent.META_ALT_ON | KeyEvent.META_ALT_LEFT_ON;
+                                    Logger.logInfo(LOG_TAG, "Added ALT to metaState");
+                                }
+                                if (shiftDown) {
+                                    metaState |= KeyEvent.META_SHIFT_ON | KeyEvent.META_SHIFT_LEFT_ON;
+                                    Logger.logInfo(LOG_TAG, "Added SHIFT to metaState");
+                                }
+
+                                Logger.logInfo(LOG_TAG, "Final KeyEvent parameters -> keyCode: " + keyCode + ", metaState: " + metaState + " (binary: " + Integer.toBinaryString(metaState) + ")");
+
+                                KeyEvent keyEvent = new KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, metaState);
+                                if (terminalView != null) {
+                                    Logger.logInfo(LOG_TAG, "Calling terminalView.onKeyDown() with KeyEvent...");
+                                    boolean result = terminalView.onKeyDown(keyCode, keyEvent);
+                                    Logger.logInfo(LOG_TAG, "TerminalView.onKeyDown() returned: " + result);
+                                } else {
+                                    Logger.logError(LOG_TAG, "TerminalView is null - cannot send KeyEvent");
+                                }
+                            } else {
+                                // 普通字符处理路径
+                                Logger.logInfo(LOG_TAG, "Processing as regular character input");
+                                if (terminalView != null && key.length() > 0) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                        Logger.logInfo(LOG_TAG, "Using codePoints method (Android N+)");
+                                        key.codePoints().forEach(codePoint -> {
+                                            Logger.logInfo(LOG_TAG, "Sending codePoint: " + codePoint + " (char: '" + (char)codePoint + "') with ctrl:" + ctrlDown + ", alt:" + altDown);
+                                            terminalView.inputCodePoint(com.termux.view.TerminalView.KEY_EVENT_SOURCE_VIRTUAL_KEYBOARD, codePoint, ctrlDown, altDown);
+                                        });
+                                        Logger.logInfo(LOG_TAG, "Finished sending codePoints for: '" + key + "'");
+                                    } else {
+                                        // 旧版本Android fallback
+                                        Logger.logInfo(LOG_TAG, "Using session.write() fallback for Android < N");
+                                        if (session != null) {
+                                            session.write(key);
+                                            Logger.logInfo(LOG_TAG, "Wrote to session: '" + key + "'");
+                                        } else {
+                                            Logger.logError(LOG_TAG, "Session is null - cannot write");
+                                        }
+                                    }
+                                } else {
+                                    Logger.logError(LOG_TAG, "Cannot process character - terminalView is null or key is empty");
+                                }
+                            }
+                            Logger.logInfo(LOG_TAG, "<<< HANDLE KEY INPUT END <<<");
+                        }
+                        
+                        private Integer getKeyCodeForString(String key) {
+                            // 映射特殊按键到KeyCode - 移除C和c的映射，让它们作为普通字符处理
+                            Integer keyCode;
+                            switch (key) {
+                                case "TAB": keyCode = KeyEvent.KEYCODE_TAB; break;
+                                case "UP": keyCode = KeyEvent.KEYCODE_DPAD_UP; break;
+                                case "DOWN": keyCode = KeyEvent.KEYCODE_DPAD_DOWN; break;
+                                case "LEFT": keyCode = KeyEvent.KEYCODE_DPAD_LEFT; break;
+                                case "RIGHT": keyCode = KeyEvent.KEYCODE_DPAD_RIGHT; break;
+                                case "ESC": keyCode = KeyEvent.KEYCODE_ESCAPE; break;
+                                case " ": keyCode = KeyEvent.KEYCODE_SPACE; break;
+                                // 移除了 C 和 c 的映射，让Ctrl+C通过上面的特殊处理逻辑
+                                default: keyCode = null; break;
+                            }
+                            Logger.logInfo(LOG_TAG, "KeyCode mapping: '" + key + "' -> " + (keyCode != null ? keyCode + " (" + getKeyCodeName(keyCode) + ")" : "null (regular character)"));
+                            return keyCode;
+                        }
+                        
+                        private String getKeyCodeName(int keyCode) {
+                            switch (keyCode) {
+                                case KeyEvent.KEYCODE_TAB: return "TAB";
+                                case KeyEvent.KEYCODE_DPAD_UP: return "UP";
+                                case KeyEvent.KEYCODE_DPAD_DOWN: return "DOWN";
+                                case KeyEvent.KEYCODE_DPAD_LEFT: return "LEFT";
+                                case KeyEvent.KEYCODE_DPAD_RIGHT: return "RIGHT";
+                                case KeyEvent.KEYCODE_ESCAPE: return "ESC";
+                                case KeyEvent.KEYCODE_SPACE: return "SPACE";
+                                // 移除了 KEYCODE_C 的处理
+                                default: return "UNKNOWN_" + keyCode;
+                            }
+                        }
+                        
+                        private void resetNativeModifierStates() {
+                            Logger.logInfo(LOG_TAG, "*** RESETTING NATIVE MODIFIER STATES ***");
+                            
+                            if (mFragment.getExtraKeysView() != null) {
+                                try {
+                                    // 获取特殊按键状态并重置为非激活状态
+                                    java.util.Map<com.termux.shared.termux.extrakeys.SpecialButton, com.termux.shared.termux.extrakeys.SpecialButtonState> specialButtons = 
+                                        mFragment.getExtraKeysView().getSpecialButtons();
+                                    
+                                    if (specialButtons != null) {
+                                        // 重置CTRL状态
+                                        com.termux.shared.termux.extrakeys.SpecialButtonState ctrlState = 
+                                            specialButtons.get(com.termux.shared.termux.extrakeys.SpecialButton.CTRL);
+                                        if (ctrlState != null) {
+                                            ctrlState.setIsActive(false);
+                                            ctrlState.setIsLocked(false);
+                                            Logger.logInfo(LOG_TAG, "CTRL state reset to inactive");
+                                        }
+                                        
+                                        // 重置ALT状态
+                                        com.termux.shared.termux.extrakeys.SpecialButtonState altState = 
+                                            specialButtons.get(com.termux.shared.termux.extrakeys.SpecialButton.ALT);
+                                        if (altState != null) {
+                                            altState.setIsActive(false);
+                                            altState.setIsLocked(false);
+                                            Logger.logInfo(LOG_TAG, "ALT state reset to inactive");
+                                        }
+                                        
+                                        // 重置SHIFT状态
+                                        com.termux.shared.termux.extrakeys.SpecialButtonState shiftState = 
+                                            specialButtons.get(com.termux.shared.termux.extrakeys.SpecialButton.SHIFT);
+                                        if (shiftState != null) {
+                                            shiftState.setIsActive(false);
+                                            shiftState.setIsLocked(false);
+                                            Logger.logInfo(LOG_TAG, "SHIFT state reset to inactive");
+                                        }
+                                        
+                                        Logger.logInfo(LOG_TAG, "All native modifier states reset successfully");
+                                    } else {
+                                        Logger.logWarn(LOG_TAG, "Could not get special buttons map for reset");
+                                    }
+                                } catch (Exception e) {
+                                    Logger.logError(LOG_TAG, "Failed to reset native modifier states: " + e.getMessage());
+                                }
+                            } else {
+                                Logger.logError(LOG_TAG, "ExtraKeysView is null - cannot reset native states");
+                            }
+                            
+                            Logger.logInfo(LOG_TAG, "*** NATIVE MODIFIER STATES RESET COMPLETE ***");
                         }
 
                         @Override
                         public boolean performExtraKeyButtonHapticFeedback(View view, com.termux.shared.termux.extrakeys.ExtraKeyButton button, com.google.android.material.button.MaterialButton buttonView) {
-                            return false; // No haptic feedback
+                            Logger.logInfo(LOG_TAG, "*** HAPTIC FEEDBACK METHOD CALLED ***");
+                            Logger.logInfo(LOG_TAG, "=== performExtraKeyButtonHapticFeedback START ===");
+                            
+                            // 获取按键信息
+                            if (button == null) {
+                                Logger.logError(LOG_TAG, "Button is NULL in haptic feedback");
+                                return false;
+                            }
+                            
+                            String key = button.getKey();
+                            if (key == null) {
+                                Logger.logError(LOG_TAG, "Key is NULL in haptic feedback");
+                                return false;
+                            }
+                            
+                            Logger.logInfo(LOG_TAG, "Haptic feedback for key: '" + key + "'");
+                            
+                            // 对于特殊按键(CTRL, ALT, SHIFT)，我们不在这里处理状态
+                            // 让原生的ExtraKeysView系统处理状态，我们只记录状态变化用于组合键检测
+                            if ("CTRL".equals(key) || "ALT".equals(key) || "SHIFT".equals(key)) {
+                                Logger.logInfo(LOG_TAG, "Special button haptic feedback: '" + key + "' - letting native system handle state");
+                            }
+                            
+                            Logger.logInfo(LOG_TAG, "=== performExtraKeyButtonHapticFeedback END ===");
+                            return false; // Let system handle haptic feedback
                         }
-                    });
-
-                    // Set basic properties
-                    extraKeysView.setButtonTextAllCaps(mFragment.getProperties().shouldExtraKeysTextBeAllCaps());
-                    mFragment.setExtraKeysView(extraKeysView);
-
-                    // Create basic extra keys info with common keys
-                    try {
-                        String basicExtraKeys = "[[\"ESC\",\"TAB\",\"CTRL\",\" \",\"UP\"],[\"ALT\",\"SHIFT\",\"/\",\"LEFT\",\"DOWN\",\"RIGHT\"]]";
-                        com.termux.shared.termux.extrakeys.ExtraKeysInfo extraKeysInfo = new com.termux.shared.termux.extrakeys.ExtraKeysInfo(basicExtraKeys, "default", com.termux.shared.termux.extrakeys.ExtraKeysConstants.CONTROL_CHARS_ALIASES);
-                        extraKeysView.reload(extraKeysInfo, mFragment.getTerminalToolbarDefaultHeight());
-                    } catch (Exception e) {
-                        Logger.logWarn(LOG_TAG, "Failed to create basic extra keys: " + e.getMessage());
-                    }
+                };
+                
+                // 设置自定义客户端并确认
+                Logger.logInfo(LOG_TAG, "*** SETTING CUSTOM CLIENT ON EXTRA KEYS VIEW ***");
+                extraKeysView.setExtraKeysViewClient(customClient);
+                Logger.logInfo(LOG_TAG, "*** CUSTOM CLIENT SET SUCCESSFULLY ***");
+                Logger.logInfo(LOG_TAG, "*** Custom client instance: " + customClient + " ***");
+                
+                // 验证客户端是否正确设置 - 使用反射检查私有字段
+                try {
+                    java.lang.reflect.Field clientField = extraKeysView.getClass().getDeclaredField("mExtraKeysViewClient");
+                    clientField.setAccessible(true);
+                    Object actualClient = clientField.get(extraKeysView);
+                    Logger.logInfo(LOG_TAG, "*** VERIFICATION: Actual client in ExtraKeysView: " + actualClient + " ***");
+                    Logger.logInfo(LOG_TAG, "*** VERIFICATION: Client match: " + (actualClient == customClient) + " ***");
+                } catch (Exception e) {
+                    Logger.logWarn(LOG_TAG, "Failed to verify client via reflection: " + e.getMessage());
                 }
 
             } else {
+                Logger.logInfo(LOG_TAG, "*** CREATING TEXT INPUT VIEW (position 1) ***");
                 layout = inflater.inflate(R.layout.view_terminal_toolbar_text_input, collection, false);
                 final EditText editText = layout.findViewById(R.id.terminal_toolbar_text_input);
 
@@ -1732,6 +2119,8 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 });
             }
             collection.addView(layout);
+            Logger.logInfo(LOG_TAG, "*** instantiateItem COMPLETED - Layout added to collection ***");
+            Logger.logInfo(LOG_TAG, "Final layout: " + layout);
             return layout;
         }
 
