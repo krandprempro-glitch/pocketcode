@@ -21,6 +21,11 @@ import com.termux.app.configuration.managers.RunConfigurationManager
 import com.termux.app.configuration.models.RunConfiguration
 import com.termux.app.configuration.utils.CommandBuilder
 import com.termux.shared.logger.Logger
+import com.termux.app.floating.services.RemoteCommandExecutor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 运行配置列表页面
@@ -81,7 +86,8 @@ class RunConfigListFragment : Fragment() {
             }
             
             override fun onCopyCommand(config: RunConfiguration) {
-                copyCommandToClipboard(config)
+                // 改为停止：直接执行停止指令
+                stopRemoteProcess(config)
             }
             
             override fun onQuickRun(config: RunConfiguration) {
@@ -136,6 +142,39 @@ class RunConfigListFragment : Fragment() {
         } catch (e: Exception) {
             Logger.logError(LOG_TAG, "Failed to copy command: ${e.message}")
             Toast.makeText(context, "复制失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * 执行停止指令（通过SSH远程执行）
+     */
+    private fun stopRemoteProcess(config: RunConfiguration) {
+        try {
+            val stopCmd = CommandBuilder.buildStopCommand(config)
+            val executor = RemoteCommandExecutor.getInstance(requireContext())
+
+            // 在后台线程执行停止命令
+            GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    val tempConfig = config.copy(
+                        id = System.currentTimeMillis().toString(),
+                        command = stopCmd.substringAfter("&& "),
+                        runInBackground = false
+                    )
+                    val result = executor.executeConfiguration(tempConfig)
+                    withContext(Dispatchers.Main) {
+                        val msg = if (result.isSuccess()) "已发送停止信号" else (result.errorMessage.ifBlank { "停止失败" })
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "停止失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Logger.logError(LOG_TAG, "Failed to build stop command: ${e.message}")
+            Toast.makeText(context, "生成停止命令失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
