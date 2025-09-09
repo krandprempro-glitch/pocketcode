@@ -96,6 +96,13 @@ class RemoteFileBrowserFragment : Fragment(),
 
         Logger.logInfo(LOG_TAG, "Fragment initialized with MVVM architecture")
     }
+    
+    override fun onResume() {
+        super.onResume()
+        
+        // 在Fragment恢复时记录抽屉状态用于调试
+        Logger.logInfo(LOG_TAG, "Fragment resumed, drawer open: ${binding.drawerLayout.isDrawerOpen(GravityCompat.START)}")
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -128,7 +135,30 @@ class RemoteFileBrowserFragment : Fragment(),
             R.string.drawer_open,
             R.string.drawer_close
         )
-        binding.drawerLayout.addDrawerListener(toggle)
+        
+        // 添加抽屉状态监听器，记录状态变化用于调试
+        binding.drawerLayout.addDrawerListener(object : androidx.drawerlayout.widget.DrawerLayout.DrawerListener {
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+                toggle.onDrawerSlide(drawerView, slideOffset)
+            }
+
+            override fun onDrawerOpened(drawerView: View) {
+                toggle.onDrawerOpened(drawerView)
+                Logger.logInfo(LOG_TAG, "Drawer opened successfully")
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                toggle.onDrawerClosed(drawerView)
+                Logger.logInfo(LOG_TAG, "Drawer closed successfully")
+            }
+
+            override fun onDrawerStateChanged(newState: Int) {
+                toggle.onDrawerStateChanged(newState)
+                Logger.logInfo(LOG_TAG, "Drawer state changed: $newState")
+            }
+        })
+        
+        // 确保toggle状态同步
         toggle.syncState()
 
         // 动态设置抽屉宽度为屏幕宽度的50%
@@ -262,6 +292,28 @@ class RemoteFileBrowserFragment : Fragment(),
 
         // 主界面选项按钮处理
         (requireActivity() as AppCompatActivity).supportActionBar?.setHomeActionContentDescription("打开菜单")
+        
+        // 添加toolbar点击监听，增强异常状态检测
+        binding.toolbar.setNavigationOnClickListener {
+            Logger.logInfo(LOG_TAG, "Toolbar navigation clicked")
+            
+            if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                // 抽屉已打开，直接关闭
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+            } else {
+                // 抽屉未打开，尝试打开
+                binding.drawerLayout.openDrawer(GravityCompat.START)
+                
+                // 延迟检查是否成功打开，如果没有则尝试修复
+                binding.root.postDelayed({
+                    if (!binding.drawerLayout.isDrawerOpen(GravityCompat.START) && 
+                        binding.drawerLayout.isDrawerVisible(GravityCompat.START)) {
+                        Logger.logInfo(LOG_TAG, "Drawer open failed, attempting to fix state")
+                        checkAndFixDrawerState()
+                    }
+                }, 200)
+            }
+        }
     }
 
     private fun initDrawerMenuItems() {
@@ -442,6 +494,34 @@ class RemoteFileBrowserFragment : Fragment(),
     private fun closeDrawer() {
         if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
             binding.drawerLayout.closeDrawer(GravityCompat.START)
+        }
+    }
+    
+    /**
+     * 检查并修复抽屉的异常状态
+     * 只在真正检测到问题时才介入处理
+     */
+    private fun checkAndFixDrawerState() {
+        try {
+            val isOpen = binding.drawerLayout.isDrawerOpen(GravityCompat.START)
+            val isVisible = binding.drawerLayout.isDrawerVisible(GravityCompat.START)
+            
+            Logger.logInfo(LOG_TAG, "Drawer state check - isOpen: $isOpen, isVisible: $isVisible")
+            
+            // 只在检测到异常状态时才处理：有蒙层但抽屉不可见
+            if (!isOpen && isVisible) {
+                Logger.logInfo(LOG_TAG, "Detected abnormal state: visible but not open, fixing...")
+                
+                // 温和地重置状态
+                binding.drawerLayout.closeDrawer(GravityCompat.START, false)
+                
+                // 给系统一点时间处理状态变更，然后重新打开
+                binding.root.postDelayed({
+                    binding.drawerLayout.openDrawer(GravityCompat.START)
+                }, 50)
+            }
+        } catch (e: Exception) {
+            Logger.logError(LOG_TAG, "Failed to check drawer state: ${e.message}")
         }
     }
 
