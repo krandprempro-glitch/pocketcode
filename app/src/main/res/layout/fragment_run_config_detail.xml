@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="@color/background">
+    android:background="@color/rc_background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,7 +17,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/rc_surface"
+            app:strokeColor="@color/rc_card_stroke"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -31,7 +34,7 @@
                     android:text="基本信息"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/rc_heading"
                     android:layout_marginBottom="16dp" />
 
                 <!-- 配置名称 -->
@@ -59,7 +62,7 @@
                     android:layout_height="wrap_content"
                     android:text="SSH连接"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/rc_label"
                     android:layout_marginBottom="8dp" />
 
                 <Spinner
@@ -75,7 +78,7 @@
                     android:layout_height="wrap_content"
                     android:text="项目路径"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/rc_label"
                     android:layout_marginBottom="8dp" />
 
                 <Spinner
@@ -95,7 +98,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/rc_surface"
+            app:strokeColor="@color/rc_card_stroke"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -109,7 +115,7 @@
                     android:text="运行配置"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/rc_heading"
                     android:layout_marginBottom="16dp" />
 
                 <!-- 语言类型 -->
@@ -118,7 +124,7 @@
                     android:layout_height="wrap_content"
                     android:text="语言类型"
                     android:textSize="14sp"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/rc_label"
                     android:layout_marginBottom="8dp" />
 
                 <Spinner
@@ -214,6 +220,23 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- 端口号（可选，仅用于Kill逻辑） -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:helperText="用于Kill进程（可选，不参与运行）">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_port"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="端口号（可选）"
+                        android:inputType="number"
+                        android:maxLength="5" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
@@ -224,7 +247,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/rc_surface"
+            app:strokeColor="@color/rc_card_stroke"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -246,7 +272,7 @@
                         android:text="命令预览"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="@color/rc_heading" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_preview"
@@ -254,6 +280,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="详情"
+                        android:textColor="@color/rc_accent"
                         android:textSize="12sp" />
 
                 </LinearLayout>
@@ -267,7 +294,7 @@
                     android:fontFamily="monospace"
                     android:text="请完善配置信息"
                     android:textSize="12sp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/rc_code_text"
                     android:minHeight="60dp" />
 
             </LinearLayout>
