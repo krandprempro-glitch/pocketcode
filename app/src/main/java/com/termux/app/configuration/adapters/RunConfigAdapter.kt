@@ -84,8 +84,8 @@ class RunConfigAdapter(private val context: Context) :
             // 设置语言图标
             ivLanguageIcon.setImageResource(getLanguageIcon(config.languageType))
             
-            // 设置卡片颜色（根据语言类型）
-            setCardColor(config.languageType)
+            // 卡片保持白色风格；仅根据语言类型调整图标颜色
+            setIconTint(config.languageType)
             
             // 设置按钮点击事件
             btnEdit.setOnClickListener {
@@ -143,7 +143,7 @@ class RunConfigAdapter(private val context: Context) :
             }
         }
         
-        private fun setCardColor(languageType: LanguageType) {
+        private fun setIconTint(languageType: LanguageType) {
             val colorRes = when (languageType) {
                 LanguageType.NODEJS -> R.color.language_nodejs
                 LanguageType.PYTHON -> R.color.language_python
@@ -155,8 +155,9 @@ class RunConfigAdapter(private val context: Context) :
                 LanguageType.CPP -> R.color.language_cpp
                 LanguageType.CUSTOM -> R.color.language_custom
             }
-            
-            cardView.setCardBackgroundColor(ContextCompat.getColor(context, colorRes))
+            ivLanguageIcon.imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(context, colorRes)
+            )
         }
         
         private fun formatLastUsedTime(timestamp: Long): String {
