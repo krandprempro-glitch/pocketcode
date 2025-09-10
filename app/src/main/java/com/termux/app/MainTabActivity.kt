@@ -134,8 +134,9 @@ class MainTabActivity : AppCompatActivity() {
             }
         })
         
-        // 显示悬浮按钮
-        floatingActionButton?.show()
+        // 在Activity的根布局中显示悬浮按钮
+        val rootContainer = findViewById<android.widget.FrameLayout>(android.R.id.content)
+        floatingActionButton?.show(rootContainer)
     }
     
     private fun showSSHConnectionDialog() {

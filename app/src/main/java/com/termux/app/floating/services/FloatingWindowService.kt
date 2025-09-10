@@ -116,7 +116,9 @@ class FloatingWindowService : Service() {
         }
         
         if (!isFloatingVisible) {
-            floatingButton?.show()
+            // 由于现在悬浮按钮只在Activity内部显示，这个Service已不再需要
+            // TODO: 这个Service可以被移除，因为悬浮按钮现在在MainTabActivity内部管理
+            // floatingButton?.show() // 暂时注释掉，避免编译错误
             isFloatingVisible = true
             
             // 创建前台服务通知
