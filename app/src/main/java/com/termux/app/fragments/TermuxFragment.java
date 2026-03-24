@@ -60,7 +60,11 @@ import com.termux.app.ui.SSHFloatingActionButton;
 import com.termux.app.ui.SSHConfigDialog;
 import com.termux.app.models.SSHConnectionConfig;
 import com.termux.app.models.SSHConfigManager;
+import com.termux.app.configuration.managers.QuickCommandManager;
+import com.termux.app.configuration.models.QuickCommand;
+import com.termux.app.models.DirectoryBookmark;
 import com.termux.app.ssh.SSHConnectionManager;
+import com.termux.app.managers.ProjectWorkspaceManager;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.ActivityUtils;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
@@ -174,6 +178,11 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
      * SSH connection manager for handling SSH connections.
      */
     private SSHConnectionManager mSSHConnectionManager;
+
+    /**
+     * Project workspace manager for handling bookmarks.
+     */
+    private ProjectWorkspaceManager mProjectWorkspaceManager;
 
     /**
      * The termux sessions list controller.
@@ -1097,7 +1106,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         Logger.logInfo(LOG_TAG, "=== setTerminalInputView SUCCESS ===");
     }
 
-    private void sendCommandToTerminal(String command) {
+    public void sendCommandToTerminal(String command) {
         Logger.logInfo(LOG_TAG, "=== sendCommandToTerminal START ===");
         Logger.logInfo(LOG_TAG, "Command to send: '" + command + "'");
 
@@ -1196,7 +1205,32 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
     private List<CommandGroupAdapter.CommandGroup> prepareCommandGroups() {
         List<CommandGroupAdapter.CommandGroup> groups = new ArrayList<>();
 
-        // 1. SSH连接类 (第一类)
+        // 1. 收藏路径类 (第一类)
+        List<ClaudeCodeMenuHelper.Command> bookmarkCommands = new ArrayList<>();
+        try {
+            // 延迟初始化 ProjectWorkspaceManager
+            if (mProjectWorkspaceManager == null && getContext() != null) {
+                mProjectWorkspaceManager = ProjectWorkspaceManager.getInstance(getContext());
+            }
+            if (mProjectWorkspaceManager != null) {
+                List<DirectoryBookmark> bookmarks = mProjectWorkspaceManager.getAllBookmarks();
+                for (DirectoryBookmark bookmark : bookmarks) {
+                    String cdCommand = "cd " + bookmark.getFullPath();
+                    bookmarkCommands.add(new ClaudeCodeMenuHelper.Command(cdCommand, bookmark.getDisplayName()));
+                }
+            }
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to load bookmarks for menu: " + e.getMessage());
+        }
+
+        // 始终显示收藏路径分组，如果没有则显示提示
+        if (bookmarkCommands.isEmpty()) {
+            bookmarkCommands.add(new ClaudeCodeMenuHelper.Command("", "暂无收藏路径"));
+        }
+        groups.add(new CommandGroupAdapter.CommandGroup(
+            CommandGroupAdapter.CommandCategory.BOOKMARKS, bookmarkCommands));
+
+        // 2. SSH连接类 (第二类)
         List<ClaudeCodeMenuHelper.Command> sshCommands = new ArrayList<>();
         try {
             SSHConfigManager sshConfigManager = SSHConfigManager.getInstance(getContext());
@@ -1218,7 +1252,31 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 CommandGroupAdapter.CommandCategory.SSH_CONNECTIONS, sshCommands));
         }
 
-        // 2. AI指令类 (第二类)
+        // 3. 常用指令类 (第三类) - 从 QuickCommandManager 加载用户保存的指令
+        List<ClaudeCodeMenuHelper.Command> quickCommands = new ArrayList<>();
+        try {
+            QuickCommandManager quickCommandManager = QuickCommandManager.getInstance(getContext());
+            List<QuickCommand> savedCommands = quickCommandManager.getAllCommands();
+
+            for (QuickCommand cmd : savedCommands) {
+                String description = cmd.getDescription();
+                if (description == null || description.isEmpty()) {
+                    description = cmd.getCategory();
+                }
+                quickCommands.add(new ClaudeCodeMenuHelper.Command(cmd.getCommand(), description));
+            }
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to load quick commands for menu: " + e.getMessage());
+        }
+
+        // 始终显示常用指令分组，如果没有则显示提示
+        if (quickCommands.isEmpty()) {
+            quickCommands.add(new ClaudeCodeMenuHelper.Command("", "暂无常用指令"));
+        }
+        groups.add(new CommandGroupAdapter.CommandGroup(
+            CommandGroupAdapter.CommandCategory.QUICK_COMMANDS, quickCommands));
+
+        // 4. AI指令类 (第四类)
         List<ClaudeCodeMenuHelper.Command> aiCommands = Arrays.asList(
             new ClaudeCodeMenuHelper.Command("/agents", "代理管理"),
             new ClaudeCodeMenuHelper.Command("/review", "代码审查"),
@@ -1241,7 +1299,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         groups.add(new CommandGroupAdapter.CommandGroup(
             CommandGroupAdapter.CommandCategory.AI_COMMANDS, aiCommands));
 
-        // 3. 系统指令类 (第三类)
+        // 4. 系统指令类 (第四类)
         List<ClaudeCodeMenuHelper.Command> systemCommands = Arrays.asList(
             new ClaudeCodeMenuHelper.Command("codex --dangerously-bypass-approvals-and-sandbox", "codex"),
             new ClaudeCodeMenuHelper.Command("claude", "claude")
@@ -1454,6 +1512,9 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
         // 初始化SSH连接管理器
         mSSHConnectionManager = new SSHConnectionManager(getContext());
+
+        // 初始化项目工作区管理器
+        mProjectWorkspaceManager = ProjectWorkspaceManager.getInstance(getContext());
 
         // 初始化SSH配置对话框
         mSSHConfigDialog = new SSHConfigDialog(getContext());
@@ -1704,22 +1765,6 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
     public TermuxAppSharedProperties getProperties() {
         return mProperties;
-    }
-
-    /**
-     * 发送命令到终端
-     * 由MainTabActivity调用，将命令写入当前终端会话
-     * @param command 要发送的命令字符串
-     */
-    public void sendCommandToTerminal(String command) {
-        TerminalSession session = getCurrentSession();
-        if (session != null && session.isRunning()) {
-            String cmdWithEnter = command + "\n";
-            byte[] bytes = cmdWithEnter.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            session.write(bytes, 0, bytes.length);
-        } else {
-            Logger.logWarn(LOG_TAG, "Cannot send command - terminal session is not available or not running");
-        }
     }
 
     /**

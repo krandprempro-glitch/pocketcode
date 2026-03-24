@@ -19,18 +19,20 @@ import java.util.List;
 public class CommandGroupAdapter extends RecyclerView.Adapter<CommandGroupAdapter.GroupViewHolder> {
     
     public enum CommandCategory {
+        BOOKMARKS("收藏路径", R.drawable.ic_bookmark),
         SSH_CONNECTIONS("SSH连接", R.drawable.ic_ssh_group),
-        AI_COMMANDS("AI指令", R.drawable.ic_ai_group), 
+        QUICK_COMMANDS("常用指令", R.drawable.ic_terminal),  // 新增常用指令分组
+        AI_COMMANDS("AI指令", R.drawable.ic_ai_group),
         SYSTEM_COMMANDS("系统指令", R.drawable.ic_system_group);
-        
+
         private final String title;
         private final int iconRes;
-        
+
         CommandCategory(String title, int iconRes) {
             this.title = title;
             this.iconRes = iconRes;
         }
-        
+
         public String getTitle() { return title; }
         public int getIconRes() { return iconRes; }
     }
@@ -43,7 +45,7 @@ public class CommandGroupAdapter extends RecyclerView.Adapter<CommandGroupAdapte
         public CommandGroup(CommandCategory category, List<ClaudeCodeMenuHelper.Command> commands) {
             this.category = category;
             this.commands = commands;
-            this.isExpanded = category == CommandCategory.SSH_CONNECTIONS; // SSH默认展开
+            this.isExpanded = false; // 所有分组默认折叠
         }
         
         // Getters
@@ -111,11 +113,19 @@ public class CommandGroupAdapter extends RecyclerView.Adapter<CommandGroupAdapte
             // 设置分组信息
             groupIcon.setImageResource(group.getCategory().getIconRes());
             groupTitle.setText(group.getCategory().getTitle());
-            groupCount.setText(String.valueOf(group.getCommands().size()));
-            
+
+            // 计算实际命令数量（过滤掉空命令的提示项）
+            int actualCommandCount = 0;
+            for (ClaudeCodeMenuHelper.Command cmd : group.getCommands()) {
+                if (cmd.command != null && !cmd.command.isEmpty()) {
+                    actualCommandCount++;
+                }
+            }
+            groupCount.setText(String.valueOf(actualCommandCount));
+
             // 设置展开状态
             updateExpandedState(group);
-            
+
             // 设置子项RecyclerView
             if (commandAdapter == null) {
                 commandAdapter = new CommandItemAdapter(group.getCommands(), commandInput, commandClickListener);
