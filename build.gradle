@@ -1,12 +1,13 @@
 buildscript {
     ext.kotlin_version = '1.7.10'
     repositories {
-        google()
-        mavenCentral()
+
         // Mirrors (kept after primary repos to avoid staleness)
         maven { url "https://maven.aliyun.com/repository/gradle-plugin" }
         maven { url "https://maven.aliyun.com/repository/google" }
         maven { url "https://maven.aliyun.com/repository/public" }
+        google()
+        mavenCentral()
     }
     dependencies {
         classpath "com.android.tools.build:gradle:4.2.2"
@@ -16,8 +17,7 @@ buildscript {
 
 allprojects {
     repositories {
-        google()
-        mavenCentral()
+
         // Mirrors (kept after primary repos to avoid staleness)
         maven { url "https://maven.aliyun.com/repository/public" }
         maven { url "https://maven.aliyun.com/repository/google"}
@@ -25,6 +25,8 @@ allprojects {
         maven { url "https://jitpack.io" }
         maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://repo1.maven.org/maven2/" }
+        google()
+        mavenCentral()
     }
 }
 

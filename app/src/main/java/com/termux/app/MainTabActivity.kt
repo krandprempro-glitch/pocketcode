@@ -9,7 +9,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.termux.R
@@ -21,62 +20,64 @@ import com.termux.app.sftp.SFTPConnectionManager
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.schedulers.Schedulers
-import com.termux.app.fragments.GitChangesFragment
-import com.termux.app.fragments.SSHConnectionFragment
 import com.termux.app.fragments.TermuxFragment
 import com.termux.filebrowser.RemoteFileBrowserFragment
 
 /**
  * 主Tab界面Activity
- * 包含4个Tab页面：终端、SFTP文件浏览、Git变更、配置
+ * 包含4个Tab页面：终端、SFTP文件浏览、待开发、配置
  * 集成悬浮窗功能管理
  */
 class MainTabActivity : AppCompatActivity() {
-    
+
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
     private lateinit var pagerAdapter: TabPagerAdapter
     private var floatingActionButton: FloatingActionButton? = null
     private val disposables = CompositeDisposable()
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Use standard tabs layout without hybrid approach
         setContentView(R.layout.activity_main_tabs)
-        
+
         initTabViews()
         initFloatingButton()
         handleIntent(intent)
     }
-    
+
     private fun initTabViews() {
         tabLayout = findViewById(R.id.tab_layout)
         viewPager = findViewById(R.id.view_pager)
-        
+
         pagerAdapter = TabPagerAdapter(this)
         viewPager.adapter = pagerAdapter
-        
+
+        // 关键修复：设置offscreenPageLimit为3，保留所有4个Fragment不被销毁
+        // 防止TermuxFragment在切换tab时被销毁导致终端状态丢失
+        viewPager.offscreenPageLimit = 3
+
         // Disable horizontal swipe gestures
         viewPager.isUserInputEnabled = false
-        
+
         // Disable all ViewPager2 animations completely
         try {
             val recyclerViewField = ViewPager2::class.java.getDeclaredField("mRecyclerView")
             recyclerViewField.isAccessible = true
             val recyclerView = recyclerViewField.get(viewPager) as RecyclerView
-            
+
             // Remove all animations
             recyclerView.itemAnimator = null
             recyclerView.overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-            
+
             // Disable the scroll animation duration
             val scrollDurationField = ViewPager2::class.java.getDeclaredField("mScrollEventAdapter")
             scrollDurationField.isAccessible = true
         } catch (e: Exception) {
             // Ignore reflection errors
         }
-        
+
         // Connect TabLayout with ViewPager2 and override tab selection behavior
         val mediator = TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             when (position) {
@@ -89,7 +90,7 @@ class MainTabActivity : AppCompatActivity() {
                     tab.setIcon(android.R.drawable.ic_menu_view)
                 }
                 2 -> {
-                    tab.text = "Git变更"
+                    tab.text = "待开发"
                     tab.setIcon(android.R.drawable.ic_menu_recent_history)
                 }
                 3 -> {
@@ -99,7 +100,7 @@ class MainTabActivity : AppCompatActivity() {
             }
         }
         mediator.attach()
-        
+
         // Override tab selection to disable animation
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -112,33 +113,33 @@ class MainTabActivity : AppCompatActivity() {
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
     }
-    
+
     private fun initFloatingButton() {
         floatingActionButton = FloatingActionButton(this)
         floatingActionButton?.setOnFloatingActionListener(object : FloatingActionButton.OnFloatingActionListener {
             override fun onMenuToggle(isVisible: Boolean) {
                 // 菜单切换
             }
-            
+
             override fun onSSHConnectionClicked() {
                 showSSHConnectionDialog()
             }
-            
+
             override fun onRunCommandClicked() {
                 showRunCommandDialog()
             }
-            
+
             override fun onQuickSettingsClicked() {
                 // 跳转到配置页面
                 tabLayout.getTabAt(3)?.select()
             }
         })
-        
+
         // 在Activity的根布局中显示悬浮按钮
         val rootContainer = findViewById<android.widget.FrameLayout>(android.R.id.content)
         floatingActionButton?.show(rootContainer)
     }
-    
+
     private fun showSSHConnectionDialog() {
         val sshDialog = SSHConfigDialog(this)
         sshDialog.setOnSSHConfigListener(object : SSHConfigDialog.OnSSHConfigListener {
@@ -148,31 +149,31 @@ class MainTabActivity : AppCompatActivity() {
                     connectToSSH(it)
                 }
             }
-            
+
             override fun onSSHConfigSaved(config: com.termux.app.models.SSHConnectionConfig?) {
                 // 配置保存成功
                 Toast.makeText(this@MainTabActivity, "SSH配置已保存", Toast.LENGTH_SHORT).show()
             }
-            
+
             override fun onSSHConfigDeleted(configName: String?) {
                 // 配置删除成功
                 Toast.makeText(this@MainTabActivity, "SSH配置已删除: $configName", Toast.LENGTH_SHORT).show()
             }
-            
+
             override fun onDialogClosed() {
                 // 对话框关闭
             }
         })
         sshDialog.show()
     }
-    
+
     private fun connectToSSH(config: com.termux.app.models.SSHConnectionConfig) {
         // 显示连接中提示
         Toast.makeText(this, "正在连接到 ${config.name} (${config.host}:${config.port})", Toast.LENGTH_SHORT).show()
-        
+
         // 使用SFTP连接管理器进行真实连接
         val sftpManager = SFTPConnectionManager.getInstance()
-        
+
         val disposable = sftpManager.connect(config)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
@@ -197,16 +198,16 @@ class MainTabActivity : AppCompatActivity() {
                     Toast.makeText(this@MainTabActivity, errorMsg, Toast.LENGTH_LONG).show()
                 }
             )
-        
+
         disposables.add(disposable)
     }
-    
+
     private fun showRunCommandDialog() {
         // 使用完整的运行命令功能
         val actionExtensions = com.termux.app.floating.extensions.FloatingActionExtensions(this)
         actionExtensions.handleRunCommandAction()
     }
-    
+
     private fun handleIntent(intent: Intent?) {
         intent?.let {
             val navigateTo = it.getStringExtra("navigate_to")
@@ -216,13 +217,13 @@ class MainTabActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         floatingActionButton?.hide()
         disposables.clear()
     }
-    
+
     /**
      * 同步更新RemoteFileBrowserFragment的抽屉文件显示
      */
@@ -234,38 +235,57 @@ class MainTabActivity : AppCompatActivity() {
             currentFragment.syncConnectionFromExternal(config)
         }
     }
-    
+
     /**
-     * Tab页面适配器 - 包含所有4个Fragment
+     * Tab页面适配器 - 包含4个Fragment
      */
     private class TabPagerAdapter(@NonNull fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
-        
+
         private val fragmentList = mutableListOf<Fragment?>(null, null, null, null)
-        
+
         fun getCurrentFragment(position: Int): Fragment? {
             return fragmentList.getOrNull(position)
         }
-        
+
         @NonNull
         override fun createFragment(position: Int): Fragment {
             val fragment = when (position) {
                 0 -> TermuxFragment() // Terminal tab
                 1 -> RemoteFileBrowserFragment() // File browser tab
-                2 -> GitChangesFragment() // Git changes tab
+                2 -> PlaceholderFragment() // 待开发 tab
                 3 -> ConfigurationMainFragment() // Configuration tab
                 else -> TermuxFragment()
             }
-            
+
             // 保存Fragment引用用于后续同步
             if (position < fragmentList.size) {
                 fragmentList[position] = fragment
             }
-            
+
             return fragment
         }
-        
+
         override fun getItemCount(): Int {
-            return 4 // All 4 tabs are fragments now
+            return 4 // 4 tabs: Terminal, File Browser, Placeholder, Settings
+        }
+    }
+
+    /**
+     * 待开发占位Fragment
+     */
+    class PlaceholderFragment : Fragment() {
+        override fun onCreateView(
+            inflater: android.view.LayoutInflater,
+            container: android.view.ViewGroup?,
+            savedInstanceState: Bundle?
+        ): android.view.View {
+            val textView = android.widget.TextView(requireContext()).apply {
+                text = "功能开发中..."
+                textSize = 24f
+                gravity = android.view.Gravity.CENTER
+                setTextColor(android.graphics.Color.GRAY)
+            }
+            return textView
         }
     }
 }

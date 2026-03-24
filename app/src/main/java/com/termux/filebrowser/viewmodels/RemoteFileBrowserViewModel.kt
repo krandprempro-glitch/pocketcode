@@ -112,19 +112,22 @@ class RemoteFileBrowserViewModel : ViewModel() {
      */
     fun syncExternalConnection(config: SSHConnectionConfig) {
         Logger.logInfo(LOG_TAG, "Syncing external connection: ${config.host}")
-        
+
         // 检查SFTP管理器是否已经连接
         if (sftpManager.isConnected && sftpManager.currentConfig?.host == config.host) {
             // 连接已存在，直接更新UI状态
             _connectionState.value = ConnectionState.Connected(config)
             _uiState.value = _uiState.value.copy(isLoading = false)
-            
+
             // 设置工作目录
             _currentPath.value = sftpManager.currentWorkingDirectory
-            
+
+            // 加载或创建工作区（关键修复：确保currentWorkspace被设置）
+            loadOrCreateWorkspace(config)
+
             // 立即开始加载文件列表
             navigateToPath(_currentPath.value)
-            
+
             Logger.logInfo(LOG_TAG, "External connection synced successfully and file loading started")
         } else {
             // 连接不存在或配置不匹配，记录警告并尝试重新连接
