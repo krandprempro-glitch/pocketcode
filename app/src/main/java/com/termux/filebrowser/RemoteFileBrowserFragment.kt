@@ -20,9 +20,11 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.termux.R
+import com.termux.app.MainTabActivity
 import com.termux.app.models.DrawerMenuItem
 import com.termux.app.models.RemoteFileItem
 import com.termux.app.models.SSHConnectionConfig
@@ -31,6 +33,7 @@ import com.termux.app.utils.LightToast
 import com.termux.databinding.FragmentRemoteFileBrowserDrawerBinding
 import com.termux.filebrowser.adapters.DrawerFileAdapter
 import com.termux.filebrowser.adapters.DrawerMenuAdapter
+import com.termux.filebrowser.adapters.FileListAdapter
 import com.termux.filebrowser.viewmodels.RemoteFileBrowserViewModel
 import com.termux.shared.logger.Logger
 import kotlinx.coroutines.launch
@@ -64,11 +67,10 @@ class RemoteFileBrowserFragment : Fragment(),
     private val viewModel: RemoteFileBrowserViewModel by viewModels()
 
     // 适配器
-    private lateinit var drawerFileAdapter: DrawerFileAdapter
     private lateinit var drawerMenuAdapter: DrawerMenuAdapter
+    private lateinit var fileListAdapter: FileListAdapter
 
-    // 代码查看器（只读）
-    private var codeEditor: TextView? = null
+    // 当前查看的文件
     private var currentViewedFile: RemoteFileItem? = null
 
     // 对话框
@@ -175,41 +177,14 @@ class RemoteFileBrowserFragment : Fragment(),
     }
 
     private fun setupCodeEditor() {
-        codeEditor = binding.codeEditor
-        codeEditor?.apply {
-            // 只读可选文本
-            setTextIsSelectable(true)
-            isFocusable = true
-            isFocusableInTouchMode = true
-            // 水平滚动与内边距
-            // 水平滚动交给外层 HorizontalScrollView
-            setPadding(16, 16, 16, 16)
-            // 暗色主题配色 + 等宽字体
-            setBackgroundColor(0xFF1E1E1E.toInt())
-            setTextColor(0xFFD4D4D4.toInt())
-            typeface = Typeface.MONOSPACE
-        }
-
-        // 配置行号栏样式
-        binding.codeLineNumbers?.apply {
-            setBackgroundColor(0xFF262626.toInt())
-            setTextColor(0xFF858585.toInt())
-            typeface = Typeface.MONOSPACE
-        }
-
-        Logger.logInfo(LOG_TAG, "TextView code viewer initialized in read-only mode")
+        // 新布局使用 codeContentText 作为代码编辑器
+        // 初始化逻辑在显示文件时处理
+        Logger.logInfo(LOG_TAG, "Code editor initialized")
     }
 
     // 已迁移到 CodeView 简单高亮，无需 TextMate 初始化
 
     private fun setupAdapters() {
-        // 抽屉文件适配器
-        drawerFileAdapter = DrawerFileAdapter(requireContext(), this)
-        binding.drawerFileList.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = drawerFileAdapter
-        }
-
         // 抽屉菜单适配器
         drawerMenuAdapter =
             DrawerMenuAdapter(requireContext(), object : DrawerMenuAdapter.OnMenuItemClickListener {
@@ -235,6 +210,46 @@ class RemoteFileBrowserFragment : Fragment(),
             container.addView(recyclerView)
         }
 
+        // 初始化全屏文件列表适配器
+        fileListAdapter = FileListAdapter(
+            onItemClick = { item ->
+                when {
+                    item.name == ".." -> {
+                        // 返回上一级目录
+                        val currentPath = viewModel.currentPath.value
+                        val parentPath = getParentPath(currentPath)
+                        if (parentPath != null) {
+                            viewModel.navigateToPath(parentPath)
+                        }
+                    }
+                    item.isDirectory -> viewModel.navigateToPath(item.path)
+                    isCodeOrTextFile(item.name) -> openFile(item)
+                    else -> showFileOptions(item)
+                }
+            },
+            onItemLongClick = { item ->
+                showFileOperationsDialog(item)
+                true
+            },
+            onBookmarkClick = { item, position ->
+                if (viewModel.isPathBookmarked(item.path)) {
+                    viewModel.removeBookmark(item.path)
+                    LightToast.showShort(requireContext(), "已取消收藏")
+                } else {
+                    viewModel.addBookmark(item.path, item.name)
+                    LightToast.showShort(requireContext(), "已添加收藏")
+                }
+                // 只刷新当前项的收藏图标
+                fileListAdapter.notifyItemChanged(position)
+            },
+            isBookmarked = { path -> viewModel.isPathBookmarked(path) }
+        )
+
+        binding.fileListRecyclerView?.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = fileListAdapter
+        }
+
         initDrawerMenuItems()
     }
 
@@ -255,10 +270,42 @@ class RemoteFileBrowserFragment : Fragment(),
                     }
                 }
 
+                // 观察Home目录路径（连接成功后获取）
+                launch {
+                    viewModel.homeDirectory.collect { homePath ->
+                        homePath?.let {
+                            Logger.logInfo(LOG_TAG, "Home directory resolved: $it")
+                        }
+                    }
+                }
+
                 // 观察文件列表
                 launch {
                     viewModel.fileList.collect { files ->
-                        drawerFileAdapter.updateFiles(files, viewModel.currentPath.value)
+                        val currentPath = viewModel.currentPath.value
+                        val displayFiles = if (currentPath != "/") {
+                            // 添加返回上级目录条目
+                            val parentItem = RemoteFileItem().apply {
+                                name = ".."
+                                path = getParentPath(currentPath) ?: "/"
+                                isDirectory = true
+                                permissions = "drwxr-xr-x"
+                                lastModified = System.currentTimeMillis() / 1000
+                            }
+                            listOf(parentItem) + files
+                        } else {
+                            files
+                        }
+                        fileListAdapter.submitList(displayFiles)
+
+                        // 更新空状态显示
+                        if (files.isEmpty() && currentPath == "/") {
+                            binding.emptyStateLayout?.visibility = View.VISIBLE
+                            binding.fileListRecyclerView?.visibility = View.GONE
+                        } else {
+                            binding.emptyStateLayout?.visibility = View.GONE
+                            binding.fileListRecyclerView?.visibility = View.VISIBLE
+                        }
                     }
                 }
 
@@ -284,7 +331,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun setupEventListeners() {
         // 下拉刷新
-        binding.drawerSwipeRefresh.setOnRefreshListener {
+        binding.fileListSwipeRefresh.setOnRefreshListener {
             viewModel.refreshCurrentDirectory()
         }
 
@@ -294,28 +341,36 @@ class RemoteFileBrowserFragment : Fragment(),
             true
         }
 
-        // 主界面选项按钮处理
-        (requireActivity() as AppCompatActivity).supportActionBar?.setHomeActionContentDescription("打开菜单")
-        
-        // 添加toolbar点击监听，增强异常状态检测
+        // toolbar导航点击监听
         binding.toolbar.setNavigationOnClickListener {
             Logger.logInfo(LOG_TAG, "Toolbar navigation clicked")
-            
+
             if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
                 // 抽屉已打开，直接关闭
                 binding.drawerLayout.closeDrawer(GravityCompat.START)
             } else {
                 // 抽屉未打开，尝试打开
                 binding.drawerLayout.openDrawer(GravityCompat.START)
-                
+
                 // 延迟检查是否成功打开，如果没有则尝试修复
                 binding.root.postDelayed({
-                    if (!binding.drawerLayout.isDrawerOpen(GravityCompat.START) && 
+                    if (!binding.drawerLayout.isDrawerOpen(GravityCompat.START) &&
                         binding.drawerLayout.isDrawerVisible(GravityCompat.START)) {
                         Logger.logInfo(LOG_TAG, "Drawer open failed, attempting to fix state")
                         checkAndFixDrawerState()
                     }
                 }, 200)
+            }
+        }
+
+        // Home按钮点击事件 - 返回用户主目录
+        binding.btnGoHome.setOnClickListener {
+            val homePath = viewModel.homeDirectory.value
+            if (homePath != null) {
+                viewModel.navigateToPath(homePath)
+                LightToast.showShort(requireContext(), "已返回主目录")
+            } else {
+                LightToast.showShort(requireContext(), "主目录未获取")
             }
         }
     }
@@ -376,8 +431,8 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun handleUiStateChange(state: RemoteFileBrowserViewModel.UiState) {
         binding.apply {
-            drawerLoadingProgress.visibility = if (state.isLoading) View.VISIBLE else View.GONE
-            drawerEmptyState.visibility = if (state.isEmpty) View.VISIBLE else View.GONE
+            loadingProgress.visibility = if (state.isLoading) View.VISIBLE else View.GONE
+            emptyStateLayout.visibility = if (state.isEmpty) View.VISIBLE else View.GONE
 
             // 根据连接状态更新空状态提示文案
             if (state.isEmpty) {
@@ -386,8 +441,8 @@ class RemoteFileBrowserFragment : Fragment(),
             }
 
             // 停止刷新动画
-            if (!state.isLoading && drawerSwipeRefresh.isRefreshing) {
-                drawerSwipeRefresh.isRefreshing = false
+            if (!state.isLoading && fileListSwipeRefresh.isRefreshing) {
+                fileListSwipeRefresh.isRefreshing = false
             }
         }
     }
@@ -402,14 +457,17 @@ class RemoteFileBrowserFragment : Fragment(),
         }
 
         updateConnectionStatus(isConnected, statusText, if (state is RemoteFileBrowserViewModel.ConnectionState.Connected) state.config else null)
-        
+
+        // 更新Home按钮可见性（连接成功后显示）
+        binding.btnGoHome.visibility = if (isConnected) View.VISIBLE else View.GONE
+
         // 更新抽屉头部的连接信息和项目名称
         when (state) {
             is RemoteFileBrowserViewModel.ConnectionState.Connected -> {
                 val config = state.config
                 val connectionInfo = "${config.username}@${config.host}:${config.port}"
                 val projectName = config.displayName
-                
+
                 binding.drawerConnectionInfo.text = connectionInfo
                 binding.drawerProjectName.text = projectName
             }
@@ -421,24 +479,27 @@ class RemoteFileBrowserFragment : Fragment(),
     }
 
     private fun updateConnectionStatus(connected: Boolean, statusText: String, config: SSHConnectionConfig? = null) {
-        binding.connectionStatusIcon.setImageResource(
-            if (connected) android.R.drawable.presence_online
-            else android.R.drawable.presence_offline
-        )
-        
-        // 在工具栏显示更详细的连接信息
-        val displayText = if (connected && config != null) {
-            "${config.displayName} - $statusText"
-        } else {
-            statusText
+        // 更新状态点为绿色或灰色
+        val drawableRes = if (connected) R.drawable.ic_circle_connected else R.drawable.ic_circle_disconnected
+        binding.connectionStatusDot.setImageResource(drawableRes)
+
+        // 长按显示完整连接信息
+        binding.connectionStatusDot.setOnLongClickListener {
+            val message = if (connected && config != null) {
+                "${config.displayName} (${config.host}) - $statusText"
+            } else {
+                statusText
+            }
+            LightToast.showShort(requireContext(), message)
+            true
         }
-        
-        binding.connectionStatusText.text = displayText
     }
 
     private fun updatePathDisplay(path: String) {
         binding.drawerCurrentPath.text = optimizePathDisplay(path)
-        binding.breadcrumbText.text = optimizePathDisplay(path)
+        // 只显示目录名在Toolbar
+        val folderName = path.split("/").lastOrNull()?.takeIf { it.isNotEmpty() } ?: "/"
+        binding.toolbarTitle.text = folderName
     }
 
     private fun optimizePathDisplay(fullPath: String): String {
@@ -556,12 +617,12 @@ class RemoteFileBrowserFragment : Fragment(),
 
                 override fun onBookmarkEdit(bookmark: com.termux.app.models.DirectoryBookmark) {
                     viewModel.updateBookmark(bookmark)
-                    drawerFileAdapter.notifyDataSetChanged()
+                    viewModel.refreshCurrentDirectory()
                 }
 
                 override fun onBookmarkDelete(bookmark: com.termux.app.models.DirectoryBookmark) {
                     viewModel.removeBookmark(bookmark.fullPath)
-                    drawerFileAdapter.notifyDataSetChanged()
+                    viewModel.refreshCurrentDirectory()
                 }
 
                 override fun onBookmarkSendToTerminal(bookmark: com.termux.app.models.DirectoryBookmark) {
@@ -572,7 +633,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
                 override fun onBookmarkAdd(path: String, name: String) {
                     viewModel.addBookmark(path, name)
-                    drawerFileAdapter.notifyDataSetChanged()
+                    viewModel.refreshCurrentDirectory()
                 }
             }
         )
@@ -629,8 +690,7 @@ class RemoteFileBrowserFragment : Fragment(),
                 val name = editText.text.toString().trim().ifEmpty { defaultName }
                 viewModel.addBookmark(path, name)
                 LightToast.showShort(requireContext(), "已添加书签: $name")
-                // 刷新右侧列表以更新星标
-                drawerFileAdapter.notifyDataSetChanged()
+                viewModel.refreshCurrentDirectory()
             }
             .setNegativeButton("取消", null)
             .show()
@@ -690,11 +750,11 @@ class RemoteFileBrowserFragment : Fragment(),
             selectedOption.contains("进入目录") -> viewModel.navigateToPath(file.path)
             selectedOption.contains("收藏目录") -> {
                 showAddBookmarkDialog(file.path)
-                drawerFileAdapter.notifyDataSetChanged()
+                viewModel.refreshCurrentDirectory()
             }
             selectedOption.contains("取消收藏") -> {
                 viewModel.removeBookmark(file.path)
-                drawerFileAdapter.notifyDataSetChanged()
+                viewModel.refreshCurrentDirectory()
             }
             selectedOption.contains("下载文件") -> LightToast.showShort(requireContext(), "下载功能开发中...")
             selectedOption.contains("查看属性") -> showFileProperties(file)
@@ -731,7 +791,7 @@ class RemoteFileBrowserFragment : Fragment(),
             viewModel.addBookmark(file.path, file.name)
             LightToast.showShort(requireContext(), "已添加收藏")
         }
-        drawerFileAdapter.notifyDataSetChanged()
+        viewModel.refreshCurrentDirectory()
     }
 
     // SSHConfigDialog.OnSSHConfigListener 实现
@@ -838,55 +898,99 @@ class RemoteFileBrowserFragment : Fragment(),
     }
     
     /**
+     * 打开文件
+     */
+    private fun openFile(file: RemoteFileItem) {
+        when {
+            file.name.endsWith(".jpg", ignoreCase = true) ||
+            file.name.endsWith(".jpeg", ignoreCase = true) ||
+            file.name.endsWith(".png", ignoreCase = true) ||
+            file.name.endsWith(".gif", ignoreCase = true) ||
+            file.name.endsWith(".webp", ignoreCase = true) -> {
+                showImagePreviewDialog(file)
+            }
+            else -> {
+                // 读取并显示文件内容
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val content = withContext(Dispatchers.IO) {
+                            viewModel.readFileContent(file.path)
+                        }
+                        displayFileContent(file, content)
+                    } catch (e: Exception) {
+                        LightToast.showShort(requireContext(), "无法打开文件: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 在代码编辑器中显示文件内容
      */
     private fun displayFileContent(file: RemoteFileItem, content: String) {
-        codeEditor?.let { editor ->
+        // 使用新的代码编辑器视图
+        binding.codeContentText?.let { editor ->
             // 根据文件扩展名生成高亮文本并显示
             val highlighted = SimpleSyntaxHighlighter.build(content, file.name)
-            editor.setText(highlighted)
-            // 设置行号
-            val lineCount = content.lines().size
-            val numbers = buildLineNumbers(lineCount)
-            binding.codeLineNumbers?.text = numbers
-            adjustGutterWidth(lineCount)
-            
-            // 更新文件信息显示
-            binding.fileNameText.text = file.name
-            binding.fileSizeText.text = formatFileSize(content.length.toLong())
-            
-            // 显示代码查看器，隐藏欢迎页面
-            binding.welcomeLayout.visibility = View.GONE
-            binding.codeViewerContainer.visibility = View.VISIBLE
-            
+            editor.text = highlighted
+
+            // 更新文件名显示
+            binding.editorFilename?.text = file.name
+
+            // 显示代码编辑器，隐藏文件列表
+            binding.fileListRecyclerView?.visibility = View.GONE
+            binding.codeEditorContainer?.visibility = View.VISIBLE
+
+            // 设置返回按钮点击事件
+            binding.editorBackButton?.setOnClickListener {
+                closeCodeEditor()
+            }
+
             // 更新状态栏
             val lines = content.lines().size
-            binding.statusTextLeft.text = "文件已加载"
-            binding.statusTextRight.text = "$lines 行 | ${formatFileSize(content.length.toLong())}"
-            
+            binding.statusTextLeft?.text = "文件已加载"
+            binding.statusTextRight?.text = "$lines 行 | ${formatFileSize(content.length.toLong())}"
+
             Logger.logInfo(LOG_TAG, "File loaded: ${file.name}, ${content.length} chars, $lines lines")
         }
     }
 
-    private fun buildLineNumbers(lines: Int): String {
-        if (lines <= 0) return "1"
-        val sb = StringBuilder()
-        for (i in 1..lines) {
-            sb.append(i)
-            if (i != lines) sb.append('\n')
-        }
-        return sb.toString()
+    private fun closeCodeEditor() {
+        binding.codeEditorContainer?.visibility = View.GONE
+        binding.fileListRecyclerView?.visibility = View.VISIBLE
     }
 
-    private fun adjustGutterWidth(lineCount: Int) {
-        val view = binding.codeLineNumbers ?: return
-        val digits = lineCount.coerceAtLeast(1).toString().length
-        val charWidth = view.paint.measureText("9")
-        val paddingPx = (view.resources.displayMetrics.density * 12).toInt()
-        val minWidth = (charWidth * digits).toInt() + paddingPx * 2
-        if (view.minWidth < minWidth) view.minWidth = minWidth
+    private fun isCodeOrTextFile(filename: String): Boolean {
+        val extensions = listOf(".java", ".kt", ".xml", ".html", ".css", ".js", ".json", ".md", ".txt", ".py", ".sh", ".c", ".cpp", ".h", "properties", "gradle")
+        return extensions.any { filename.endsWith(it, ignoreCase = true) }
     }
-    
+
+    private fun showFileOptions(file: RemoteFileItem) {
+        // 显示文件选项对话框
+        val options = arrayOf("查看", "下载", "分享")
+        AlertDialog.Builder(requireContext())
+            .setTitle(file.name)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> openFile(file)
+                    1 -> downloadFile(file)
+                    2 -> shareFile(file)
+                }
+            }
+            .show()
+    }
+
+    private fun downloadFile(file: RemoteFileItem) {
+        // 实现下载逻辑
+        LightToast.showShort(requireContext(), "下载: ${file.name}")
+    }
+
+    private fun shareFile(file: RemoteFileItem) {
+        // 实现分享逻辑
+        LightToast.showShort(requireContext(), "分享: ${file.name}")
+    }
+
     // 语言检测与高亮由 SimpleSyntaxHighlighter 处理
     
     /**
@@ -925,10 +1029,21 @@ class RemoteFileBrowserFragment : Fragment(),
         (requireActivity() as? MainTabActivity)?.sendCommandToTerminal("cd $path")
     }
 
+    /**
+     * 获取父目录路径
+     */
+    private fun getParentPath(path: String): String? {
+        if (path == "/") return null
+        val lastSlash = path.lastIndexOf('/')
+        return when {
+            lastSlash <= 0 -> "/"
+            else -> path.substring(0, lastSlash)
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         sshConfigDialog?.dismiss()
-        codeEditor = null
         currentViewedFile = null
         _binding = null
     }

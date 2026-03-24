@@ -55,6 +55,9 @@ class RemoteFileBrowserViewModel : ViewModel() {
     private val _currentPath = MutableStateFlow("/")
     val currentPath: StateFlow<String> = _currentPath.asStateFlow()
 
+    private val _homeDirectory = MutableStateFlow<String?>(null)
+    val homeDirectory: StateFlow<String?> = _homeDirectory.asStateFlow()
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
@@ -122,6 +125,11 @@ class RemoteFileBrowserViewModel : ViewModel() {
             // 设置工作目录
             _currentPath.value = sftpManager.currentWorkingDirectory
 
+            // 设置Home目录
+            val homeDir = sftpManager.currentWorkingDirectory
+            _homeDirectory.value = homeDir
+            Logger.logInfo(LOG_TAG, "Home directory synced: $homeDir")
+
             // 加载或创建工作区（关键修复：确保currentWorkspace被设置）
             loadOrCreateWorkspace(config)
 
@@ -138,13 +146,14 @@ class RemoteFileBrowserViewModel : ViewModel() {
 
     fun disconnect() {
         Logger.logInfo(LOG_TAG, "Disconnecting SFTP")
-        
+
         sftpManager.disconnect()
         _connectionState.value = ConnectionState.Disconnected
         _fileList.value = emptyList()
         _currentPath.value = "/"
+        _homeDirectory.value = null
         _uiState.value = UiState()
-        
+
         currentWorkspace = null
     }
 
@@ -236,17 +245,21 @@ class RemoteFileBrowserViewModel : ViewModel() {
 
     private fun onConnectionEstablished(config: SSHConnectionConfig) {
         Logger.logInfo(LOG_TAG, "Connection established to ${config.host}")
-        
+
         _connectionState.value = ConnectionState.Connected(config)
         _uiState.value = _uiState.value.copy(isLoading = false)
-        
+
+        // 设置Home目录（使用SFTP返回的当前工作目录，通常是用户家目录）
+        val homeDir = sftpManager.currentWorkingDirectory
+        _homeDirectory.value = homeDir
+        Logger.logInfo(LOG_TAG, "Home directory set to: $homeDir")
+
         // 加载或创建工作区
         loadOrCreateWorkspace(config)
-        
-        // 导航到用户家目录（SFTP返回的当前工作目录），回退到根目录
+
+        // 导航到用户家目录，回退到根目录
         val startPath = try {
-            val cwd = sftpManager.currentWorkingDirectory
-            if (cwd.isNullOrBlank()) "/" else cwd
+            if (homeDir.isNullOrBlank()) "/" else homeDir
         } catch (e: Exception) {
             "/"
         }
