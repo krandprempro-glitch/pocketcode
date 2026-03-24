@@ -27,6 +27,7 @@ class BookmarksAdapter(
         fun onBookmarkClick(bookmark: DirectoryBookmark)
         fun onBookmarkLongClick(bookmark: DirectoryBookmark)
         fun onBookmarkRemove(bookmark: DirectoryBookmark)
+        fun onBookmarkSendToTerminal(bookmark: DirectoryBookmark)
     }
 
     class BookmarkViewHolder(
@@ -57,6 +58,11 @@ class BookmarksAdapter(
                 root.setOnLongClickListener {
                     listener.onBookmarkLongClick(bookmark)
                     true
+                }
+
+                // 发送到终端按钮点击事件
+                sendToTerminalButton.setOnClickListener {
+                    listener.onBookmarkSendToTerminal(bookmark)
                 }
 
                 // 删除按钮点击事件

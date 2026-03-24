@@ -564,6 +564,12 @@ class RemoteFileBrowserFragment : Fragment(),
                     drawerFileAdapter.notifyDataSetChanged()
                 }
 
+                override fun onBookmarkSendToTerminal(bookmark: com.termux.app.models.DirectoryBookmark) {
+                    // 发送 cd 命令到终端
+                    sendCdCommandToTerminal(bookmark.fullPath)
+                    LightToast.showShort(requireContext(), "已发送 cd 命令到终端: ${bookmark.fullPath}")
+                }
+
                 override fun onBookmarkAdd(path: String, name: String) {
                     viewModel.addBookmark(path, name)
                     drawerFileAdapter.notifyDataSetChanged()
@@ -899,17 +905,24 @@ class RemoteFileBrowserFragment : Fragment(),
      */
     fun syncConnectionFromExternal(config: SSHConnectionConfig) {
         Logger.logInfo(LOG_TAG, "Syncing external SSH connection: ${config.host}")
-        
+
         // 通过ViewModel同步连接状态
         viewModel.syncExternalConnection(config)
-        
+
         // 连接成功后，刷新当前目录的文件列表
         viewModel.refreshCurrentDirectory()
-        
+
         // 如果抽屉已关闭，可以选择性地自动展开抽屉显示文件
         if (!binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
             binding.drawerLayout.openDrawer(GravityCompat.START)
         }
+    }
+
+    /**
+     * 发送 cd 命令到终端
+     */
+    private fun sendCdCommandToTerminal(path: String) {
+        (requireActivity() as? MainTabActivity)?.sendCommandToTerminal("cd $path")
     }
 
     override fun onDestroyView() {

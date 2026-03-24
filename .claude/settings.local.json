@@ -35,7 +35,8 @@
       "Bash(git checkout app/build.gradle)",
       "Bash(ls -la d:/as/termux-app-master/app/src/main/cpp/*.zip)",
       "Bash(git add app/src/main/java/com/termux/filebrowser/viewmodels/RemoteFileBrowserViewModel.kt app/src/main/java/com/termux/app/MainTabActivity.kt app/build.gradle termux-shared/build.gradle gradle.properties build.gradle)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(ls -la d:/as/termux-app-master/app/src/main/res/drawable/ic_expand*)"
     ],
     "deny": [],
     "ask": [],

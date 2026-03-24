@@ -56,6 +56,18 @@
         android:textColor="@color/tertiary_text"
         android:textSize="10sp" />
 
+    <!-- 发送到终端按钮 -->
+    <ImageView
+        android:id="@+id/send_to_terminal_button"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="发送到终端"
+        android:padding="2dp"
+        android:src="@drawable/ic_terminal"
+        android:tint="?attr/colorPrimary" />
+
     <!-- 删除按钮 -->
     <ImageView
         android:id="@+id/remove_button"

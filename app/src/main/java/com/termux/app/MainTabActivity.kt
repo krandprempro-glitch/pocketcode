@@ -125,6 +125,11 @@ class MainTabActivity : AppCompatActivity() {
                 showSSHConnectionDialog()
             }
 
+            override fun onSSHConfigSelected(config: com.termux.app.models.SSHConnectionConfig) {
+                // 从悬浮菜单选择SSH配置后直接连接
+                connectToSSH(config)
+            }
+
             override fun onRunCommandClicked() {
                 showRunCommandDialog()
             }
@@ -222,6 +227,21 @@ class MainTabActivity : AppCompatActivity() {
         super.onDestroy()
         floatingActionButton?.hide()
         disposables.clear()
+    }
+
+    /**
+     * 发送命令到终端
+     * 由其他Fragment调用，将命令发送到TermuxFragment的终端中
+     */
+    fun sendCommandToTerminal(command: String) {
+        val terminalFragment = pagerAdapter.getCurrentFragment(0) as? TermuxFragment
+        if (terminalFragment != null) {
+            terminalFragment.sendCommandToTerminal(command)
+            // 切换到终端Tab
+            viewPager.setCurrentItem(0, false)
+        } else {
+            Toast.makeText(this, "终端不可用", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**

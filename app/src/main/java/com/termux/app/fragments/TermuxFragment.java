@@ -1707,6 +1707,22 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
     }
 
     /**
+     * 发送命令到终端
+     * 由MainTabActivity调用，将命令写入当前终端会话
+     * @param command 要发送的命令字符串
+     */
+    public void sendCommandToTerminal(String command) {
+        TerminalSession session = getCurrentSession();
+        if (session != null && session.isRunning()) {
+            String cmdWithEnter = command + "\n";
+            byte[] bytes = cmdWithEnter.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            session.write(bytes, 0, bytes.length);
+        } else {
+            Logger.logWarn(LOG_TAG, "Cannot send command - terminal session is not available or not running");
+        }
+    }
+
+    /**
      * Fragment-compatible Terminal Toolbar Page Adapter.
      * This is a modified version of TerminalToolbarViewPager.PageAdapter that works with TermuxFragment.
      */

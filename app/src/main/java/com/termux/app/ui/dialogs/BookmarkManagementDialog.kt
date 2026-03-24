@@ -28,6 +28,7 @@ class BookmarkManagementDialog(
         fun onBookmarkEdit(bookmark: DirectoryBookmark)
         fun onBookmarkDelete(bookmark: DirectoryBookmark)
         fun onBookmarkAdd(path: String, name: String)
+        fun onBookmarkSendToTerminal(bookmark: DirectoryBookmark)
     }
 
     override fun getLayoutResource(): Int = R.layout.dialog_bookmark_management
@@ -94,6 +95,10 @@ class BookmarkManagementDialog(
 
     override fun onBookmarkRemove(bookmark: DirectoryBookmark) {
         showDeleteConfirmDialog(bookmark)
+    }
+
+    override fun onBookmarkSendToTerminal(bookmark: DirectoryBookmark) {
+        listener.onBookmarkSendToTerminal(bookmark)
     }
 
     private fun showBookmarkOptionsDialog(bookmark: DirectoryBookmark) {

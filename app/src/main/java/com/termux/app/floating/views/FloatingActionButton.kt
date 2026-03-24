@@ -12,18 +12,21 @@ import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import com.termux.R
 
+import com.termux.app.models.SSHConnectionConfig
+
 /**
  * 主悬浮按钮
  * 提供主要的悬浮操作入口
  */
 class FloatingActionButton(context: Context) : DraggableView(context) {
-    
+
     private lateinit var iconView: ImageView
     private var actionListener: OnFloatingActionListener? = null
-    
+
     interface OnFloatingActionListener {
         fun onMenuToggle(isVisible: Boolean)
         fun onSSHConnectionClicked()
+        fun onSSHConfigSelected(config: SSHConnectionConfig)
         fun onRunCommandClicked()
         fun onQuickSettingsClicked()
     }
@@ -62,6 +65,7 @@ class FloatingActionButton(context: Context) : DraggableView(context) {
         menuDialog = OverlayMenuDialog(context).apply {
             setOnMenuSelectListener(object : OverlayMenuDialog.OnMenuSelectListener {
                 override fun onSSHConnection() { actionListener?.onSSHConnectionClicked() }
+                override fun onSSHConfigSelected(config: SSHConnectionConfig) { actionListener?.onSSHConfigSelected(config) }
                 override fun onRunCommand() { actionListener?.onRunCommandClicked() }
                 override fun onQuickSettings() { actionListener?.onQuickSettingsClicked() }
             })

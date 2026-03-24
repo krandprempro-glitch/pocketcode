@@ -21,7 +21,7 @@
         android:layout_height="1dp"
         android:background="@color/divider_color"/>
 
-    <!-- SSH 连接 -->
+    <!-- SSH 连接（可折叠） -->
     <LinearLayout
         android:id="@+id/row_ssh"
         android:layout_width="match_parent"
@@ -49,10 +49,61 @@
             android:textColor="?attr/colorOnSurface"/>
 
         <ImageView
+            android:id="@+id/iv_ssh_expand"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:src="@drawable/ic_chevron_right"
+            android:src="@drawable/ic_expand_more"
             android:tint="?attr/colorOnSurface"/>
+    </LinearLayout>
+
+    <!-- SSH配置列表（默认折叠） -->
+    <LinearLayout
+        android:id="@+id/container_ssh_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:background="?attr/colorSurfaceVariant">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_ssh_configs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="200dp"
+            android:paddingStart="44dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"/>
+
+        <!-- 空状态提示 -->
+        <TextView
+            android:id="@+id/tv_ssh_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="暂无SSH配置"
+            android:textSize="13sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:paddingStart="44dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone"/>
+
+        <!-- 管理连接按钮 -->
+        <TextView
+            android:id="@+id/tv_manage_ssh"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="管理连接..."
+            android:textSize="14sp"
+            android:textColor="?attr/colorPrimary"
+            android:gravity="center_vertical"
+            android:paddingStart="44dp"
+            android:paddingEnd="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"/>
+
     </LinearLayout>
 
     <View
