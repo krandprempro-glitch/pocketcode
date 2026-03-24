@@ -17,6 +17,7 @@ import com.termux.R
 import com.termux.app.MainTabActivity
 import com.termux.app.floating.views.FloatingActionButton
 import com.termux.app.floating.extensions.FloatingActionExtensions
+import com.termux.app.models.SSHConnectionConfig
 
 /**
  * 悬浮窗服务
@@ -110,6 +111,15 @@ class FloatingWindowService : Service() {
                     
                     override fun onQuickSettingsClicked() {
                         actionExtensions.handleQuickSettingsAction()
+                    }
+
+                    override fun onSSHConfigSelected(config: SSHConnectionConfig) {
+                        // 悬浮窗中选择SSH配置 - 打开MainTabActivity并传递配置
+                        val intent = Intent(this@FloatingWindowService, MainTabActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            putExtra("ssh_config_id", config.id)
+                        }
+                        startActivity(intent)
                     }
                 })
             }

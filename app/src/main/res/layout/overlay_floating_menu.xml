@@ -63,7 +63,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:visibility="gone"
-        android:background="?attr/colorSurfaceVariant">
+        android:background="@color/divider_color">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_ssh_configs"
@@ -82,7 +82,7 @@
             android:layout_height="wrap_content"
             android:text="暂无SSH配置"
             android:textSize="13sp"
-            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textColor="@color/secondary_text"
             android:paddingStart="44dp"
             android:paddingEnd="8dp"
             android:paddingTop="8dp"

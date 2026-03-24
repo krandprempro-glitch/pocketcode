@@ -354,6 +354,38 @@ public class ProjectWorkspaceManager {
     }
     
     /**
+     * 获取所有书签（不限制项目）- 兼容性版本，不强制要求projectId
+     */
+    public List<DirectoryBookmark> getAllBookmarks() {
+        List<DirectoryBookmark> bookmarks = new ArrayList<>();
+
+        try {
+            Map<String, ?> all = bookmarkPrefs.getAll();
+            for (Map.Entry<String, ?> entry : all.entrySet()) {
+                if (entry.getKey().startsWith(BOOKMARK_PREFIX) && entry.getValue() instanceof String) {
+                    try {
+                        DirectoryBookmark bookmark = gson.fromJson((String) entry.getValue(), DirectoryBookmark.class);
+                        // 兼容性检查：只验证必要字段，不强制要求projectId
+                        if (bookmark != null && bookmark.getFullPath() != null && !bookmark.getFullPath().isEmpty()) {
+                            bookmarks.add(bookmark);
+                        }
+                    } catch (Exception e) {
+                        Logger.logError(TAG, "Failed to parse bookmark: " + entry.getKey());
+                    }
+                }
+            }
+
+            // 按创建时间排序
+            bookmarks.sort((a, b) -> Long.compare(b.getCreatedTime(), a.getCreatedTime()));
+
+        } catch (Exception e) {
+            Logger.logError(TAG, "Failed to load all bookmarks: " + e.getMessage());
+        }
+
+        return bookmarks;
+    }
+
+    /**
      * 获取项目的所有书签
      */
     public List<DirectoryBookmark> getProjectBookmarks(String projectId) {
