@@ -152,7 +152,7 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    
+
     kotlinOptions {
         jvmTarget = '1.8'
     }
@@ -271,7 +271,16 @@ clean {
     }
 }
 
+// 从assets目录复制bootstrap文件到cpp目录，用于NDK构建
+task copyBootstrapsToCpp(type: Copy) {
+    description 'Copy bootstrap files from assets to cpp directory for NDK build'
+    from 'src/main/assets'
+    into 'src/main/cpp'
+    include 'bootstrap-*.zip'
+}
+
 task downloadBootstraps() {
+    dependsOn copyBootstrapsToCpp
     doLast {
 //        def packageVariant = project.ext.packageVariant
 //        if (packageVariant == "apt-android-7") {
@@ -295,5 +304,10 @@ task downloadBootstraps() {
 afterEvaluate {
     android.applicationVariants.all { variant ->
         variant.javaCompileProvider.get().dependsOn(downloadBootstraps)
+        // 确保 NDK 构建前复制 bootstrap 文件
+        def externalNativeBuildTask = tasks.findByName("externalNativeBuild${variant.name.capitalize()}")
+        if (externalNativeBuildTask != null) {
+            externalNativeBuildTask.dependsOn copyBootstrapsToCpp
+        }
     }
 }
