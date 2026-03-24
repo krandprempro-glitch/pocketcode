@@ -11,6 +11,7 @@ import com.termux.R
 import com.termux.app.configuration.adapters.ConfigurationMainAdapter
 import com.termux.app.configuration.activities.SshConfigListActivity
 import com.termux.app.configuration.activities.RunConfigListActivity
+import com.termux.app.configuration.activities.QuickCommandListActivity
 import com.termux.app.configuration.activities.GlobalSettingsActivity
 import com.termux.app.configuration.models.ConfigurationItem
 import android.widget.Toast
@@ -60,6 +61,10 @@ class ConfigurationMainFragment : Fragment() {
             }
             ConfigurationItem.ConfigurationType.RUN_CONFIG -> {
                 val intent = RunConfigListActivity.newIntent(requireContext())
+                startActivity(intent)
+            }
+            ConfigurationItem.ConfigurationType.QUICK_COMMANDS -> {
+                val intent = QuickCommandListActivity.newIntent(requireContext())
                 startActivity(intent)
             }
             ConfigurationItem.ConfigurationType.GLOBAL_SETTINGS -> {

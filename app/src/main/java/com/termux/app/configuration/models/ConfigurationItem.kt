@@ -14,6 +14,7 @@ data class ConfigurationItem(
     enum class ConfigurationType {
         SSH_CONFIG,     // SSH连接配置
         RUN_CONFIG,     // 运行配置
+        QUICK_COMMANDS, // 常用指令
         GLOBAL_SETTINGS, // 全局设置
         ABOUT           // 关于页面
     }
@@ -33,6 +34,13 @@ data class ConfigurationItem(
                 "配置项目运行命令",
                 R.drawable.ic_run,
                 ConfigurationType.RUN_CONFIG
+            ),
+            ConfigurationItem(
+                "quick_commands",
+                "常用指令",
+                "管理常用命令快捷方式",
+                R.drawable.ic_terminal,
+                ConfigurationType.QUICK_COMMANDS
             ),
             ConfigurationItem(
                 "global_settings",

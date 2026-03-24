@@ -8,10 +8,12 @@ object ConfigurationConstants {
     const val PREFS_RUN_CONFIG = "run_configurations"
     const val PREFS_COMMAND_TEMPLATES = "command_templates"
     const val PREFS_CONFIG_SETTINGS = "config_settings"
+    const val PREFS_QUICK_COMMANDS = "quick_commands"
     
     // 配置项键值
     const val KEY_RUN_CONFIG_PREFIX = "run_config_"
     const val KEY_TEMPLATE_PREFIX = "template_"
+    const val KEY_QUICK_CMD_PREFIX = "quick_cmd_"
     const val KEY_LAST_USED = "last_used_config"
     
     // 默认值
