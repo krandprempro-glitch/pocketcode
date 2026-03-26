@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.termux.R
 import com.termux.app.MainTabActivity
+import com.termux.app.clipboard.ClipboardSyncManager
 import com.termux.app.models.DrawerMenuItem
 import com.termux.app.models.RemoteFileItem
 import com.termux.app.models.SSHConnectionConfig
@@ -851,6 +852,8 @@ class RemoteFileBrowserFragment : Fragment(),
     fun onSSHConnected(config: SSHConnectionConfig) {
         Logger.logInfo(LOG_TAG, "SSH connected notification from SSH tab: ${config.host}")
         viewModel.connect(config)
+        // 启动剪贴板同步
+        ClipboardSyncManager.getInstance().startSync()
     }
 
     /**
@@ -860,6 +863,8 @@ class RemoteFileBrowserFragment : Fragment(),
     fun onSSHDisconnected() {
         Logger.logInfo(LOG_TAG, "SSH disconnected notification from SSH tab")
         viewModel.disconnect()
+        // 停止剪贴板同步
+        ClipboardSyncManager.getInstance().stopSync()
     }
 
     /**
