@@ -61,6 +61,37 @@ class RemoteFileBrowserFragment : Fragment(),
         private const val LOG_TAG = "RemoteFileBrowserFragment"
     }
 
+    /**
+     * 目录变化监听器接口
+     * 用于通知其他组件（如MainTabActivity）当前目录已变化
+     */
+    interface OnDirectoryChangeListener {
+        /**
+         * 当目录变化时调用
+         * @param newPath 新的目录路径
+         */
+        fun onDirectoryChanged(newPath: String)
+    }
+
+    // 目录变化监听器
+    private var directoryChangeListener: OnDirectoryChangeListener? = null
+
+    /**
+     * 设置目录变化监听器
+     * @param listener 要设置的监听器
+     */
+    fun setOnDirectoryChangeListener(listener: OnDirectoryChangeListener?) {
+        this.directoryChangeListener = listener
+    }
+
+    /**
+     * 获取当前目录路径
+     * @return 当前查看的目录路径
+     */
+    fun getCurrentDirectory(): String {
+        return viewModel.currentPath.value
+    }
+
     private var _binding: FragmentRemoteFileBrowserDrawerBinding? = null
     private val binding get() = _binding!!
 
@@ -313,6 +344,8 @@ class RemoteFileBrowserFragment : Fragment(),
                 launch {
                     viewModel.currentPath.collect { path ->
                         updatePathDisplay(path)
+                        // 通知目录变化监听器（用于GitHistoryFragment等组件同步）
+                        directoryChangeListener?.onDirectoryChanged(path)
                     }
                 }
 

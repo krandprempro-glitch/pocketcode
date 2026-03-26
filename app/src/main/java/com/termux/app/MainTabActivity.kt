@@ -17,19 +17,21 @@ import com.termux.app.floating.views.FloatingActionButton
 import android.widget.Toast
 import com.termux.app.ui.SSHConfigDialog
 import com.termux.app.sftp.SFTPConnectionManager
+import com.termux.shared.logger.Logger
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import com.termux.app.fragments.GitHistoryFragment
 import com.termux.app.fragments.TermuxFragment
 import com.termux.filebrowser.RemoteFileBrowserFragment
+import com.termux.filebrowser.RemoteFileBrowserFragment.OnDirectoryChangeListener
 
 /**
  * 主Tab界面Activity
  * 包含4个Tab页面：终端、SFTP文件浏览、待开发、配置
  * 集成悬浮窗功能管理
  */
-class MainTabActivity : AppCompatActivity() {
+class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
 
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
@@ -254,6 +256,29 @@ class MainTabActivity : AppCompatActivity() {
         if (currentFragment is RemoteFileBrowserFragment) {
             // 通过Fragment的ViewModel同步连接状态和加载文件列表
             currentFragment.syncConnectionFromExternal(config)
+
+            // 同时同步GitHistoryFragment，获取当前目录并通知其刷新
+            val gitHistoryFragment = pagerAdapter.getCurrentFragment(2)
+            if (gitHistoryFragment is GitHistoryFragment) {
+                val currentDir = currentFragment.getCurrentDirectory()
+                if (currentDir.isNotEmpty()) {
+                    gitHistoryFragment.onDirectoryChanged(currentDir)
+                }
+            }
+        }
+    }
+
+    /**
+     * 实现 OnDirectoryChangeListener 接口
+     * 当RemoteFileBrowserFragment中的目录变化时，自动同步GitHistoryFragment
+     */
+    override fun onDirectoryChanged(newPath: String) {
+        Logger.logDebug("MainTabActivity", "Directory changed to: $newPath, syncing GitHistoryFragment")
+
+        // 获取GitHistoryFragment（Tab2）
+        val gitHistoryFragment = pagerAdapter.getCurrentFragment(2)
+        if (gitHistoryFragment is GitHistoryFragment) {
+            gitHistoryFragment.onDirectoryChanged(newPath)
         }
     }
 
@@ -276,6 +301,11 @@ class MainTabActivity : AppCompatActivity() {
                 2 -> GitHistoryFragment() // Git 记录 tab
                 3 -> ConfigurationMainFragment() // Configuration tab
                 else -> TermuxFragment()
+            }
+
+            // 为RemoteFileBrowserFragment设置目录变化监听器
+            if (position == 1 && fragment is RemoteFileBrowserFragment) {
+                fragment.setOnDirectoryChangeListener(this@MainTabActivity)
             }
 
             // 保存Fragment引用用于后续同步
