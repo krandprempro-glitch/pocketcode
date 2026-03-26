@@ -24,6 +24,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers
 import com.termux.app.fragments.GitHistoryFragment
 import com.termux.app.fragments.TermuxFragment
 import com.termux.app.clipboard.ClipboardSyncManager
+import com.termux.app.clipboard.ClipboardSyncStatusView
 import com.termux.filebrowser.RemoteFileBrowserFragment
 import com.termux.filebrowser.RemoteFileBrowserFragment.OnDirectoryChangeListener
 
@@ -38,6 +39,7 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
     private lateinit var viewPager: ViewPager2
     private lateinit var pagerAdapter: TabPagerAdapter
     private var floatingActionButton: FloatingActionButton? = null
+    private var clipboardSyncStatus: ClipboardSyncStatusView? = null
     private val disposables = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,6 +123,23 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
 
     private fun initClipboardSync() {
         ClipboardSyncManager.getInstance().init(this)
+
+        // 初始化状态图标
+        clipboardSyncStatus = findViewById(R.id.clipboard_sync_status)
+
+        // 监听连接状态
+        SFTPConnectionManager.getInstance().connectionStatus
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { status ->
+                when (status) {
+                    SFTPConnectionManager.ConnectionStatus.CONNECTED -> {
+                        clipboardSyncStatus?.showSyncing()
+                    }
+                    else -> {
+                        clipboardSyncStatus?.hide()
+                    }
+                }
+            }
     }
 
     private fun initFloatingButton() {
