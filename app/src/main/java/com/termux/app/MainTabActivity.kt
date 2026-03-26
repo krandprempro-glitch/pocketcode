@@ -20,6 +20,7 @@ import com.termux.app.sftp.SFTPConnectionManager
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import com.termux.app.fragments.GitHistoryFragment
 import com.termux.app.fragments.TermuxFragment
 import com.termux.filebrowser.RemoteFileBrowserFragment
 
@@ -90,7 +91,7 @@ class MainTabActivity : AppCompatActivity() {
                     tab.setIcon(android.R.drawable.ic_menu_view)
                 }
                 2 -> {
-                    tab.text = "待开发"
+                    tab.text = "Git 记录"
                     tab.setIcon(android.R.drawable.ic_menu_recent_history)
                 }
                 3 -> {
@@ -272,7 +273,7 @@ class MainTabActivity : AppCompatActivity() {
             val fragment = when (position) {
                 0 -> TermuxFragment() // Terminal tab
                 1 -> RemoteFileBrowserFragment() // File browser tab
-                2 -> PlaceholderFragment() // 待开发 tab
+                2 -> GitHistoryFragment() // Git 记录 tab
                 3 -> ConfigurationMainFragment() // Configuration tab
                 else -> TermuxFragment()
             }
@@ -290,22 +291,4 @@ class MainTabActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 待开发占位Fragment
-     */
-    class PlaceholderFragment : Fragment() {
-        override fun onCreateView(
-            inflater: android.view.LayoutInflater,
-            container: android.view.ViewGroup?,
-            savedInstanceState: Bundle?
-        ): android.view.View {
-            val textView = android.widget.TextView(requireContext()).apply {
-                text = "功能开发中..."
-                textSize = 24f
-                gravity = android.view.Gravity.CENTER
-                setTextColor(android.graphics.Color.GRAY)
-            }
-            return textView
-        }
-    }
 }
