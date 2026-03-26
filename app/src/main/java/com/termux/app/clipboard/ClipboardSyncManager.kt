@@ -209,7 +209,10 @@ class ClipboardSyncManager private constructor() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({
+                // 更新服务器指纹缓存
                 lastServerFingerprint = md5(content)
+                // 更新手机指纹缓存，避免下次被服务器内容覆盖
+                lastPhoneFingerprint = md5(content)
                 Logger.logDebug(LOG_TAG, "剪贴板已推送到服务器")
             }, { error ->
                 Logger.logError(LOG_TAG, "推送失败: ${error.message}")
@@ -244,6 +247,8 @@ class ClipboardSyncManager private constructor() {
 
         val clip = android.content.ClipData.newPlainText("server_clipboard", content)
         clipboard.setPrimaryClip(clip)
+        // 立即更新手机指纹，避免重复拉取
+        lastPhoneFingerprint = md5(content)
     }
 
     /**
