@@ -57,7 +57,11 @@ public final class TerminalRenderer {
     public final void render(TerminalEmulator mEmulator, Canvas canvas, int topRow,
                              int selectionY1, int selectionY2, int selectionX1, int selectionX2) {
         final boolean reverseVideo = mEmulator.isReverseVideo();
-        final int endRow = topRow + mEmulator.mRows;
+        final int rowsInHistory = mEmulator.getScreen().getActiveTranscriptRows();
+        // Clamp topRow to valid range to prevent IllegalArgumentException in externalToInternalRow()
+        // This handles race conditions where mTopRow may be outdated relative to current transcript state
+        final int clampedTopRow = Math.max(-rowsInHistory, Math.min(0, topRow));
+        final int endRow = clampedTopRow + mEmulator.mRows;
         final int columns = mEmulator.mColumns;
         final int cursorCol = mEmulator.getCursorCol();
         final int cursorRow = mEmulator.getCursorRow();
@@ -70,7 +74,7 @@ public final class TerminalRenderer {
             canvas.drawColor(palette[TextStyle.COLOR_INDEX_FOREGROUND], PorterDuff.Mode.SRC);
 
         float heightOffset = mFontLineSpacingAndAscent;
-        for (int row = topRow; row < endRow; row++) {
+        for (int row = clampedTopRow; row < endRow; row++) {
             heightOffset += mFontLineSpacing;
 
             final int cursorX = (row == cursorRow && cursorVisible) ? cursorCol : -1;
