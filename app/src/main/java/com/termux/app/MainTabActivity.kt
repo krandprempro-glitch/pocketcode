@@ -23,6 +23,7 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import com.termux.app.fragments.GitHistoryFragment
 import com.termux.app.fragments.TermuxFragment
+import com.termux.app.clipboard.ClipboardSyncManager
 import com.termux.filebrowser.RemoteFileBrowserFragment
 import com.termux.filebrowser.RemoteFileBrowserFragment.OnDirectoryChangeListener
 
@@ -46,6 +47,7 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
         setContentView(R.layout.activity_main_tabs)
 
         initTabViews()
+        initClipboardSync()
         initFloatingButton()
         handleIntent(intent)
     }
@@ -115,6 +117,10 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+    }
+
+    private fun initClipboardSync() {
+        ClipboardSyncManager.getInstance().init(this)
     }
 
     private fun initFloatingButton() {

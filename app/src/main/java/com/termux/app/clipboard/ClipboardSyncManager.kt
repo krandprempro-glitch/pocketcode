@@ -30,6 +30,7 @@ class ClipboardSyncManager private constructor() {
         }
     }
 
+    private var applicationContext: android.content.Context? = null
     private val disposables = CompositeDisposable()
     private var syncDisposable: io.reactivex.rxjava3.disposables.Disposable? = null
 
@@ -37,6 +38,13 @@ class ClipboardSyncManager private constructor() {
     private var lastServerFingerprint: String? = null
     private var lastPhoneFingerprint: String? = null
     private var isEnabled = false
+
+    /**
+     * 初始化剪贴板管理器
+     */
+    fun init(context: android.content.Context) {
+        applicationContext = context.applicationContext
+    }
 
     // 服务器剪贴板命令（根据环境检测）
     private enum class ClipboardBackend {
@@ -212,15 +220,30 @@ class ClipboardSyncManager private constructor() {
      * 获取手机剪贴板内容
      */
     private fun getPhoneClipboardContent(): String {
-        // 临时实现，后续接入Android ClipboardManager
-        return ""
+        val context = applicationContext ?: return ""
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            ?: return ""
+
+        val clip = clipboard.primaryClip
+        if (clip == null || clip.itemCount == 0) return ""
+
+        return try {
+            clip.getItemAt(0).coerceToText(context).toString()
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     /**
      * 设置手机剪贴板
      */
     private fun setPhoneClipboard(content: String) {
-        // 临时实现，后续接入Android ClipboardManager
+        val context = applicationContext ?: return
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            ?: return
+
+        val clip = android.content.ClipData.newPlainText("server_clipboard", content)
+        clipboard.setPrimaryClip(clip)
     }
 
     /**
