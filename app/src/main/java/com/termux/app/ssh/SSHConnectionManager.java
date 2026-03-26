@@ -67,22 +67,30 @@ public class SSHConnectionManager {
         if (config == null || !config.isValid()) {
             return null;
         }
-        
+
         StringBuilder command = new StringBuilder();
         command.append("ssh ");
-        
+
         // 添加一些常用选项
         command.append("-o StrictHostKeyChecking=no ");
         command.append("-o UserKnownHostsFile=/dev/null ");
-        
+
+        // SSH Keepalive 配置 - 防止后台时连接断开
+        // ServerAliveInterval: 每30秒发送心跳
+        // ServerAliveCountMax: 3次无响应后断开 (30s * 3 = 90秒)
+        // TCPKeepAlive: 底层TCP keepalive
+        command.append("-o ServerAliveInterval=30 ");
+        command.append("-o ServerAliveCountMax=3 ");
+        command.append("-o TCPKeepAlive=yes ");
+
         // 添加端口参数（如果不是默认端口）
         if (config.getPort() != 22) {
             command.append("-p ").append(config.getPort()).append(" ");
         }
-        
+
         // 添加用户名和主机
         command.append(config.getUsername()).append("@").append(config.getHost());
-        
+
         return command.toString();
     }
     
