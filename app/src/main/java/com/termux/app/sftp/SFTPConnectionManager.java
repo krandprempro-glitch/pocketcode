@@ -35,6 +35,7 @@ import java.security.Provider;
 import java.security.Security;
 import net.schmizz.sshj.sftp.OpenMode;
 import net.schmizz.sshj.sftp.RemoteFile;
+import net.schmizz.sshj.connection.channel.Session;
 import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.Response;
 import net.schmizz.sshj.sftp.SFTPClient;
@@ -634,6 +635,49 @@ public class SFTPConnectionManager {
                 });
     }
     
+    /**
+     * 执行远程命令
+     * @param command 要执行的命令
+     * @return Single<String> 命令输出结果
+     */
+    public Single<String> executeCommand(String command) {
+        return Single.<String>create(emitter -> {
+            try {
+                if (!isConnected) {
+                    emitter.onError(new RuntimeException("未建立SSH连接"));
+                    return;
+                }
+                Session session = sshClient.startSession();
+                try {
+                    Session.Command cmd = session.exec(command);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    byte[] buf = new byte[1024];
+                    int n;
+                    while ((n = cmd.getInputStream().read(buf)) != -1) {
+                        baos.write(buf, 0, n);
+                    }
+                    cmd.join(30, TimeUnit.SECONDS);
+                    int exitStatus = cmd.getExitStatus();
+                    if (exitStatus != 0) {
+                        ByteArrayOutputStream errorBaos = new ByteArrayOutputStream();
+                        while ((n = cmd.getErrorStream().read(buf)) != -1) {
+                            errorBaos.write(buf, 0, n);
+                        }
+                        String errorMsg = errorBaos.toString(StandardCharsets.UTF_8.name());
+                        emitter.onError(new RuntimeException("命令执行失败: " + errorMsg));
+                        return;
+                    }
+                    emitter.onSuccess(baos.toString(StandardCharsets.UTF_8.name()));
+                } finally {
+                    session.close();
+                }
+            } catch (Exception e) {
+                emitter.onError(e);
+            }
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
+    }
+
     /**
      * 关闭连接管理器
      */
