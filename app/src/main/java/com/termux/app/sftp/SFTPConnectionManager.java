@@ -657,13 +657,16 @@ public class SFTPConnectionManager {
                         baos.write(buf, 0, n);
                     }
                     cmd.join(30, TimeUnit.SECONDS);
-                    int exitStatus = cmd.getExitStatus();
-                    if (exitStatus != 0) {
+                    Integer exitStatus = cmd.getExitStatus();
+                    if (exitStatus != null && exitStatus != 0) {
                         ByteArrayOutputStream errorBaos = new ByteArrayOutputStream();
                         while ((n = cmd.getErrorStream().read(buf)) != -1) {
                             errorBaos.write(buf, 0, n);
                         }
                         String errorMsg = errorBaos.toString(StandardCharsets.UTF_8.name());
+                        if (errorMsg == null || errorMsg.trim().isEmpty()) {
+                            errorMsg = "Exit code: " + exitStatus;
+                        }
                         emitter.onError(new RuntimeException("命令执行失败: " + errorMsg));
                         return;
                     }
