@@ -96,12 +96,15 @@ public class GitHistoryFragment extends Fragment {
                 break;
             case SUCCESS:
                 progressBar.setVisibility(View.GONE);
+                statusText.setVisibility(View.VISIBLE);
+                statusText.setText("");
                 branchSection.setVisibility(View.VISIBLE);
                 commitsRecyclerView.setVisibility(View.VISIBLE);
                 retryButton.setVisibility(View.GONE);
                 break;
             case ERROR:
                 progressBar.setVisibility(View.GONE);
+                statusText.setVisibility(View.VISIBLE);
                 retryButton.setVisibility(View.VISIBLE);
                 break;
         }
