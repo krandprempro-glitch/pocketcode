@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.termux.app.sessions.SessionManager
 import com.termux.app.sessions.SessionStatus
-import com.termux.app.databinding.ActivityTerminalSessionBinding
+import com.termux.databinding.ActivityTerminalSessionBinding
 
 class TerminalSessionActivity : AppCompatActivity() {
 

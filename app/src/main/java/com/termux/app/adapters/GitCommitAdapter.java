@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.termux.app.R;
+import com.termux.R;
 import com.termux.app.models.GitCommit;
 
 import java.text.SimpleDateFormat;

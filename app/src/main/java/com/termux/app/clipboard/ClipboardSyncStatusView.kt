@@ -22,7 +22,7 @@ class ClipboardSyncStatusView @JvmOverloads constructor(
         orientation = HORIZONTAL
         syncIcon = ImageView(context).apply {
             layoutParams = LayoutParams(48, 48)
-            setImageResource(android.R.drawable.ic_menu_sync)
+            setImageResource(android.R.drawable.stat_notify_sync)
             visibility = View.GONE
         }
         addView(syncIcon)
@@ -33,7 +33,7 @@ class ClipboardSyncStatusView @JvmOverloads constructor(
      */
     fun showSyncing() {
         syncIcon.visibility = View.VISIBLE
-        syncIcon.setImageResource(android.R.drawable.ic_menu_sync)
+        syncIcon.setImageResource(android.R.drawable.stat_notify_sync)
         // TODO: 添加旋转动画
     }
 
@@ -43,7 +43,7 @@ class ClipboardSyncStatusView @JvmOverloads constructor(
     fun showSynced() {
         syncIcon.visibility = View.VISIBLE
         // 使用勾号图标表示已同步
-        syncIcon.setImageResource(android.R.drawable.ic_menu_ok)
+        syncIcon.setImageResource(android.R.drawable.ic_input_add)
     }
 
     /**

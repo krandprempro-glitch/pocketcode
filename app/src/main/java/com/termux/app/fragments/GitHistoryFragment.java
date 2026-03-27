@@ -16,7 +16,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.termux.app.R;
+import com.termux.R;
 import com.termux.app.models.GitBranch;
 import com.termux.app.models.GitCommit;
 import com.termux.app.viewmodels.GitHistoryViewModel;
@@ -25,7 +25,6 @@ import com.termux.app.adapters.GitCommitAdapter;
 import java.util.List;
 
 public class GitHistoryFragment extends Fragment {
-
     private GitHistoryViewModel viewModel;
 
     private ProgressBar progressBar;

@@ -5,7 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
-import com.termux.app.databinding.DialogNewSessionBinding
+import com.termux.databinding.DialogNewSessionBinding
 import com.termux.app.models.SSHConfigManager
 import com.termux.app.managers.ProjectWorkspaceManager
 

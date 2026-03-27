@@ -311,7 +311,7 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
     /**
      * Tab页面适配器 - 包含4个Fragment
      */
-    private class TabPagerAdapter(@NonNull fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
+    private class TabPagerAdapter(@NonNull private val fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
 
         private val fragmentList = mutableListOf<Fragment?>(null, null, null, null)
 
@@ -331,7 +331,7 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
 
             // 为RemoteFileBrowserFragment设置目录变化监听器
             if (position == 1 && fragment is RemoteFileBrowserFragment) {
-                fragment.setOnDirectoryChangeListener(this@MainTabActivity)
+                fragment.setOnDirectoryChangeListener(fragmentActivity as? OnDirectoryChangeListener)
             }
 
             // 保存Fragment引用用于后续同步

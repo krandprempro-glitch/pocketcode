@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.termux.app.databinding.FragmentSessionListBinding
+import com.termux.databinding.FragmentSessionListBinding
 import com.termux.app.terminal.TerminalSessionActivity
 
 class SessionListFragment : Fragment() {
@@ -66,12 +66,12 @@ class SessionListFragment : Fragment() {
     }
 
     private fun refreshSessions() {
-        adapter.submitList(SessionManager.allSessions)
+        adapter.submitList(SessionManager.getAllSessions())
         updateEmptyState()
     }
 
     private fun updateEmptyState() {
-        val isEmpty = SessionManager.allSessions.isEmpty()
+        val isEmpty = SessionManager.getAllSessions().isEmpty()
         binding.emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
         binding.sessionsRecyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
