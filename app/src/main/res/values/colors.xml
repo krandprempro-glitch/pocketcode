@@ -104,4 +104,15 @@
     <color name="rc_code_text">#374151</color>
     <color name="rc_button_black">#111827</color>
     <color name="rc_button_black_text">#FFFFFF</color>
+
+    <!-- Session list colors (dark theme) -->
+    <color name="surface_elevated">#1e293b</color>
+    <color name="primary_20">#333b82f6</color>
+    <color name="white">#FFFFFF</color>
+    <color name="status_idle">#64748b</color>
+    <color name="status_running">#3b82f6</color>
+    <color name="status_thinking">#f59e0b</color>
+    <color name="status_working">#8b5cf6</color>
+    <color name="status_waiting">#22c55e</color>
+    <color name="status_error">#ef4444</color>
 </resources>
