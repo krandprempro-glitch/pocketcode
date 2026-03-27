@@ -145,6 +145,11 @@
             android:theme="@style/Theme.ConfigurationActivity.Dark" />
 
         <activity
+            android:name=".app.terminal.TerminalSessionActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
+        <activity
             android:name=".app.configuration.activities.QuickCommandListActivity"
             android:exported="false"
             android:label="常用指令"
