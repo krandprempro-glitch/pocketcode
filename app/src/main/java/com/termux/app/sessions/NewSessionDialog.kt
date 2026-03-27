@@ -4,7 +4,9 @@ import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.WindowManager
 import android.widget.ArrayAdapter
+import com.termux.R
 import com.termux.databinding.DialogNewSessionBinding
 import com.termux.app.models.SSHConfigManager
 import com.termux.app.managers.ProjectWorkspaceManager
@@ -23,7 +25,18 @@ class NewSessionDialog(
         binding = DialogNewSessionBinding.inflate(LayoutInflater.from(context))
         setContentView(binding.root)
 
-        window?.setBackgroundDrawableResource(android.R.color.transparent)
+        window?.apply {
+            // 使用浅色背景，与弹窗内容一致
+            setBackgroundDrawableResource(R.color.dialog_window_background_light)
+            // 蒙层透明度 30%，只在弹窗四周
+            setDimAmount(0.3f)
+            // 清除模糊效果
+            clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            // 设置窗口宽度为屏幕宽度的 90%
+            val metrics = context.resources.displayMetrics
+            val width = (metrics.widthPixels * 0.9f).toInt()
+            setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
 
         setupSshDropdown()
         setupPathDropdown()
@@ -37,7 +50,7 @@ class NewSessionDialog(
             emptyList()
         }
 
-        val adapter = ArrayAdapter(context, android.R.layout.simple_dropdown_item_1line, sshConfigs)
+        val adapter = ArrayAdapter(context, R.layout.item_dropdown_light, sshConfigs)
         binding.sshDropdown.setAdapter(adapter)
         binding.sshDropdown.setOnItemClickListener { _, _, position, _ ->
             selectedSshConfig = sshConfigs[position]
@@ -54,7 +67,7 @@ class NewSessionDialog(
         }
 
         val displayNames = paths.map { it.first }
-        val adapter = ArrayAdapter(context, android.R.layout.simple_dropdown_item_1line, displayNames)
+        val adapter = ArrayAdapter(context, R.layout.item_dropdown_light, displayNames)
         binding.pathDropdown.setAdapter(adapter)
         binding.pathDropdown.setOnItemClickListener { _, _, position, _ ->
             selectedPath = paths[position].second

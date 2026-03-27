@@ -35,12 +35,10 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_new_config"
-        style="@style/Widget.MaterialComponents.Button"
+        style="@style/AppButton.Primary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="新建配置"
         android:layout_marginTop="16dp"
-        app:backgroundTint="@color/rc_button_black"
-        android:textColor="@color/rc_button_black_text" />
+        android:text="新建配置" />
 
 </LinearLayout>

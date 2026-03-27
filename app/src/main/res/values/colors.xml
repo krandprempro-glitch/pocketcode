@@ -16,7 +16,7 @@
     
     <!-- Dark theme colors -->
     <color name="dark_background">#121212</color>
-    <color name="dark_surface">#FFFFFF</color>
+    <color name="dark_surface">#1E1E1E</color>
     <color name="dark_tab_background">#1F1F1F</color>
     <color name="dark_tab_text">#B3B3B3</color>
     <color name="dark_tab_text_selected">#FFFFFF</color>
@@ -108,6 +108,9 @@
     <!-- Session list colors (dark theme) -->
     <color name="surface_elevated">#1e293b</color>
     <color name="primary_20">#333b82f6</color>
+    <color name="dropdown_box_stroke">#3B82F6</color>
+    <color name="dialog_window_background">#E0121212</color>
+    <color name="dialog_window_background_light">#F5F5F5</color>
     <color name="white">#FFFFFF</color>
     <color name="status_idle">#64748b</color>
     <color name="status_running">#3b82f6</color>
