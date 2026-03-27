@@ -39,3 +39,6 @@ local.properties
 .swp
 ehthumbs.db
 Thumbs.db
+
+# Git worktrees
+.worktrees/
