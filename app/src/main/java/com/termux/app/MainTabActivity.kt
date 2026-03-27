@@ -23,6 +23,7 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import com.termux.app.fragments.GitHistoryFragment
 import com.termux.app.fragments.TermuxFragment
+import com.termux.app.sessions.SessionListFragment
 import com.termux.app.clipboard.ClipboardSyncManager
 import com.termux.app.clipboard.ClipboardSyncStatusView
 import com.termux.filebrowser.RemoteFileBrowserFragment
@@ -321,11 +322,11 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
         @NonNull
         override fun createFragment(position: Int): Fragment {
             val fragment = when (position) {
-                0 -> TermuxFragment() // Terminal tab
+                0 -> SessionListFragment() // Session list tab
                 1 -> RemoteFileBrowserFragment() // File browser tab
                 2 -> GitHistoryFragment() // Git 记录 tab
                 3 -> ConfigurationMainFragment() // Configuration tab
-                else -> TermuxFragment()
+                else -> SessionListFragment()
             }
 
             // 为RemoteFileBrowserFragment设置目录变化监听器
