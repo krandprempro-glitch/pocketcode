@@ -10,8 +10,8 @@ release/
 .externalNativeBuild
 .cxx
 *.zip
-# 但保留 assets 目录中的 bootstrap 包
-!app/src/main/assets/*.zip
+# 保留 bootstrap 目录中的 zip 文件
+!app/bootstrap/*.zip
 
 # Local configuration file (sdk path, etc)
 local.properties

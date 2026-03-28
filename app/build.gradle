@@ -161,6 +161,9 @@ android {
         viewBinding true
     }
 
+    // bootstrap zip已通过NDK编译进libtermux-bootstrap.so，无需打包到assets
+    // 文件存放在 app/bootstrap/ 目录，不放入assets避免被AAPT打包
+
     externalNativeBuild {
         ndkBuild {
             path "src/main/cpp/Android.mk"
@@ -271,10 +274,10 @@ clean {
     }
 }
 
-// 从assets目录复制bootstrap文件到cpp目录，用于NDK构建
+// 从bootstrap目录复制文件到cpp目录，用于NDK构建（不放在assets中避免打包进APK）
 task copyBootstrapsToCpp(type: Copy) {
-    description 'Copy bootstrap files from assets to cpp directory for NDK build'
-    from 'src/main/assets'
+    description 'Copy bootstrap files from bootstrap/ to cpp/ directory for NDK build'
+    from 'bootstrap'
     into 'src/main/cpp'
     include 'bootstrap-*.zip'
 }
