@@ -32,24 +32,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- Diff Content -->
-        <ScrollView
-            android:id="@+id/diff_container"
+        <!-- Diff Content - RecyclerView for colored diff lines -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/diff_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="visible">
-
-            <TextView
-                android:id="@+id/diff_content"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="12dp"
-                android:textColor="@color/white"
-                android:fontFamily="monospace"
-                android:textIsSelectable="true"
-                android:textSize="13sp"
-                android:lineSpacingExtra="4dp" />
-        </ScrollView>
+            android:visibility="visible"
+            android:background="@color/dark_background"
+            android:clipToPadding="false"
+            android:paddingBottom="48dp" />
 
         <!-- File Content -->
         <ScrollView
