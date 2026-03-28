@@ -420,19 +420,27 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
             return;
         }
 
-        String[] scriptNames = new String[scripts.size()];
-        for (int i = 0; i < scripts.size(); i++) {
-            scriptNames[i] = scripts.get(i).getName() + " - " + scripts.get(i).getDescription();
-        }
+        // 使用自定义对话框布局
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_script_selection, null);
+        dialog.setContentView(dialogView);
 
-        new AlertDialog.Builder(this)
-            .setTitle("选择脚本")
-            .setItems(scriptNames, (dialog, which) -> {
-                com.termux.app.models.ScriptItem script = scripts.get(which);
-                executeScript(script);
-            })
-            .setNegativeButton("取消", null)
-            .show();
+        // 设置背景透明
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        // 设置RecyclerView
+        androidx.recyclerview.widget.RecyclerView recyclerView = dialogView.findViewById(R.id.scripts_recycler_view);
+        recyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+        com.termux.app.adapters.ScriptAdapter adapter = new com.termux.app.adapters.ScriptAdapter(scripts, script -> {
+            dialog.dismiss();
+            executeScript(script);
+        });
+        recyclerView.setAdapter(adapter);
+
+        // 取消按钮
+        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void executeScript(com.termux.app.models.ScriptItem script) {
