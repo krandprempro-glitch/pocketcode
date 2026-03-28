@@ -38,8 +38,11 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.CompositeDisposable;
 
 import com.termux.R;
+import com.termux.app.TermuxInstaller;
 import com.termux.app.TermuxService;
 import com.termux.app.terminal.ClaudeCodeMenuHelper;
 import com.termux.app.terminal.CommandGroupAdapter;
@@ -82,6 +85,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     public static final String EXTRA_SESSION_NAME = "session_name";
     public static final String EXTRA_SSH_CONFIG = "ssh_config";
     public static final String EXTRA_INITIAL_PATH = "initial_path";
+    public static final String EXTRA_INITIAL_COMMAND = "initial_command";
     private static final String TAG = "FullTerminal";
 
     // Service
@@ -103,8 +107,11 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     private String mSessionName;
     private String mSshConfigName;
     private String mInitialPath;
+    private String mInitialCommand;
     private TerminalSession mTerminalSession;
     private boolean mAutoCommandsSent = false;
+    private CommandGroupAdapter mCommandAdapter;
+    private CompositeDisposable mCommandMenuDisposables = new CompositeDisposable();
 
     // Renderer initialized flag
     private boolean mRendererInitialized = false;
@@ -355,8 +362,9 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         mSessionName = getIntent().getStringExtra(EXTRA_SESSION_NAME);
         mSshConfigName = getIntent().getStringExtra(EXTRA_SSH_CONFIG);
         mInitialPath = getIntent().getStringExtra(EXTRA_INITIAL_PATH);
+        mInitialCommand = getIntent().getStringExtra(EXTRA_INITIAL_COMMAND);
         Log.d(TAG, "Intent extras: id=" + mSessionId + " handle=" + mSessionHandle + " name=" + mSessionName
-            + " ssh=" + mSshConfigName + " path=" + mInitialPath);
+            + " ssh=" + mSshConfigName + " path=" + mInitialPath + " cmd=" + mInitialCommand);
 
         // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -694,15 +702,32 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         RecyclerView recyclerView = view.findViewById(R.id.commands_recycler_view);
         List<CommandGroupAdapter.CommandGroup> groups = prepareCommandGroups();
 
-        CommandGroupAdapter adapter = new CommandGroupAdapter(
+        mCommandAdapter = new CommandGroupAdapter(
             groups,
             mTerminalCommandInput,
             command -> dialog.dismiss()
         );
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(adapter);
+        recyclerView.setAdapter(mCommandAdapter);
         dialog.show();
+
+        // Subscribe to custom commands updates
+        mCommandMenuDisposables.clear();
+        mCommandMenuDisposables.add(
+            ClaudeCodeCommandManager.getInstance().customCommandsObservable
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(commands -> {
+                    if (mCommandAdapter != null) {
+                        List<CommandGroupAdapter.CommandGroup> updatedGroups = prepareCommandGroups();
+                        mCommandAdapter.updateGroups(updatedGroups);
+                    }
+                })
+        );
+
+        // Trigger a fetch if not yet populated
+        ClaudeCodeCommandManager.getInstance().fetchRemoteCommands(false)
+            .subscribe();
     }
 
     private List<CommandGroupAdapter.CommandGroup> prepareCommandGroups() {
@@ -732,7 +757,9 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
             for (SSHConnectionConfig config : mgr.getAllConfigs()) {
                 String cmd = SSHConnectionManager.generateTerminalSSHCommand(config);
                 if (cmd != null) {
-                    sshCommands.add(new ClaudeCodeMenuHelper.Command(cmd, "连接: " + config.getDisplayName()));
+                    String desc = config.getUsername() + "@" + config.getHost();
+                if (config.getPort() != 22) desc += ":" + config.getPort();
+                sshCommands.add(new ClaudeCodeMenuHelper.Command(cmd, desc));
                 }
             }
         } catch (Exception e) {
@@ -1004,33 +1031,44 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
             return;
         }
 
-        try {
-            Log.d(TAG, "createNewSession: calling createTermuxSession...");
-            TermuxSession newTermuxSession = mTermuxService.createTermuxSession(
-                null, null, null, null, false, mSessionName
-            );
+        // Ensure bootstrap is set up before creating session (same as TermuxActivity)
+        TermuxInstaller.setupBootstrapIfNeeded(this, () -> {
+            try {
+                Log.d(TAG, "createNewSession: calling createTermuxSession...");
+                TermuxSession newTermuxSession = mTermuxService.createTermuxSession(
+                    null, null, null, null, false, mSessionName
+                );
 
-            if (newTermuxSession != null) {
-                mTerminalSession = newTermuxSession.getTerminalSession();
-                Log.d(TAG, "createNewSession: SUCCESS, handle=" + mTerminalSession.mHandle);
-                doAttachSession(mTerminalSession);
-            } else {
-                Log.e(TAG, "createNewSession: returned NULL!");
-                showToast("创建会话失败");
+                if (newTermuxSession != null) {
+                    mTerminalSession = newTermuxSession.getTerminalSession();
+                    Log.d(TAG, "createNewSession: SUCCESS, handle=" + mTerminalSession.mHandle);
+                    doAttachSession(mTerminalSession);
+                } else {
+                    Log.e(TAG, "createNewSession: returned NULL!");
+                    showToast("创建会话失败");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "createNewSession FAILED: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                e.printStackTrace();
+                showToast("创建会话失败: " + e.getMessage());
             }
-        } catch (Exception e) {
-            Log.e(TAG, "createNewSession FAILED: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            e.printStackTrace();
-            showToast("创建会话失败: " + e.getMessage());
-        }
+        });
     }
 
     // ==================== Auto Commands (SSH / cd) ====================
 
     private void sendAutoCommands() {
         Log.d(TAG, "sendAutoCommands: called, sent=" + mAutoCommandsSent
-            + " ssh=" + mSshConfigName + " path=" + mInitialPath);
+            + " ssh=" + mSshConfigName + " path=" + mInitialPath + " cmd=" + mInitialCommand);
         if (mAutoCommandsSent) return;
+
+        // Initial command (e.g., pkg install sshpass) — run and stay in terminal
+        if (mInitialCommand != null && !mInitialCommand.isEmpty()) {
+            Log.d(TAG, "Auto command: " + mInitialCommand);
+            sendCommandToTerminal(mInitialCommand);
+            mAutoCommandsSent = true;
+            return;
+        }
 
         if (mSshConfigName != null && !mSshConfigName.isEmpty()) {
             // SSH connection requested
@@ -1103,6 +1141,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     protected void onDestroy() {
         super.onDestroy();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        mCommandMenuDisposables.clear();
 
         if (mServiceBound) {
             unbindService(this);
