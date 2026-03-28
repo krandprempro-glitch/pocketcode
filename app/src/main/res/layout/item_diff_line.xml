@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:minHeight="22dp"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/old_line_number"
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:paddingEnd="8dp"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:textColor="@color/diff_line_number" />
+
+    <TextView
+        android:id="@+id/new_line_number"
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:paddingEnd="8dp"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:textColor="@color/diff_line_number" />
+
+    <TextView
+        android:id="@+id/diff_prefix"
+        android:layout_width="12dp"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:textSize="11sp"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/diff_content"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:textIsSelectable="true"
+        android:lineSpacingExtra="2dp" />
+
+</LinearLayout>
