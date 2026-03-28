@@ -45,6 +45,7 @@ import com.termux.app.terminal.ClaudeCodeMenuHelper;
 import com.termux.app.terminal.CommandGroupAdapter;
 import com.termux.app.configuration.managers.QuickCommandManager;
 import com.termux.app.configuration.models.QuickCommand;
+import com.termux.app.managers.ClaudeCodeCommandManager;
 import com.termux.app.managers.ProjectWorkspaceManager;
 import com.termux.app.models.DirectoryBookmark;
 import com.termux.app.models.SSHConfigManager;
@@ -729,7 +730,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         try {
             SSHConfigManager mgr = SSHConfigManager.getInstance(this);
             for (SSHConnectionConfig config : mgr.getAllConfigs()) {
-                String cmd = config.generateSSHCommand();
+                String cmd = SSHConnectionManager.generateTerminalSSHCommand(config);
                 if (cmd != null) {
                     sshCommands.add(new ClaudeCodeMenuHelper.Command(cmd, "连接: " + config.getDisplayName()));
                 }
@@ -758,32 +759,22 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         }
         groups.add(new CommandGroupAdapter.CommandGroup(CommandGroupAdapter.CommandCategory.QUICK_COMMANDS, quickCommands));
 
-        // 4. AI Commands
-        List<ClaudeCodeMenuHelper.Command> aiCommands = Arrays.asList(
-            new ClaudeCodeMenuHelper.Command("/agents", "代理管理"),
-            new ClaudeCodeMenuHelper.Command("/review", "代码审查"),
-            new ClaudeCodeMenuHelper.Command("thinkharder", "深度思考"),
-            new ClaudeCodeMenuHelper.Command("ultrathink", "超级思考"),
-            new ClaudeCodeMenuHelper.Command("#(memory)", "访问记忆"),
-            new ClaudeCodeMenuHelper.Command("/memory", "内存管理"),
-            new ClaudeCodeMenuHelper.Command("/model", "模型设置"),
-            new ClaudeCodeMenuHelper.Command("/help", "获取帮助"),
-            new ClaudeCodeMenuHelper.Command("/config", "配置设置"),
-            new ClaudeCodeMenuHelper.Command("/clear", "清屏"),
-            new ClaudeCodeMenuHelper.Command("/init", "初始化"),
-            new ClaudeCodeMenuHelper.Command("!(bash)", "执行bash命令"),
-            new ClaudeCodeMenuHelper.Command("/add-dir", "添加目录"),
-            new ClaudeCodeMenuHelper.Command("/compact", "紧凑模式"),
-            new ClaudeCodeMenuHelper.Command("/doctor", "系统诊断"),
-            new ClaudeCodeMenuHelper.Command("/mcp", "MCP协议"),
-            new ClaudeCodeMenuHelper.Command("/resume", "恢复会话")
-        );
+        // 4. AI Commands (built-in)
+        List<ClaudeCodeMenuHelper.Command> aiCommands = ClaudeCodeCommandManager.getInstance().getDefaultCommands();
         groups.add(new CommandGroupAdapter.CommandGroup(CommandGroupAdapter.CommandCategory.AI_COMMANDS, aiCommands));
 
-        // 5. System Commands
+        // 5. AI Custom Commands (remote user-defined)
+        List<ClaudeCodeMenuHelper.Command> customCommands = ClaudeCodeCommandManager.getInstance().getCustomCommands();
+        if (!customCommands.isEmpty()) {
+            groups.add(new CommandGroupAdapter.CommandGroup(CommandGroupAdapter.CommandCategory.AI_CUSTOM_COMMANDS, customCommands));
+        }
+
+        // 6. System Commands
         List<ClaudeCodeMenuHelper.Command> systemCommands = Arrays.asList(
-            new ClaudeCodeMenuHelper.Command("codex --dangerously-bypass-approvals-and-sandbox", "codex"),
-            new ClaudeCodeMenuHelper.Command("claude", "claude")
+            new ClaudeCodeMenuHelper.Command("claude", "启动Claude Code"),
+            new ClaudeCodeMenuHelper.Command("claude --resume", "恢复上次会话"),
+            new ClaudeCodeMenuHelper.Command("claude -p \"\"", "快速提问模式"),
+            new ClaudeCodeMenuHelper.Command("codex", "启动Codex")
         );
         groups.add(new CommandGroupAdapter.CommandGroup(CommandGroupAdapter.CommandCategory.SYSTEM_COMMANDS, systemCommands));
 
@@ -1040,7 +1031,6 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         Log.d(TAG, "sendAutoCommands: called, sent=" + mAutoCommandsSent
             + " ssh=" + mSshConfigName + " path=" + mInitialPath);
         if (mAutoCommandsSent) return;
-        mAutoCommandsSent = true;
 
         if (mSshConfigName != null && !mSshConfigName.isEmpty()) {
             // SSH connection requested
@@ -1049,15 +1039,19 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
                 Log.d(TAG, "sendAutoCommands: SSHConfigManager=" + mgr);
                 SSHConnectionConfig config = mgr.getConfigByName(mSshConfigName);
                 Log.d(TAG, "sendAutoCommands: config for '" + mSshConfigName + "' = " + config);
-                String sshCmd = SSHConnectionManager.generateSSHCommand(config);
+                Log.d(TAG, "sendAutoCommands: password='" + config.getPassword()
+                    + "' privateKey='" + config.getPrivateKeyPath() + "'");
+                String sshCmd = SSHConnectionManager.generateTerminalSSHCommand(config);
                 Log.d(TAG, "sendAutoCommands: sshCmd=" + sshCmd);
                 if (sshCmd != null) {
-                    // If path specified, SSH with cd: ssh ... "cd /path && bash"
+                    // If path specified, SSH with cd: ssh ... "cd /path; exec bash"
+                    // Use ; so bash starts even if cd fails, exec replaces shell for interactive use
                     if (mInitialPath != null && !mInitialPath.isEmpty()) {
-                        sshCmd += " \"cd " + mInitialPath + " && bash\"";
+                        sshCmd += " \"cd " + mInitialPath + " 2>/dev/null; exec bash\"";
                     }
                     Log.d(TAG, "Auto SSH: " + sshCmd);
                     sendCommandToTerminal(sshCmd);
+                    mAutoCommandsSent = true;
                     return;
                 }
             } catch (Exception e) {
@@ -1068,7 +1062,8 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         // No SSH — local terminal, cd to path if specified
         if (mInitialPath != null && !mInitialPath.isEmpty()) {
             Log.d(TAG, "Auto cd: " + mInitialPath);
-            sendCommandToTerminal("cd " + mInitialPath);
+            sendCommandToTerminal("cd " + mInitialPath + " && ls");
+            mAutoCommandsSent = true;
         }
     }
 

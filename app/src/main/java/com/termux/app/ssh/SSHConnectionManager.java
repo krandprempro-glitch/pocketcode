@@ -93,7 +93,60 @@ public class SSHConnectionManager {
 
         return command.toString();
     }
-    
+
+    /**
+     * 生成用于终端的SSH连接命令（包含自动密码输入支持）
+     *
+     * 优先级：密钥 > sshpass密码 > 普通SSH(用户手动输密码)
+     *
+     * @param config SSH配置
+     * @return SSH命令字符串，可能包含sshpass包装
+     */
+    public static String generateTerminalSSHCommand(SSHConnectionConfig config) {
+        if (config == null || !config.isValid()) {
+            return null;
+        }
+
+        StringBuilder baseCmd = new StringBuilder();
+        baseCmd.append("ssh ");
+
+        // 通用选项
+        baseCmd.append("-o StrictHostKeyChecking=no ");
+        baseCmd.append("-o UserKnownHostsFile=/dev/null ");
+        baseCmd.append("-o ServerAliveInterval=30 ");
+        baseCmd.append("-o ServerAliveCountMax=3 ");
+        baseCmd.append("-o TCPKeepAlive=yes ");
+
+        // 端口
+        if (config.getPort() != 22) {
+            baseCmd.append("-p ").append(config.getPort()).append(" ");
+        }
+
+        // 密钥认证优先
+        String privateKeyPath = config.getPrivateKeyPath();
+        if (privateKeyPath != null && !privateKeyPath.trim().isEmpty()) {
+            baseCmd.append("-i \"").append(privateKeyPath.trim()).append("\" ");
+        }
+
+        // 用户名和主机
+        baseCmd.append(config.getUsername()).append("@").append(config.getHost());
+
+        String sshCmd = baseCmd.toString();
+
+        // 密码认证：使用sshpass自动输入
+        String password = config.getPassword();
+        if (password != null && !password.isEmpty()) {
+            // 密码用单引号包裹，并将密码中的单引号转义为 '\''
+            // 逻辑：先闭合前导单引号，再放入 '\''（单引号转义），再闭合尾部单引号
+            String escapedPwd = password.replace("'", "'\\''");
+            String sshpassCmd = "which sshpass >/dev/null 2>&1 || pkg install sshpass -y; "
+                + "SSHPASS='" + escapedPwd + "' sshpass -e ssh -t " + sshCmd.substring(4);
+            return sshpassCmd;
+        }
+
+        return sshCmd;
+    }
+
     /**
      * 发送命令到终端
      * @param command 要发送的命令
