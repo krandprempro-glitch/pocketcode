@@ -346,6 +346,7 @@ class RemoteFileBrowserFragment : Fragment(),
                     viewModel.currentPath.collect { path ->
                         updatePathDisplay(path)
                         // 通知目录变化监听器（用于GitHistoryFragment等组件同步）
+                        Logger.logDebug("RemoteFileBrowserFragment", "Directory changed to: $path, notifying listener")
                         directoryChangeListener?.onDirectoryChanged(path)
                     }
                 }

@@ -9,7 +9,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.termux.databinding.FragmentSessionListBinding
-import com.termux.app.terminal.TerminalSessionActivity
+import com.termux.app.terminal.FullTerminalActivity
 
 class SessionListFragment : Fragment() {
 
@@ -85,11 +85,12 @@ class SessionListFragment : Fragment() {
     }
 
     private fun openTerminalSession(session: SessionInfo) {
-        val intent = Intent(requireContext(), TerminalSessionActivity::class.java).apply {
-            putExtra(TerminalSessionActivity.EXTRA_SESSION_ID, session.id)
-            putExtra(TerminalSessionActivity.EXTRA_SESSION_NAME, session.name)
-            putExtra(TerminalSessionActivity.EXTRA_SSH_CONFIG, session.sshConfigName)
-            putExtra(TerminalSessionActivity.EXTRA_INITIAL_PATH, session.currentPath)
+        val intent = Intent(requireContext(), FullTerminalActivity::class.java).apply {
+            putExtra(FullTerminalActivity.EXTRA_SESSION_ID, session.id)
+            putExtra(FullTerminalActivity.EXTRA_SESSION_NAME, session.name)
+            putExtra(FullTerminalActivity.EXTRA_SSH_CONFIG, session.sshConfigName)
+            putExtra(FullTerminalActivity.EXTRA_INITIAL_PATH, session.currentPath)
+            session.terminalHandle?.let { putExtra(FullTerminalActivity.EXTRA_SESSION_HANDLE, it) }
         }
         startActivity(intent)
     }

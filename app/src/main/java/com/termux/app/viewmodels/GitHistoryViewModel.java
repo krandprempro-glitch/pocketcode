@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import com.termux.app.models.GitBranch;
 import com.termux.app.models.GitCommit;
 import com.termux.app.sftp.SFTPConnectionManager;
+import com.termux.shared.logger.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +63,9 @@ public class GitHistoryViewModel extends ViewModel {
     }
 
     public void loadGitHistory(String remotePath) {
+        Logger.logDebug("GitHistoryViewModel", "loadGitHistory called with path: " + remotePath);
+        Logger.logDebug("GitHistoryViewModel", "isConnected: " + sftpManager.isConnected());
+
         if (!sftpManager.isConnected()) {
             uiState.setValue(UiState.NOT_CONNECTED);
             return;
@@ -70,9 +74,12 @@ public class GitHistoryViewModel extends ViewModel {
         currentPath.setValue(remotePath);
         uiState.setValue(UiState.LOADING);
 
-        // 1. 获取分支列表
+        // 1. 获取分支列表，使用 -C 指定工作目录
+        String branchCommand = "git -C \"" + remotePath + "\" branch -a --no-color 2>&1";
+        Logger.logDebug("GitHistoryViewModel", "Executing branch command: " + branchCommand);
+
         disposables.add(
-            sftpManager.executeCommand("git branch -a --no-color")
+            sftpManager.executeCommand(branchCommand)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(this::parseBranches, this::handleError)
@@ -80,6 +87,7 @@ public class GitHistoryViewModel extends ViewModel {
     }
 
     private void parseBranches(String output) {
+        Logger.logDebug("GitHistoryViewModel", "parseBranches received output: " + output);
         List<GitBranch> branchList = new ArrayList<>();
         String[] lines = output.split("\n");
         String currentBranchName = "";
@@ -88,6 +96,11 @@ public class GitHistoryViewModel extends ViewModel {
             if (line == null) continue;
             line = line.trim();
             if (line.isEmpty()) continue;
+
+            // 跳过错误输出行（如 "fatal: not a git repository"）
+            if (line.startsWith("fatal:") || line.startsWith("Cloning into")) {
+                continue;
+            }
 
             boolean isCurrent = line.startsWith("*");
             String name = line.replaceFirst("^\\*\\s*", "").trim();
@@ -100,11 +113,9 @@ public class GitHistoryViewModel extends ViewModel {
 
         branches.setValue(branchList);
 
-        // 2. 获取当前分支的 Commit 历史
-        String logCommand = "git log --oneline -20 --format=\"%H|%s|%an|%ad\" --date=unix";
-        if (!currentBranchName.isEmpty()) {
-            logCommand = "git -C \"" + currentPath.getValue() + "\" log --oneline -20 --format=\"%H|%s|%an|%ad\" --date=unix 2>/dev/null || git log --oneline -20 --format=\"%H|%s|%an|%ad\" --date=unix";
-        }
+        // 2. 获取当前分支的 Commit 历史，使用 -C 指定工作目录
+        String path = currentPath.getValue();
+        String logCommand = "git -C \"" + path + "\" log --oneline -20 --format=\"%H|%s|%an|%ad\" --date=unix 2>&1";
 
         disposables.add(
             sftpManager.executeCommand(logCommand)
@@ -115,6 +126,7 @@ public class GitHistoryViewModel extends ViewModel {
     }
 
     private void parseCommits(String output) {
+        Logger.logDebug("GitHistoryViewModel", "parseCommits received output: " + output);
         List<GitCommit> commitList = new ArrayList<>();
         String[] lines = output.split("\n");
 
@@ -122,6 +134,11 @@ public class GitHistoryViewModel extends ViewModel {
             if (line == null) continue;
             line = line.trim();
             if (line.isEmpty()) continue;
+
+            // 跳过错误输出行
+            if (line.startsWith("fatal:") || line.startsWith("Cloning into")) {
+                continue;
+            }
 
             // 格式: hash|message|author|timestamp
             String[] parts = line.split("\\|", 4);
@@ -149,8 +166,9 @@ public class GitHistoryViewModel extends ViewModel {
     }
 
     private void handleError(Throwable error) {
+        Logger.logDebug("GitHistoryViewModel", "handleError called, error: " + error);
         String msg = error.getMessage();
-        if (msg != null && msg.contains("不是 Git 仓库")) {
+        if (msg != null && (msg.contains("不是 Git 仓库") || msg.contains("not a git repository"))) {
             errorMessage.setValue("该目录不是 Git 仓库");
         } else if (msg != null && msg.contains("未建立SSH连接")) {
             uiState.setValue(UiState.NOT_CONNECTED);
@@ -166,6 +184,26 @@ public class GitHistoryViewModel extends ViewModel {
         if (path != null && !path.isEmpty()) {
             loadGitHistory(path);
         }
+    }
+
+    public void switchBranch(String branchName) {
+        String path = currentPath.getValue();
+        if (path == null || path.isEmpty() || !sftpManager.isConnected()) {
+            return;
+        }
+        uiState.setValue(UiState.LOADING);
+        String checkoutCommand = "git -C \"" + path + "\" checkout \"" + branchName + "\" 2>&1";
+        Logger.logDebug("GitHistoryViewModel", "Switching branch: " + checkoutCommand);
+        disposables.add(
+            sftpManager.executeCommand(checkoutCommand)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(result -> {
+                    Logger.logDebug("GitHistoryViewModel", "Branch switch result: " + result);
+                    // Refresh after checkout
+                    loadGitHistory(path);
+                }, this::handleError)
+        );
     }
 
     @Override

@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="@color/dark_background">
 
     <LinearLayout
@@ -21,15 +22,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/dark_tab_background"
-            android:elevation="8dp"
             app:tabTextColor="@color/dark_tab_text"
             app:tabSelectedTextColor="@color/dark_tab_text_selected"
             app:tabIconTint="@color/tab_icon_color_selector"
             app:tabIndicatorColor="@color/dark_tab_indicator"
-            app:tabIndicatorHeight="3dp"
             app:tabMode="fixed"
-            app:tabGravity="fill"
-            app:tabRippleColor="@color/dark_tab_ripple" />
+            app:tabGravity="fill" />
 
     </LinearLayout>
 

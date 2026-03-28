@@ -147,7 +147,16 @@
         <activity
             android:name=".app.terminal.TerminalSessionActivity"
             android:exported="false"
-            android:launchMode="singleTop" />
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar"
+            android:windowSoftInputMode="stateHidden" />
+
+        <activity
+            android:name=".app.terminal.FullTerminalActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
             android:name=".app.configuration.activities.QuickCommandListActivity"

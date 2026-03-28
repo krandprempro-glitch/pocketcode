@@ -1,113 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@android:color/white">
+    android:orientation="vertical">
 
-    <!-- 连接状态栏 -->
+    <!-- 顶部深色标题栏：标题 + 可点击的分支标签 -->
     <LinearLayout
-        android:id="@+id/status_bar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:orientation="horizontal"
-        android:padding="12dp"
         android:gravity="center_vertical"
-        android:background="#F5F5F5">
+        android:paddingHorizontal="16dp"
+        android:background="@color/dark_tab_background">
 
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:visibility="gone" />
+        <!-- 左侧：Git 图标 + 标题 -->
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_git_branch"
+            app:tint="@color/white" />
 
         <TextView
-            android:id="@+id/status_text"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:text="未连接 SSH"
-            android:textSize="14sp"
-            android:textColor="#666666" />
-
-        <Button
-            android:id="@+id/retry_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="重试"
-            android:visibility="gone" />
-    </LinearLayout>
-
-    <!-- 分支信息区 -->
-    <LinearLayout
-        android:id="@+id/branch_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="分支"
-            android:textSize="12sp"
-            android:textColor="#999999" />
-
-        <TextView
-            android:id="@+id/current_branch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="main"
+            android:text="Git"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#333333" />
+            android:textColor="@color/white" />
 
-        <TextView
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- 加载指示器 -->
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="8dp"
+            android:visibility="gone" />
+
+        <!-- 右侧：可点击的分支标签（带下拉箭头） -->
+        <LinearLayout
+            android:id="@+id/branch_chip"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="所有分支"
-            android:textSize="12sp"
-            android:textColor="#999999" />
+            android:layout_height="28dp"
+            android:minWidth="80dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/branch_chip_background"
+            android:paddingHorizontal="10dp"
+            android:visibility="gone">
 
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:scrollbars="none">
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_git_branch"
+                app:tint="@color/dark_primary" />
 
-            <LinearLayout
-                android:id="@+id/branch_list_container"
+            <TextView
+                android:id="@+id/tv_current_branch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal" />
-        </HorizontalScrollView>
+                android:layout_marginStart="4dp"
+                android:text="main"
+                android:textSize="12sp"
+                android:textColor="@color/dark_primary"
+                android:maxWidth="120dp"
+                android:ellipsize="end"
+                android:maxLines="1" />
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_arrow_drop_down"
+                app:tint="@color/dark_primary" />
+        </LinearLayout>
+
     </LinearLayout>
 
-    <View
+    <!-- 白色主体内容区 -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@android:color/white">
 
-    <!-- Commit 历史 -->
-    <TextView
-        android:id="@+id/commits_header"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        android:text="提交历史"
-        android:textSize="12sp"
-        android:textColor="#999999"
-        android:visibility="gone" />
+        <!-- 连接状态栏 -->
+        <LinearLayout
+            android:id="@+id/status_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical"
+            android:background="#F5F5F5">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/commits_recycler_view"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:visibility="gone" />
+            <TextView
+                android:id="@+id/status_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="未连接 SSH"
+                android:textSize="14sp"
+                android:textColor="#666666" />
+
+            <Button
+                android:id="@+id/retry_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="重试"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0" />
+
+        <!-- Commit 历史 -->
+        <TextView
+            android:id="@+id/commits_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="提交历史"
+            android:textSize="12sp"
+            android:textColor="#999999"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/commits_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
 </LinearLayout>

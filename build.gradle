@@ -28,6 +28,13 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    // Force all modules to use Gson 2.8.9 to fix Java module system compatibility
+    configurations.all {
+        resolutionStrategy {
+            force 'com.google.code.gson:gson:2.8.9'
+        }
+    }
 }
 
 task clean(type: Delete) {

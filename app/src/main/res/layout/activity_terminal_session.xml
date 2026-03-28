@@ -6,32 +6,24 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- Toolbar -->
+    <!-- Toolbar - Only toolbar, no duplicate title -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:background="@color/background"
+        android:background="@color/dark_background"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="@color/text_primary"
-        app:titleTextColor="@color/text_primary" />
+        app:navigationIconTint="@color/white"
+        app:titleTextColor="@color/white" />
 
     <!-- Terminal View -->
     <com.termux.view.TerminalView
         android:id="@+id/terminal_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/terminal_toolbar_view_pager"
+        android:layout_above="@+id/terminal_input_container"
         android:layout_below="@+id/toolbar"
         android:background="#000000" />
-
-    <!-- Terminal Toolbar -->
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/terminal_toolbar_view_pager"
-        android:layout_width="match_parent"
-        android:layout_height="75dp"
-        android:background="@color/background"
-        android:layout_above="@+id/terminal_input_container" />
 
     <!-- Terminal Input -->
     <LinearLayout
@@ -39,7 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="@color/surface"
+        android:background="@color/dark_surface"
         android:orientation="horizontal"
         android:padding="8dp">
 
@@ -66,7 +58,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Claude Code 菜单"
             android:src="@drawable/ic_claude_code"
-            android:padding="8dp" />
+            android:padding="8dp"
+            android:visibility="gone" />
 
         <ImageButton
             android:id="@+id/terminal_send_button"
@@ -79,5 +72,13 @@
             android:padding="8dp" />
 
     </LinearLayout>
+
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/loading_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
 
 </RelativeLayout>

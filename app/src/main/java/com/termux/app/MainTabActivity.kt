@@ -49,6 +49,9 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
         // Use standard tabs layout without hybrid approach
         setContentView(R.layout.activity_main_tabs)
 
+        // Fix status bar color to match dark background
+        window.statusBarColor = getColor(R.color.dark_background)
+
         initTabViews()
         initClipboardSync()
         initFloatingButton()
@@ -299,10 +302,11 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
      * 当RemoteFileBrowserFragment中的目录变化时，自动同步GitHistoryFragment
      */
     override fun onDirectoryChanged(newPath: String) {
-        Logger.logDebug("MainTabActivity", "Directory changed to: $newPath, syncing GitHistoryFragment")
+        Logger.logDebug("MainTabActivity", "onDirectoryChanged called with path: $newPath")
 
-        // 获取GitHistoryFragment（Tab2）
+        // 获取GitHistoryFragment（Tab3）
         val gitHistoryFragment = pagerAdapter.getCurrentFragment(2)
+        Logger.logDebug("MainTabActivity", "GitHistoryFragment instance: $gitHistoryFragment")
         if (gitHistoryFragment is GitHistoryFragment) {
             gitHistoryFragment.onDirectoryChanged(newPath)
         }

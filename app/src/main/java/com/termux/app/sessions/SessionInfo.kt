@@ -10,7 +10,8 @@ data class SessionInfo(
     val status: SessionStatus,
     val statusDetail: String?,
     val startTime: Long,
-    val lastActiveTime: Long
+    val lastActiveTime: Long,
+    val terminalHandle: String? = null
 )
 
 enum class SessionStatus {
