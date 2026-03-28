@@ -137,31 +137,17 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         final int fontSizePx = (int) (14 * density);
         Log.d(TAG, "Font size: " + fontSizePx + "px (density=" + density + ")");
 
-        // Use OnGlobalLayoutListener to initialize renderer on first layout.
-        // setTextSize() handles invalid dimensions gracefully, so we always
-        // initialize on first callback rather than waiting for specific dimensions.
-        android.view.ViewTreeObserver.OnGlobalLayoutListener listener = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
-            boolean mCalled = false;
-            @Override
-            public void onGlobalLayout() {
-                if (mCalled) return;
-                int w = mTerminalView.getWidth();
-                int h = mTerminalView.getHeight();
-                Log.d(TAG, "OnGlobalLayout: " + w + "x" + h);
-                mCalled = true;
-                mTerminalView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                try {
-                    mTerminalView.setTextSize(fontSizePx);
-                    Log.d(TAG, "setTextSize() called, initTerminalRenderer: SUCCESS");
-                } catch (Exception e) {
-                    Log.e(TAG, "setTextSize FAILED: " + e.getMessage());
-                }
-                mRendererInitialized = true;
-            }
-        };
-        mTerminalView.getViewTreeObserver().addOnGlobalLayoutListener(listener);
+        // Initialize renderer directly - setTextSize handles invalid dimensions gracefully
+        // and will properly initialize when attached to a properly sized view
+        try {
+            mTerminalView.setTextSize(fontSizePx);
+            Log.d(TAG, "setTextSize() called, initTerminalRenderer: SUCCESS");
+        } catch (Exception e) {
+            Log.e(TAG, "setTextSize FAILED: " + e.getMessage());
+        }
+        mRendererInitialized = true;
 
-        // Also trigger a layout pass request to ensure we get valid dimensions
+        // Also request layout to ensure proper sizing when view is attached
         mTerminalView.requestLayout();
     }
 
