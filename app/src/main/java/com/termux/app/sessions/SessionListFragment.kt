@@ -185,24 +185,10 @@ class SessionListFragment : Fragment() {
     }
 
     private fun showRenameDialog(session: SessionInfo) {
-        val editText = android.widget.EditText(requireContext()).apply {
-            setText(session.name)
-            setSelection(session.name.length)
-            setPadding(48, 32, 48, 16)
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("重命名会话")
-            .setView(editText)
-            .setPositiveButton("确定") { _, _ ->
-                val newName = editText.text.toString().trim()
-                if (newName.isNotEmpty() && newName != session.name) {
-                    SessionManager.renameSession(session.id, newName)
-                    refreshSessions()
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
+        RenameSessionDialog(requireContext(), session.name) { newName ->
+            SessionManager.renameSession(session.id, newName)
+            refreshSessions()
+        }.show()
     }
 
     override fun onDestroyView() {
