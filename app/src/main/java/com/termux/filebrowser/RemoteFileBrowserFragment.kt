@@ -413,9 +413,7 @@ class RemoteFileBrowserFragment : Fragment(),
     private fun initDrawerMenuItems() {
         val menuItems = mutableListOf<DrawerMenuItem>()
 
-        // 主功能模块
-        val mainModule = DrawerMenuItem("main_functions", "功能菜单", R.drawable.ic_menu)
-        mainModule.addSubItem(
+        menuItems.add(
             DrawerMenuItem(
                 "ssh_config",
                 "SSH连接配置",
@@ -423,7 +421,7 @@ class RemoteFileBrowserFragment : Fragment(),
                 DrawerMenuItem.MenuAction.SSH_CONFIG
             )
         )
-        mainModule.addSubItem(
+        menuItems.add(
             DrawerMenuItem(
                 "bookmarks",
                 "收藏夹管理",
@@ -431,7 +429,7 @@ class RemoteFileBrowserFragment : Fragment(),
                 DrawerMenuItem.MenuAction.BOOKMARK_MANAGE_ALL
             )
         )
-        mainModule.addSubItem(
+        menuItems.add(
             DrawerMenuItem(
                 "refresh",
                 "刷新目录",
@@ -440,27 +438,6 @@ class RemoteFileBrowserFragment : Fragment(),
             )
         )
 
-        // 设置子模块
-        val settingsModule = DrawerMenuItem("settings", "设置选项", R.drawable.ic_settings_small)
-        settingsModule.addSubItem(
-            DrawerMenuItem(
-                "settings_display",
-                "显示设置",
-                R.drawable.ic_settings_small,
-                DrawerMenuItem.MenuAction.SETTINGS_DISPLAY
-            )
-        )
-        settingsModule.addSubItem(
-            DrawerMenuItem(
-                "settings_connection",
-                "连接设置",
-                R.drawable.ic_settings_small,
-                DrawerMenuItem.MenuAction.SETTINGS_CONNECTION
-            )
-        )
-        mainModule.addSubItem(settingsModule)
-
-        menuItems.add(mainModule)
         drawerMenuAdapter.updateMenuItems(menuItems)
     }
 
@@ -556,6 +533,10 @@ class RemoteFileBrowserFragment : Fragment(),
         when (item.action) {
             DrawerMenuItem.MenuAction.SSH_CONFIG -> {
                 showConnectionDialog()
+                closeDrawer()
+            }
+            DrawerMenuItem.MenuAction.BOOKMARK_MANAGE_ALL -> {
+                showAllBookmarksDialog()
                 closeDrawer()
             }
             DrawerMenuItem.MenuAction.REFRESH -> {
