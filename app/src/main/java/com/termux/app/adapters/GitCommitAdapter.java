@@ -25,10 +25,16 @@ import java.util.Locale;
 
 public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.CommitViewHolder> {
 
+    private static final long SECONDS = 60;
+    private static final long MINUTES = 3600;
+    private static final long HOURS = 86400;
+    private static final long DAYS = 2592000;
+
     private String expandedCommitHash = null;
     private List<GitChangedFile> expandedFiles = Collections.emptyList();
     private OnCommitExpandListener expandListener;
     private OnFileClickListener fileClickListener;
+    private final ChangedFileAdapter changedFileAdapter;
 
     public interface OnCommitExpandListener {
         void onCommitExpand(String commitHash);
@@ -40,6 +46,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
 
     public GitCommitAdapter() {
         super(new CommitDiffCallback());
+        changedFileAdapter = new ChangedFileAdapter();
     }
 
     public void setOnCommitExpandListener(OnCommitExpandListener listener) {
@@ -102,7 +109,6 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
         private final TextView timeView;
         private final LinearLayout changedFilesContainer;
         private final RecyclerView changedFilesRecyclerView;
-        private final ChangedFileAdapter changedFileAdapter;
 
         CommitViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -113,7 +119,6 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             changedFilesContainer = itemView.findViewById(R.id.changed_files_container);
             changedFilesRecyclerView = itemView.findViewById(R.id.changed_files_recycler_view);
 
-            changedFileAdapter = new ChangedFileAdapter();
             changedFilesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
             changedFilesRecyclerView.setAdapter(changedFileAdapter);
         }
@@ -156,7 +161,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             // Update expanded state UI
             if (isExpanded) {
                 changedFilesContainer.setVisibility(View.VISIBLE);
-                changedFileAdapter.setFiles(files);
+                changedFileAdapter.submitList(files);
                 changedFileAdapter.setOnFileClickListener(file -> {
                     if (fileClickListener != null) {
                         fileClickListener.onFileClick(file);
@@ -164,7 +169,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                 });
             } else {
                 changedFilesContainer.setVisibility(View.GONE);
-                changedFileAdapter.setFiles(Collections.emptyList());
+                changedFileAdapter.submitList(Collections.emptyList());
             }
         }
 
@@ -174,14 +179,14 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             long now = System.currentTimeMillis() / 1000;
             long diff = now - timestamp;
 
-            if (diff < 60) {
+            if (diff < SECONDS) {
                 return "just now";
-            } else if (diff < 3600) {
-                return diff / 60 + " min ago";
-            } else if (diff < 86400) {
-                return diff / 3600 + " hours ago";
-            } else if (diff < 2592000) {
-                return diff / 86400 + " days ago";
+            } else if (diff < MINUTES) {
+                return diff / SECONDS + " min ago";
+            } else if (diff < HOURS) {
+                return diff / MINUTES + " hours ago";
+            } else if (diff < DAYS) {
+                return diff / HOURS + " days ago";
             } else {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 return sdf.format(new Date(timestamp * 1000));

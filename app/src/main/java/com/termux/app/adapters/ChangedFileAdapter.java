@@ -7,27 +7,27 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
 import com.termux.app.models.GitChangedFile;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Adapter for displaying changed files within an expanded commit
  */
-public class ChangedFileAdapter extends RecyclerView.Adapter<ChangedFileAdapter.FileViewHolder> {
+public class ChangedFileAdapter extends ListAdapter<GitChangedFile, ChangedFileAdapter.FileViewHolder> {
 
-    private final List<GitChangedFile> files = new ArrayList<>();
     private OnFileClickListener listener;
 
     public interface OnFileClickListener {
         void onFileClick(GitChangedFile file);
     }
 
-    public ChangedFileAdapter() {}
+    public ChangedFileAdapter() {
+        super(new FileDiffCallback());
+    }
 
     @NonNull
     @Override
@@ -39,21 +39,8 @@ public class ChangedFileAdapter extends RecyclerView.Adapter<ChangedFileAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull FileViewHolder holder, int position) {
-        GitChangedFile file = files.get(position);
+        GitChangedFile file = getItem(position);
         holder.bind(file);
-    }
-
-    @Override
-    public int getItemCount() {
-        return files.size();
-    }
-
-    public void setFiles(List<GitChangedFile> newFiles) {
-        files.clear();
-        if (newFiles != null) {
-            files.addAll(newFiles);
-        }
-        notifyDataSetChanged();
     }
 
     public void setOnFileClickListener(OnFileClickListener listener) {
@@ -76,18 +63,13 @@ public class ChangedFileAdapter extends RecyclerView.Adapter<ChangedFileAdapter.
 
             // Set status color based on type
             int colorRes;
-            switch (file.getStatus()) {
-                case "A":
-                    colorRes = R.color.git_status_added;
-                    break;
-                case "D":
-                    colorRes = R.color.git_status_deleted;
-                    break;
-                case "R":
-                case "M":
-                default:
-                    colorRes = R.color.git_status_modified;
-                    break;
+            String status = file.getStatus();
+            if (GitChangedFile.STATUS_ADDED.equals(status)) {
+                colorRes = R.color.git_status_added;
+            } else if (GitChangedFile.STATUS_DELETED.equals(status)) {
+                colorRes = R.color.git_status_deleted;
+            } else {
+                colorRes = R.color.git_status_modified;
             }
             statusView.setTextColor(ContextCompat.getColor(itemView.getContext(), colorRes));
 
@@ -96,6 +78,19 @@ public class ChangedFileAdapter extends RecyclerView.Adapter<ChangedFileAdapter.
                     listener.onFileClick(file);
                 }
             });
+        }
+    }
+
+    static class FileDiffCallback extends DiffUtil.ItemCallback<GitChangedFile> {
+        @Override
+        public boolean areItemsTheSame(@NonNull GitChangedFile oldItem, @NonNull GitChangedFile newItem) {
+            return oldItem.getPath().equals(newItem.getPath());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull GitChangedFile oldItem, @NonNull GitChangedFile newItem) {
+            return oldItem.getPath().equals(newItem.getPath()) &&
+                   oldItem.getStatus().equals(newItem.getStatus());
         }
     }
 }
