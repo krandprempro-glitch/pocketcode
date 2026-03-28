@@ -4,6 +4,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -32,6 +33,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
 
     private String expandedCommitHash = null;
     private List<GitChangedFile> expandedFiles = Collections.emptyList();
+    private String loadingCommitHash = null;
     private OnCommitExpandListener expandListener;
     private OnFileClickListener fileClickListener;
     private final ChangedFileAdapter changedFileAdapter;
@@ -62,8 +64,20 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
      */
     public void setExpandedFiles(String commitHash, List<GitChangedFile> files) {
         if (commitHash != null && commitHash.equals(expandedCommitHash)) {
+            loadingCommitHash = null;
             expandedFiles = files != null ? new ArrayList<>(files) : Collections.emptyList();
             notifyDataSetChanged();
+        }
+    }
+
+    /**
+     * Mark a commit as currently loading its file list
+     */
+    public void setFilesLoading(String commitHash) {
+        if (commitHash != null && commitHash.equals(expandedCommitHash)) {
+            loadingCommitHash = commitHash;
+            expandedFiles = Collections.emptyList();
+            notifyItemChanged(findExpandedIndex());
         }
     }
 
@@ -99,7 +113,8 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
     public void onBindViewHolder(@NonNull CommitViewHolder holder, int position) {
         GitCommit commit = getItem(position);
         boolean isExpanded = commit.getFullHash().equals(expandedCommitHash);
-        holder.bind(commit, isExpanded, isExpanded ? expandedFiles : Collections.emptyList());
+        boolean isLoading = isExpanded && commit.getFullHash().equals(loadingCommitHash);
+        holder.bind(commit, isExpanded, isLoading, isExpanded ? expandedFiles : Collections.emptyList());
     }
 
     class CommitViewHolder extends RecyclerView.ViewHolder {
@@ -109,6 +124,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
         private final TextView timeView;
         private final LinearLayout changedFilesContainer;
         private final RecyclerView changedFilesRecyclerView;
+        private final ProgressBar changedFilesLoading;
 
         CommitViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -118,12 +134,13 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             timeView = itemView.findViewById(R.id.commit_time);
             changedFilesContainer = itemView.findViewById(R.id.changed_files_container);
             changedFilesRecyclerView = itemView.findViewById(R.id.changed_files_recycler_view);
+            changedFilesLoading = itemView.findViewById(R.id.changed_files_loading);
 
             changedFilesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
             changedFilesRecyclerView.setAdapter(changedFileAdapter);
         }
 
-        void bind(GitCommit commit, boolean isExpanded, List<GitChangedFile> files) {
+        void bind(GitCommit commit, boolean isExpanded, boolean isLoading, List<GitChangedFile> files) {
             hashView.setText(commit.getHash());
             messageView.setText(commit.getMessage());
             authorView.setText(commit.getAuthor());
@@ -139,10 +156,12 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                     if (commitHash.equals(expandedCommitHash)) {
                         // Collapse
                         expandedCommitHash = null;
+                        loadingCommitHash = null;
                         expandedFiles = Collections.emptyList();
                     } else {
                         // Expand - set hash first so UI updates immediately
                         expandedCommitHash = commitHash;
+                        loadingCommitHash = commitHash;
                         expandedFiles = Collections.emptyList();
                         if (expandListener != null) {
                             expandListener.onCommitExpand(commitHash);
@@ -163,7 +182,14 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             // Update expanded state UI
             if (isExpanded) {
                 changedFilesContainer.setVisibility(View.VISIBLE);
-                changedFileAdapter.submitList(files);
+                if (isLoading) {
+                    changedFilesLoading.setVisibility(View.VISIBLE);
+                    changedFilesRecyclerView.setVisibility(View.GONE);
+                } else {
+                    changedFilesLoading.setVisibility(View.GONE);
+                    changedFilesRecyclerView.setVisibility(View.VISIBLE);
+                    changedFileAdapter.submitList(files);
+                }
                 changedFileAdapter.setOnFileClickListener(file -> {
                     if (fileClickListener != null) {
                         fileClickListener.onFileClick(commit.getFullHash(), file);

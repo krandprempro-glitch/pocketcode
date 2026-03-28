@@ -2,6 +2,7 @@ package com.termux.app.fragments;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import androidx.appcompat.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
+import com.termux.app.activities.GitFileDetailActivity;
 import com.termux.app.decorations.DividerItemDecoration;
 import com.termux.app.models.GitBranch;
 import com.termux.app.models.GitChangedFile;
@@ -36,6 +38,7 @@ public class GitHistoryFragment extends Fragment {
     private ProgressBar loadingMore;
     private TextView noMoreData;
     private TextView statusText;
+    private View statusBar;
     private TextView tvCurrentBranch;
     private View branchChip;
     private RecyclerView commitsRecyclerView;
@@ -68,6 +71,7 @@ public class GitHistoryFragment extends Fragment {
         loadingMore = view.findViewById(R.id.loading_more);
         noMoreData = view.findViewById(R.id.no_more_data);
         statusText = view.findViewById(R.id.status_text);
+        statusBar = view.findViewById(R.id.status_bar);
         tvCurrentBranch = view.findViewById(R.id.tv_current_branch);
         branchChip = view.findViewById(R.id.branch_chip);
         commitsRecyclerView = view.findViewById(R.id.commits_recycler_view);
@@ -212,15 +216,15 @@ public class GitHistoryFragment extends Fragment {
             return;
         }
 
-        // Use git show --name-status to get file list with status
-        String command = "git -C \"" + path + "\" show --name-status --pretty=format: \"" + commitHash + "\" 2>&1";
+        // Use git diff-tree to get file list with status (cleaner output)
+        String command = "git -C \"" + path + "\" diff-tree --no-commit-header --name-status -r \"" + commitHash + "\" 2>&1";
         Logger.logDebug("GitHistoryFragment", "Loading changed files: " + command);
 
         viewModel.executeGitCommand(command, output -> parseChangedFiles(commitHash, output));
     }
 
     /**
-     * Parse the output of git show --name-status
+     * Parse the output of git diff-tree --name-status
      * Format: status\tpath (e.g., "M\tfile.txt", "A\tnewfile.txt")
      */
     private void parseChangedFiles(String commitHash, String output) {
@@ -229,17 +233,12 @@ public class GitHistoryFragment extends Fragment {
             String[] lines = output.split("\n");
             for (String line : lines) {
                 if (line == null || line.trim().isEmpty()) continue;
-                // Skip lines that are part of commit metadata
-                if (line.startsWith("commit ") || line.startsWith("Author:") ||
-                    line.startsWith("Date:") || line.contains("diff --git")) {
-                    continue;
-                }
                 // Parse status\tpath format
                 String[] parts = line.split("\t", 2);
                 if (parts.length >= 2) {
                     String status = parts[0].trim();
                     String filePath = parts[1].trim();
-                    if (!status.isEmpty() && !filePath.isEmpty()) {
+                    if (!status.isEmpty() && !filePath.isEmpty() && filePath.length() > 1) {
                         files.add(new GitChangedFile(filePath, status));
                     }
                 }

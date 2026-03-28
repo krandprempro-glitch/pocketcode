@@ -68,6 +68,16 @@
         android:background="#F5F5F5"
         android:visibility="gone">
 
+        <!-- Loading state -->
+        <ProgressBar
+            android:id="@+id/changed_files_loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:padding="8dp"
+            android:visibility="gone" />
+
+        <!-- Changed files list -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/changed_files_recycler_view"
             android:layout_width="match_parent"
