@@ -412,8 +412,51 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     }
 
     private void showScriptSelectionDialog() {
-        // TODO: 用户手动处理脚本选择逻辑
-        android.widget.Toast.makeText(this, "脚本功能开发中", android.widget.Toast.LENGTH_SHORT).show();
+        com.termux.app.managers.ScriptManager scriptManager = com.termux.app.managers.ScriptManager.getInstance();
+        java.util.List<com.termux.app.models.ScriptItem> scripts = scriptManager.getScripts(this);
+
+        if (scripts.isEmpty()) {
+            Toast.makeText(this, "没有可用的脚本", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] scriptNames = new String[scripts.size()];
+        for (int i = 0; i < scripts.size(); i++) {
+            scriptNames[i] = scripts.get(i).getName() + " - " + scripts.get(i).getDescription();
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("选择脚本")
+            .setItems(scriptNames, (dialog, which) -> {
+                com.termux.app.models.ScriptItem script = scripts.get(which);
+                executeScript(script);
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+
+    private void executeScript(com.termux.app.models.ScriptItem script) {
+        com.termux.app.sftp.SFTPConnectionManager sftpManager = com.termux.app.sftp.SFTPConnectionManager.getInstance();
+
+        if (!sftpManager.isConnected()) {
+            Toast.makeText(this, "请先建立SSH连接", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "正在执行脚本: " + script.getName(), Toast.LENGTH_SHORT).show();
+
+        // Escape script content for bash -c
+        String escapedContent = script.getContent()
+            .replace("\\", "\\\\")
+            .replace("'", "'\\''");
+
+        String command = "bash -c '" + escapedContent + "'";
+
+        sftpManager.executeCommand(command)
+            .subscribe(
+                result -> runOnUiThread(() -> Toast.makeText(this, "脚本执行完成", Toast.LENGTH_SHORT).show()),
+                error -> runOnUiThread(() -> Toast.makeText(this, "脚本执行失败: " + error.getMessage(), Toast.LENGTH_LONG).show())
+            );
     }
 
     private void setupTerminalView() {

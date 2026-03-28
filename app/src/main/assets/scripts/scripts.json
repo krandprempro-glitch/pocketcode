@@ -1,0 +1,14 @@
+{
+  "scripts": [
+    {
+      "name": "setup-claude-commands",
+      "description": "初始化 Claude Code Skills 和 cmd-index",
+      "file": "setup-claude-commands.sh"
+    },
+    {
+      "name": "ssh-keepalive-setup",
+      "description": "设置 SSH Keepalive 防止断连",
+      "file": "ssh-keepalive-setup.sh"
+    }
+  ]
+}
