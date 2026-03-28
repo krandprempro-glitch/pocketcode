@@ -58,4 +58,22 @@
             android:gravity="end" />
     </LinearLayout>
 
+    <!-- Expandable container for changed files -->
+    <LinearLayout
+        android:id="@+id/changed_files_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:background="#F5F5F5"
+        android:visibility="gone">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/changed_files_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
+
+    </LinearLayout>
+
 </LinearLayout>

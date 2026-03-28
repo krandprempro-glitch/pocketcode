@@ -277,6 +277,21 @@ public class GitHistoryViewModel extends ViewModel {
         );
     }
 
+    /**
+     * Execute a custom git command and handle the result with a callback
+     */
+    public void executeGitCommand(String command, io.reactivex.rxjava3.functions.Consumer<String> onResult) {
+        if (!sftpManager.isConnected()) {
+            return;
+        }
+        disposables.add(
+            sftpManager.executeCommand(command)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(onResult, error -> Logger.logDebug("GitHistoryViewModel", "Git command error: " + error.getMessage()))
+        );
+    }
+
     @Override
     protected void onCleared() {
         super.onCleared();

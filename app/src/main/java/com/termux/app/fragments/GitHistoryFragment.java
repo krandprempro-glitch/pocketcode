@@ -1,6 +1,7 @@
 package com.termux.app.fragments;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import androidx.appcompat.app.AlertDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,12 +18,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
+import com.termux.app.decorations.DividerItemDecoration;
 import com.termux.app.models.GitBranch;
+import com.termux.app.models.GitChangedFile;
 import com.termux.app.models.GitCommit;
 import com.termux.app.viewmodels.GitHistoryViewModel;
 import com.termux.app.adapters.GitCommitAdapter;
 import com.termux.shared.logger.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class GitHistoryFragment extends Fragment {
@@ -72,6 +76,9 @@ public class GitHistoryFragment extends Fragment {
         commitAdapter = new GitCommitAdapter();
         commitsRecyclerView.setAdapter(commitAdapter);
 
+        // Add divider between commit items
+        commitsRecyclerView.addItemDecoration(new DividerItemDecoration(requireContext()));
+
         // Add scroll listener for pagination
         scrollListener = new RecyclerView.OnScrollListener() {
             @Override
@@ -100,6 +107,14 @@ public class GitHistoryFragment extends Fragment {
     private void setupListeners() {
         retryButton.setOnClickListener(v -> viewModel.refresh());
         branchChip.setOnClickListener(v -> showBranchSwitchDialog());
+
+        // Handle commit expand/collapse
+        commitAdapter.setOnCommitExpandListener(commitHash -> loadChangedFiles(commitHash));
+
+        // Handle file click (navigation comes in Task 4)
+        commitAdapter.setOnFileClickListener(file -> {
+            Logger.logDebug("GitHistoryFragment", "File clicked: " + file.getPath());
+        });
     }
 
     private void updateUiState(GitHistoryViewModel.UiState state) {
@@ -165,6 +180,52 @@ public class GitHistoryFragment extends Fragment {
         }
     }
 
+    /**
+     * Load the list of changed files for a commit
+     */
+    private void loadChangedFiles(String commitHash) {
+        String path = viewModel.getCurrentPath().getValue();
+        if (path == null || path.isEmpty() || !viewModel.isConnected()) {
+            return;
+        }
+
+        // Use git show --name-status to get file list with status
+        String command = "git -C \"" + path + "\" show --name-status --pretty=format: \"" + commitHash + "\" 2>&1";
+        Logger.logDebug("GitHistoryFragment", "Loading changed files: " + command);
+
+        viewModel.executeGitCommand(command, output -> parseChangedFiles(commitHash, output));
+    }
+
+    /**
+     * Parse the output of git show --name-status
+     * Format: status\tpath (e.g., "M\tfile.txt", "A\tnewfile.txt")
+     */
+    private void parseChangedFiles(String commitHash, String output) {
+        List<GitChangedFile> files = new ArrayList<>();
+        if (output != null && !output.isEmpty()) {
+            String[] lines = output.split("\n");
+            for (String line : lines) {
+                if (line == null || line.trim().isEmpty()) continue;
+                // Skip lines that are part of commit metadata
+                if (line.startsWith("commit ") || line.startsWith("Author:") ||
+                    line.startsWith("Date:") || line.contains("diff --git")) {
+                    continue;
+                }
+                // Parse status\tpath format
+                String[] parts = line.split("\t", 2);
+                if (parts.length >= 2) {
+                    String status = parts[0].trim();
+                    String filePath = parts[1].trim();
+                    if (!status.isEmpty() && !filePath.isEmpty()) {
+                        files.add(new GitChangedFile(filePath, status));
+                    }
+                }
+            }
+        }
+        Logger.logDebug("GitHistoryFragment", "Parsed " + files.size() + " changed files for " + commitHash);
+        commitAdapter.setExpandedFiles(commitHash, files);
+    }
+
     private void showBranchSwitchDialog() {
         if (cachedBranches == null || cachedBranches.isEmpty()) {
             return;
@@ -189,7 +250,7 @@ public class GitHistoryFragment extends Fragment {
         }
 
         String finalCurrentBranch = currentBranch;
-        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(requireContext())
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("切换分支")
                 .setSingleChoiceItems(branchNames, selectedIndex, (d, which) -> {
                     d.dismiss();

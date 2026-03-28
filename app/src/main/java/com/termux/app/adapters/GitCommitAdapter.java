@@ -3,24 +3,81 @@ package com.termux.app.adapters;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
+import com.termux.app.models.GitChangedFile;
 import com.termux.app.models.GitCommit;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.CommitViewHolder> {
 
+    private String expandedCommitHash = null;
+    private List<GitChangedFile> expandedFiles = Collections.emptyList();
+    private OnCommitExpandListener expandListener;
+    private OnFileClickListener fileClickListener;
+
+    public interface OnCommitExpandListener {
+        void onCommitExpand(String commitHash);
+    }
+
+    public interface OnFileClickListener {
+        void onFileClick(GitChangedFile file);
+    }
+
     public GitCommitAdapter() {
         super(new CommitDiffCallback());
+    }
+
+    public void setOnCommitExpandListener(OnCommitExpandListener listener) {
+        this.expandListener = listener;
+    }
+
+    public void setOnFileClickListener(OnFileClickListener listener) {
+        this.fileClickListener = listener;
+    }
+
+    /**
+     * Set the expanded files for a specific commit hash
+     */
+    public void setExpandedFiles(String commitHash, List<GitChangedFile> files) {
+        if (commitHash != null && commitHash.equals(expandedCommitHash)) {
+            expandedFiles = files != null ? new ArrayList<>(files) : Collections.emptyList();
+            notifyDataSetChanged();
+        }
+    }
+
+    /**
+     * Clear expanded state
+     */
+    public void clearExpanded() {
+        expandedCommitHash = null;
+        expandedFiles = Collections.emptyList();
+        notifyDataSetChanged();
+    }
+
+    private int findExpandedIndex() {
+        if (expandedCommitHash == null) return -1;
+        List<GitCommit> currentList = getCurrentList();
+        for (int i = 0; i < currentList.size(); i++) {
+            if (currentList.get(i).getFullHash().equals(expandedCommitHash)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @NonNull
@@ -33,14 +90,19 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
 
     @Override
     public void onBindViewHolder(@NonNull CommitViewHolder holder, int position) {
-        holder.bind(getItem(position));
+        GitCommit commit = getItem(position);
+        boolean isExpanded = commit.getFullHash().equals(expandedCommitHash);
+        holder.bind(commit, isExpanded, isExpanded ? expandedFiles : Collections.emptyList());
     }
 
-    static class CommitViewHolder extends RecyclerView.ViewHolder {
+    class CommitViewHolder extends RecyclerView.ViewHolder {
         private final TextView hashView;
         private final TextView messageView;
         private final TextView authorView;
         private final TextView timeView;
+        private final LinearLayout changedFilesContainer;
+        private final RecyclerView changedFilesRecyclerView;
+        private final ChangedFileAdapter changedFileAdapter;
 
         CommitViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -48,13 +110,62 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             messageView = itemView.findViewById(R.id.commit_message);
             authorView = itemView.findViewById(R.id.commit_author);
             timeView = itemView.findViewById(R.id.commit_time);
+            changedFilesContainer = itemView.findViewById(R.id.changed_files_container);
+            changedFilesRecyclerView = itemView.findViewById(R.id.changed_files_recycler_view);
+
+            changedFileAdapter = new ChangedFileAdapter();
+            changedFilesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+            changedFilesRecyclerView.setAdapter(changedFileAdapter);
         }
 
-        void bind(GitCommit commit) {
+        void bind(GitCommit commit, boolean isExpanded, List<GitChangedFile> files) {
             hashView.setText(commit.getHash());
             messageView.setText(commit.getMessage());
             authorView.setText(commit.getAuthor());
             timeView.setText(formatTimeAgo(commit.getTimestamp()));
+
+            // Handle click to toggle expand/collapse
+            itemView.setOnClickListener(v -> {
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) {
+                    GitCommit clickedCommit = getItem(pos);
+                    String commitHash = clickedCommit.getFullHash();
+
+                    if (commitHash.equals(expandedCommitHash)) {
+                        // Collapse
+                        expandedCommitHash = null;
+                        expandedFiles = Collections.emptyList();
+                    } else {
+                        // Expand - notify listener to load files
+                        if (expandListener != null) {
+                            expandListener.onCommitExpand(commitHash);
+                        }
+                    }
+
+                    // Refresh this item
+                    notifyItemChanged(pos);
+
+                    // Find and refresh previously expanded item
+                    int oldIndex = findExpandedIndex();
+                    if (oldIndex != -1 && oldIndex != pos) {
+                        notifyItemChanged(oldIndex);
+                    }
+                }
+            });
+
+            // Update expanded state UI
+            if (isExpanded) {
+                changedFilesContainer.setVisibility(View.VISIBLE);
+                changedFileAdapter.setFiles(files);
+                changedFileAdapter.setOnFileClickListener(file -> {
+                    if (fileClickListener != null) {
+                        fileClickListener.onFileClick(file);
+                    }
+                });
+            } else {
+                changedFilesContainer.setVisibility(View.GONE);
+                changedFileAdapter.setFiles(Collections.emptyList());
+            }
         }
 
         private String formatTimeAgo(long timestamp) {
