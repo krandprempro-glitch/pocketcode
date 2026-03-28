@@ -10,7 +10,7 @@ import com.termux.shared.logger.Logger;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.charset.StandardCharsets;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
