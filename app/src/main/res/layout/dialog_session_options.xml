@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="8dp"
+    app:cardBackgroundColor="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Session Name Title -->
+        <TextView
+            android:id="@+id/session_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Rename Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_rename"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:text="重命名"
+            android:textSize="15sp"
+            android:textColor="@color/primary_text"
+            app:cornerRadius="10dp"
+            app:icon="@drawable/ic_computer"
+            app:iconTint="@color/secondary_text"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:strokeColor="@color/divider"
+            app:strokeWidth="1dp" />
+
+        <!-- Close Session Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_close"
+            style="@style/AppButton.Danger"
+            android:layout_width="match_parent"
+            android:layout_marginBottom="4dp"
+            android:text="关闭会话" />
+
+        <!-- Cancel Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel"
+            style="@style/AppButton.Secondary"
+            android:layout_width="match_parent"
+            android:text="取消" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

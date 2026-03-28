@@ -441,9 +441,14 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     }
 
     private void executeScript(com.termux.app.models.ScriptItem script) {
-        // 直接发送脚本内容到终端执行
         Toast.makeText(this, "正在执行脚本: " + script.getName(), Toast.LENGTH_SHORT).show();
-        sendCommandToTerminal(script.getContent());
+        // 使用 heredoc 方式，逐行发送脚本内容
+        sendCommandToTerminal("bash <<'SCRIPT_EOF'");
+        // 逐行发送脚本内容
+        for (String line : script.getContent().split("\n")) {
+            sendCommandToTerminal(line);
+        }
+        sendCommandToTerminal("SCRIPT_EOF");
     }
 
     private void setupTerminalView() {
