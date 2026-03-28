@@ -8,6 +8,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.ListAdapter;
@@ -35,7 +36,6 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
     private List<GitChangedFile> expandedFiles = Collections.emptyList();
     private OnCommitExpandListener expandListener;
     private OnFileClickListener fileClickListener;
-    private final ChangedFileAdapter changedFileAdapter;
 
     public interface OnCommitExpandListener {
         void onCommitExpand(String commitHash);
@@ -47,7 +47,6 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
 
     public GitCommitAdapter() {
         super(new CommitDiffCallback());
-        changedFileAdapter = new ChangedFileAdapter();
     }
 
     public void setOnCommitExpandListener(OnCommitExpandListener listener) {
@@ -120,7 +119,6 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
     public void onBindViewHolder(@NonNull CommitViewHolder holder, int position) {
         GitCommit commit = getItem(position);
         boolean isExpanded = commit.getFullHash().equals(expandedCommitHash);
-        boolean isLoading = isExpanded && expandedFiles.isEmpty();
         holder.bind(commit, isExpanded, isExpanded ? expandedFiles : Collections.emptyList());
     }
 
@@ -130,7 +128,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
         private final TextView authorView;
         private final TextView timeView;
         private final LinearLayout changedFilesContainer;
-        private final RecyclerView changedFilesRecyclerView;
+        private final LinearLayout changedFilesList;
         private final ProgressBar changedFilesLoading;
 
         CommitViewHolder(@NonNull View itemView) {
@@ -140,11 +138,8 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
             authorView = itemView.findViewById(R.id.commit_author);
             timeView = itemView.findViewById(R.id.commit_time);
             changedFilesContainer = itemView.findViewById(R.id.changed_files_container);
-            changedFilesRecyclerView = itemView.findViewById(R.id.changed_files_recycler_view);
+            changedFilesList = itemView.findViewById(R.id.changed_files_list);
             changedFilesLoading = itemView.findViewById(R.id.changed_files_loading);
-
-            changedFilesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
-            changedFilesRecyclerView.setAdapter(changedFileAdapter);
 
             // Set click listener ONCE in constructor, not in bind()
             itemView.setOnClickListener(v -> {
@@ -156,6 +151,18 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                     android.util.Log.d("GitCommitAdapter", "Item clicked: hash=" + commitHash +
                         ", expandedCommitHash=" + expandedCommitHash +
                         ", equals=" + commitHash.equals(expandedCommitHash));
+
+                    // Save old expanded state BEFORE mutation
+                    String oldExpandedHash = expandedCommitHash;
+                    int oldIndex = -1;
+                    if (oldExpandedHash != null && !oldExpandedHash.equals(commitHash)) {
+                        for (int i = 0; i < getCurrentList().size(); i++) {
+                            if (getCurrentList().get(i).getFullHash().equals(oldExpandedHash)) {
+                                oldIndex = i;
+                                break;
+                            }
+                        }
+                    }
 
                     if (commitHash.equals(expandedCommitHash)) {
                         // Collapse
@@ -180,12 +187,11 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                         }
                     }
 
-                    // Refresh this item
+                    // Refresh clicked item
                     notifyItemChanged(pos);
 
-                    // Find and refresh previously expanded item
-                    int oldIndex = findExpandedIndex();
-                    if (oldIndex != -1 && oldIndex != pos) {
+                    // Refresh previously expanded item (if different)
+                    if (oldIndex >= 0 && oldIndex != pos) {
                         notifyItemChanged(oldIndex);
                     }
                 }
@@ -208,20 +214,52 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                 changedFilesContainer.setVisibility(View.VISIBLE);
                 if (isLoading) {
                     changedFilesLoading.setVisibility(View.VISIBLE);
-                    changedFilesRecyclerView.setVisibility(View.GONE);
+                    changedFilesList.setVisibility(View.GONE);
                 } else {
                     changedFilesLoading.setVisibility(View.GONE);
-                    changedFilesRecyclerView.setVisibility(View.VISIBLE);
-                    changedFileAdapter.submitList(files);
-                }
-                changedFileAdapter.setOnFileClickListener(file -> {
-                    if (fileClickListener != null) {
-                        fileClickListener.onFileClick(commit.getFullHash(), file);
+                    changedFilesList.setVisibility(View.VISIBLE);
+                    // Populate LinearLayout with file items
+                    changedFilesList.removeAllViews();
+                    android.util.Log.d("GitCommitAdapter", "Populating changedFilesList with " + files.size() + " files");
+                    for (GitChangedFile file : files) {
+                        View fileView = LayoutInflater.from(itemView.getContext())
+                            .inflate(R.layout.item_changed_file, changedFilesList, false);
+
+                        TextView statusView = fileView.findViewById(R.id.file_status);
+                        TextView pathView = fileView.findViewById(R.id.file_path);
+
+                        statusView.setText(file.getStatus());
+                        // Show only filename instead of full path
+                        String fullPath = file.getPath();
+                        int slash = fullPath.lastIndexOf('/');
+                        String displayName = (slash >= 0 && slash < fullPath.length() - 1)
+                                ? fullPath.substring(slash + 1) : fullPath;
+                        pathView.setText(displayName);
+
+                        // Set status color
+                        int colorRes;
+                        if (GitChangedFile.STATUS_ADDED.equals(file.getStatus())) {
+                            colorRes = R.color.git_status_added;
+                        } else if (GitChangedFile.STATUS_DELETED.equals(file.getStatus())) {
+                            colorRes = R.color.git_status_deleted;
+                        } else {
+                            colorRes = R.color.git_status_modified;
+                        }
+                        statusView.setTextColor(ContextCompat.getColor(itemView.getContext(), colorRes));
+
+                        fileView.setOnClickListener(v -> {
+                            if (fileClickListener != null) {
+                                fileClickListener.onFileClick(commit.getFullHash(), file);
+                            }
+                        });
+
+                        changedFilesList.addView(fileView);
+                        android.util.Log.d("GitCommitAdapter", "Added file view: " + file.getPath());
                     }
-                });
+                }
             } else {
                 changedFilesContainer.setVisibility(View.GONE);
-                changedFileAdapter.submitList(Collections.emptyList());
+                changedFilesList.removeAllViews();
             }
         }
 
