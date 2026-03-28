@@ -38,11 +38,11 @@
             android:textSize="15sp"
             android:textColor="@color/primary_text"
             app:cornerRadius="10dp"
-            app:icon="@drawable/ic_computer"
+            app:icon="@drawable/ic_edit"
             app:iconTint="@color/secondary_text"
             app:iconGravity="textStart"
             app:iconPadding="8dp"
-            app:strokeColor="@color/divider"
+            app:strokeColor="@color/divider_color"
             app:strokeWidth="1dp" />
 
         <!-- Close Session Button -->

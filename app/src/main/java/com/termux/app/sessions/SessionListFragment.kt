@@ -168,20 +168,15 @@ class SessionListFragment : Fragment() {
     }
 
     private fun showSessionOptions(session: SessionInfo) {
-        val options = arrayOf("重命名", "关闭会话")
-        AlertDialog.Builder(requireContext())
-            .setTitle(session.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> showRenameDialog(session)
-                    1 -> {
-                        SessionManager.closeSession(session.id)
-                        refreshSessions()
-                    }
-                }
+        SessionOptionsDialog(
+            requireContext(),
+            session,
+            onRename = { showRenameDialog(session) },
+            onClose = {
+                SessionManager.closeSession(session.id)
+                refreshSessions()
             }
-            .setNegativeButton("取消", null)
-            .show()
+        ).show()
     }
 
     private fun showRenameDialog(session: SessionInfo) {
