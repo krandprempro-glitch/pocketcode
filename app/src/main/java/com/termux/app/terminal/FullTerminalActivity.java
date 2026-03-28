@@ -56,6 +56,8 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
     // Renderer initialized flag
     private boolean mRendererInitialized = false;
+    private int mAttachRetryCount = 0;
+    private static final int MAX_ATTACH_RETRIES = 20;
 
     // Simple terminal view client
     private final TermuxTerminalViewClientBase mTerminalViewClient = new TermuxTerminalViewClientBase() {
@@ -224,9 +226,15 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
         // Ensure renderer is initialized first
         if (!mRendererInitialized) {
-            Log.d(TAG, "Renderer not ready, waiting...");
-            mTerminalView.postDelayed(() -> doAttachSession(session), 50);
-            return;
+            if (mAttachRetryCount >= MAX_ATTACH_RETRIES) {
+                Log.e(TAG, "Renderer still not initialized after " + MAX_ATTACH_RETRIES + " retries, forcing init");
+                mRendererInitialized = true;
+            } else {
+                mAttachRetryCount++;
+                Log.d(TAG, "Renderer not ready, waiting... (retry " + mAttachRetryCount + "/" + MAX_ATTACH_RETRIES + ")");
+                mTerminalView.postDelayed(() -> doAttachSession(session), 50);
+                return;
+            }
         }
 
         mTerminalView.post(() -> {
@@ -239,9 +247,14 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
                 // If dimensions are still invalid, wait more
                 if (h <= 0) {
-                    Log.d(TAG, "Dimensions still invalid (h=" + h + "), retrying...");
-                    mTerminalView.postDelayed(() -> doAttachSession(session), 100);
-                    return;
+                    if (mAttachRetryCount >= MAX_ATTACH_RETRIES) {
+                        Log.e(TAG, "Dimensions still invalid after " + MAX_ATTACH_RETRIES + " retries (h=" + h + "), forcing attach");
+                    } else {
+                        mAttachRetryCount++;
+                        Log.d(TAG, "Dimensions still invalid (h=" + h + "), retrying... (" + mAttachRetryCount + "/" + MAX_ATTACH_RETRIES + ")");
+                        mTerminalView.postDelayed(() -> doAttachSession(session), 100);
+                        return;
+                    }
                 }
 
                 // Force setTextSize to ensure renderer and emulator are properly initialized

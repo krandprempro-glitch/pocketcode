@@ -55,7 +55,7 @@
             android:id="@+id/terminal_input_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_above="@+id/terminal_toolbar_view_pager"
+            android:layout_alignParentBottom="true"
             android:background="@color/dark_surface"
             android:elevation="4dp"
             android:orientation="horizontal"
