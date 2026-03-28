@@ -10,15 +10,18 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.tabs.TabLayout;
 import com.termux.R;
+import com.termux.app.adapters.DiffLineAdapter;
+import com.termux.app.models.DiffLine;
 import com.termux.app.sftp.SFTPConnectionManager;
+import com.termux.app.utils.DiffParser;
 import com.termux.shared.logger.Logger;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.function.Consumer;
+import java.util.List;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
@@ -26,7 +29,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 
 /**
  * Git文件详情页面
- * 显示指定提交中某个文件的Diff或File内容
+ * 显示指定提交中某个文件的Diff（GitLab风格）或File内容
  */
 public class GitFileDetailActivity extends AppCompatActivity {
 
@@ -40,13 +43,13 @@ public class GitFileDetailActivity extends AppCompatActivity {
 
     private Toolbar toolbar;
     private TabLayout tabLayout;
-    private View diffContainer;
+    private RecyclerView diffRecyclerView;
     private View fileContainer;
-    private TextView diffContent;
     private TextView fileContent;
     private ProgressBar progressBar;
     private TextView errorView;
 
+    private DiffLineAdapter diffAdapter;
     private final CompositeDisposable disposables = new CompositeDisposable();
     private boolean isFileLoaded = false;
 
@@ -66,25 +69,35 @@ public class GitFileDetailActivity extends AppCompatActivity {
         }
 
         setupViews();
-        loadDiff(); // Default to diff
+        loadDiff();
     }
 
     private void setupViews() {
         toolbar = findViewById(R.id.toolbar);
         tabLayout = findViewById(R.id.tab_layout);
-        diffContainer = findViewById(R.id.diff_container);
+        diffRecyclerView = findViewById(R.id.diff_recycler_view);
         fileContainer = findViewById(R.id.file_container);
-        diffContent = findViewById(R.id.diff_content);
         fileContent = findViewById(R.id.file_content);
         progressBar = findViewById(R.id.progress_bar);
         errorView = findViewById(R.id.error_view);
 
-        // Setup toolbar with back navigation
+        // Setup toolbar with back navigation — show filename as title
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(filePath);
+            // Show only filename in toolbar title
+            String fileName = filePath;
+            int lastSlash = filePath.lastIndexOf('/');
+            if (lastSlash >= 0 && lastSlash < filePath.length() - 1) {
+                fileName = filePath.substring(lastSlash + 1);
+            }
+            getSupportActionBar().setTitle(fileName);
         }
+
+        // Setup diff RecyclerView
+        diffAdapter = new DiffLineAdapter();
+        diffRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        diffRecyclerView.setAdapter(diffAdapter);
 
         // Setup TabLayout
         tabLayout.addTab(tabLayout.newTab().setText("Diff"));
@@ -101,18 +114,17 @@ public class GitFileDetailActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
+            public void onTabUnselected(TabLayout.Tab tab) {}
 
             @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-            }
+            public void onTabReselected(TabLayout.Tab tab) {}
         });
     }
 
     private void loadDiff() {
         showLoading();
-        String cmd = "git -C \"" + workDir + "\" show " + commitHash + " -- \"" + filePath + "\" 2>&1";
+        // Use git show with --format="" to get diff output only
+        String cmd = "git -C \"" + workDir + "\" show --format=\"\" " + commitHash + " -- \"" + filePath + "\" 2>&1";
         Logger.logDebug("GitFileDetailActivity", "Loading diff with command: " + cmd);
 
         disposables.add(
@@ -121,8 +133,9 @@ public class GitFileDetailActivity extends AppCompatActivity {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(output -> {
                     hideLoading();
-                    diffContent.setText(output);
-                    Logger.logDebug("GitFileDetailActivity", "Diff loaded, output length: " + output.length());
+                    List<DiffLine> diffLines = DiffParser.parse(output);
+                    diffAdapter.submitList(diffLines);
+                    Logger.logDebug("GitFileDetailActivity", "Diff parsed into " + diffLines.size() + " lines");
                 }, error -> {
                     hideLoading();
                     showError(error.getMessage() != null ? error.getMessage() : "Failed to load diff");
@@ -134,7 +147,6 @@ public class GitFileDetailActivity extends AppCompatActivity {
     private void loadFileSnapshot() {
         if (isFileLoaded) return;
         showLoading();
-        // Use git show to get file content at specific commit: git show <hash>:<path>
         String cmd = "git -C \"" + workDir + "\" show " + commitHash + ":\"" + filePath + "\" 2>&1";
         Logger.logDebug("GitFileDetailActivity", "Loading file snapshot with command: " + cmd);
 
@@ -156,12 +168,12 @@ public class GitFileDetailActivity extends AppCompatActivity {
     }
 
     private void showDiff() {
-        diffContainer.setVisibility(View.VISIBLE);
+        diffRecyclerView.setVisibility(View.VISIBLE);
         fileContainer.setVisibility(View.GONE);
     }
 
     private void showFile() {
-        diffContainer.setVisibility(View.GONE);
+        diffRecyclerView.setVisibility(View.GONE);
         fileContainer.setVisibility(View.VISIBLE);
         if (!isFileLoaded) {
             loadFileSnapshot();
