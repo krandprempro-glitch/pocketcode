@@ -44,16 +44,20 @@ class NewSessionDialog(
     }
 
     private fun setupSshDropdown() {
-        val sshConfigs = try {
-            SSHConfigManager.getInstance(context).allConfigs.map { it.name }
+        // "无" = local terminal, then actual SSH configs
+        val sshConfigs = mutableListOf("无")
+        try {
+            sshConfigs.addAll(SSHConfigManager.getInstance(context).allConfigs.map { it.name })
         } catch (e: Exception) {
-            emptyList()
+            // no SSH configs available
         }
 
         val adapter = ArrayAdapter(context, R.layout.item_dropdown_light, sshConfigs)
         binding.sshDropdown.setAdapter(adapter)
+        binding.sshDropdown.setText(sshConfigs[0], false)
+        selectedSshConfig = null
         binding.sshDropdown.setOnItemClickListener { _, _, position, _ ->
-            selectedSshConfig = sshConfigs[position]
+            selectedSshConfig = if (position == 0) null else sshConfigs[position]
         }
     }
 
