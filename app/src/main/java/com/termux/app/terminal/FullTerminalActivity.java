@@ -226,7 +226,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
                 doAttachSession(session);
                 return;
             } else {
-                Log.d(TAG, "Session not found by handle: " + mSessionHandle);
+                Log.d(TAG, "Session not found by handle: " + mSessionHandle + ", will create new");
             }
         } else {
             Log.d(TAG, "No handle or no service, creating new session");
