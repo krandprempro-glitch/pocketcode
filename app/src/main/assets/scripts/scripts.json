@@ -1,0 +1,14 @@
+{
+  "scripts": [
+    {
+      "name": "connect-remote",
+      "description": "连接远程服务器并执行系统检查",
+      "file": "connect-remote.sh"
+    },
+    {
+      "name": "system-check",
+      "description": "显示系统信息和资源使用情况",
+      "file": "system-check.sh"
+    }
+  ]
+}
