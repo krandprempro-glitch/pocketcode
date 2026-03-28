@@ -367,3 +367,51 @@ class PerformanceTracker {
 ```
 
 遵循以上规范能确保代码质量达到企业级标准，提供优秀的用户体验和系统稳定性。
+
+### 弹窗与对话框设计规范
+
+本项目所有弹窗统一使用以下设计模式，**禁止使用原生 AlertDialog**。
+
+#### 标准弹窗结构
+
+```
+MaterialCardView (16dp圆角, 8dp阴影, 白色背景)
+└── LinearLayout (vertical, 24dp内边距)
+    ├── 标题 TextView (居中, 20sp, bold)
+    ├── 内容区域 (输入框/按钮列表等)
+    └── 操作按钮 (Primary + Secondary)
+```
+
+#### 实现方式
+
+1. **布局文件**: 创建 `dialog_*.xml`，根元素为 `MaterialCardView`
+2. **Dialog类**: 继承 `Dialog`，使用 `ViewBinding` 绑定布局
+3. **窗口配置**:
+```kotlin
+window?.apply {
+    setBackgroundDrawableResource(R.color.dialog_window_background_light)
+    setDimAmount(0.3f)
+    clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+    val metrics = context.resources.displayMetrics
+    val width = (metrics.widthPixels * 0.9f).toInt()
+    setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
+}
+```
+
+#### 按钮样式
+
+- **主要操作**: `AppButton.Primary` (实心按钮, 白色文字)
+- **次要操作**: `AppButton.Secondary` (文字按钮, 无背景)
+- **危险操作**: `AppButton.Danger` (红色实心按钮, 用于删除/关闭等)
+- **列表选项**: `Widget.MaterialComponents.Button.OutlinedButton` (描边按钮, 48dp高度)
+
+#### 输入框样式
+
+统一使用 `TextInputLayout` + `TextInputEditText`，style 为 `Widget.MaterialComponents.TextInputLayout.OutlinedBox`。
+
+#### 参考文件
+
+- 布局模板: `app/src/main/res/layout/dialog_new_session.xml`
+- Dialog类模板: `app/src/main/java/com/termux/app/sessions/NewSessionDialog.kt`
+- 重命名弹窗: `dialog_rename_session.xml` + `RenameSessionDialog.kt`
+- 选项弹窗: `dialog_session_options.xml` + `SessionOptionsDialog.kt`
