@@ -13,8 +13,12 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.termux.R
 import com.termux.databinding.FragmentSessionListBinding
+import com.termux.app.managers.ScriptManager
+import com.termux.app.models.ScriptItem
+import com.termux.app.sftp.SFTPConnectionManager
 import com.termux.app.terminal.FullTerminalActivity
 import com.termux.app.ui.SSHConfigDialog
+import com.termux.shared.logger.Logger
 
 class SessionListFragment : Fragment() {
 
@@ -62,6 +66,57 @@ class SessionListFragment : Fragment() {
             }
             popup.show()
         }
+
+        binding.btnScripts.setOnClickListener {
+            showScriptSelectionDialog()
+        }
+    }
+
+    private fun showScriptSelectionDialog() {
+        val scripts = ScriptManager.getInstance().getScripts(requireContext())
+        if (scripts.isEmpty()) {
+            Toast.makeText(requireContext(), "没有可用的脚本", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val names = scripts.map { it.name }.toTypedArray()
+        AlertDialog.Builder(requireContext())
+            .setTitle("选择脚本")
+            .setItems(names) { _, which ->
+                val script = scripts[which]
+                executeScriptRemotely(script)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun executeScriptRemotely(script: ScriptItem) {
+        val sftpManager = SFTPConnectionManager.getInstance()
+        if (!sftpManager.isConnected) {
+            Toast.makeText(requireContext(), "请先建立SSH连接", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Toast.makeText(requireContext(), "正在执行脚本: ${script.name}", Toast.LENGTH_SHORT).show()
+
+        // Escape script content for bash -c
+        val escapedContent = script.content
+            .replace("\\", "\\\\")
+            .replace("'", "'\\''")
+
+        val command = "bash -c '$escapedContent'"
+
+        sftpManager.executeCommand(command)
+            .subscribe(
+                { result ->
+                    Logger.logDebug("ScriptManager", "Script output: $result")
+                    Toast.makeText(requireContext(), "脚本执行完成", Toast.LENGTH_SHORT).show()
+                },
+                { error ->
+                    Logger.logError("ScriptManager", "Script error: ${error.message}")
+                    Toast.makeText(requireContext(), "脚本执行失败: ${error.message}", Toast.LENGTH_LONG).show()
+                }
+            )
     }
 
     private fun openInitTerminal() {
@@ -116,8 +171,25 @@ class SessionListFragment : Fragment() {
 
     private fun setupFab() {
         binding.fabNewSession.setOnClickListener {
-            showNewSessionDialog()
+            if (!SessionManager.isSshInitialized()) {
+                showSshInitRequiredDialog()
+            } else {
+                showNewSessionDialog()
+            }
         }
+    }
+
+    private fun showSshInitRequiredDialog() {
+        AlertDialog.Builder(requireContext(), R.style.AppTheme_Dialog_Dark)
+            .setTitle("创建终端")
+            .setMessage("首次使用需要先初始化 SSH 环境，是否立即初始化？")
+            .setPositiveButton("确认初始化") { _, _ ->
+                SessionManager.setSshInitialized(true)
+                openInitTerminal()
+            }
+            .setNegativeButton("取消", null)
+            .setCancelable(false)
+            .show()
     }
 
     private fun refreshSessions() {
