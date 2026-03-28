@@ -70,11 +70,8 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
         if (commitHash != null && commitHash.equals(expandedCommitHash)) {
             expandedFiles = files != null ? new ArrayList<>(files) : Collections.emptyList();
             android.util.Log.d("GitCommitAdapter", "expandedFiles updated, size=" + expandedFiles.size());
-            int idx = findExpandedIndex();
-            android.util.Log.d("GitCommitAdapter", "findExpandedIndex returned: " + idx);
-            if (idx >= 0) {
-                notifyItemChanged(idx);
-            }
+            android.util.Log.d("GitCommitAdapter", "Calling notifyDataSetChanged to refresh UI");
+            notifyDataSetChanged();
         }
     }
 

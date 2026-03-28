@@ -40,6 +40,7 @@ public class ChangedFileAdapter extends ListAdapter<GitChangedFile, ChangedFileA
     @Override
     public void onBindViewHolder(@NonNull FileViewHolder holder, int position) {
         GitChangedFile file = getItem(position);
+        android.util.Log.d("ChangedFileAdapter", "onBindViewHolder called: position=" + position + ", file=" + file.getPath());
         holder.bind(file);
     }
 
