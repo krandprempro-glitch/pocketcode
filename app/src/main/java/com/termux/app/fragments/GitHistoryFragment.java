@@ -1,6 +1,6 @@
 package com.termux.app.fragments;
 
-import android.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,6 +39,7 @@ public class GitHistoryFragment extends Fragment {
 
     private GitCommitAdapter commitAdapter;
     private List<GitBranch> cachedBranches;
+    private RecyclerView.OnScrollListener scrollListener;
 
     @Nullable
     @Override
@@ -72,7 +73,7 @@ public class GitHistoryFragment extends Fragment {
         commitsRecyclerView.setAdapter(commitAdapter);
 
         // Add scroll listener for pagination
-        commitsRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        scrollListener = new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
@@ -85,7 +86,8 @@ public class GitHistoryFragment extends Fragment {
                     viewModel.loadMore();
                 }
             }
-        });
+        };
+        commitsRecyclerView.addOnScrollListener(scrollListener);
     }
 
     private void setupObservers() {
@@ -146,8 +148,8 @@ public class GitHistoryFragment extends Fragment {
 
     private void updateCommits(List<GitCommit> commits) {
         commitAdapter.submitList(commits);
-        // Show loadingMore when pagination loading is in progress (loadedCount > 0 means not initial load)
-        if (viewModel.isLoading() && viewModel.getLoadedCount() > 0) {
+        // Show loadingMore when pagination loading is in progress
+        if (viewModel.isPaginationLoading()) {
             loadingMore.setVisibility(View.VISIBLE);
         } else {
             loadingMore.setVisibility(View.GONE);
@@ -155,6 +157,9 @@ public class GitHistoryFragment extends Fragment {
     }
 
     private void showError(String message) {
+        if (loadingMore != null) {
+            loadingMore.setVisibility(View.GONE);
+        }
         if (message != null && !message.isEmpty()) {
             statusText.setText(message);
         }
@@ -184,7 +189,7 @@ public class GitHistoryFragment extends Fragment {
         }
 
         String finalCurrentBranch = currentBranch;
-        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("切换分支")
                 .setSingleChoiceItems(branchNames, selectedIndex, (d, which) -> {
                     d.dismiss();
@@ -229,5 +234,13 @@ public class GitHistoryFragment extends Fragment {
                 viewModel.refresh();
             }
         }
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (commitsRecyclerView != null && scrollListener != null) {
+            commitsRecyclerView.removeOnScrollListener(scrollListener);
+        }
+        super.onDestroyView();
     }
 }

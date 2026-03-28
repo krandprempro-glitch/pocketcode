@@ -27,8 +27,8 @@ public class GitHistoryViewModel extends ViewModel {
 
     private static final int PAGE_SIZE = 30;
     private int loadedCount = 0;
-    private boolean isLoading = false;
-    private boolean hasMore = true;
+    private volatile boolean isLoading = false;
+    private volatile boolean hasMore = true;
 
     private final SFTPConnectionManager sftpManager;
     private final CompositeDisposable disposables = new CompositeDisposable();
@@ -75,6 +75,10 @@ public class GitHistoryViewModel extends ViewModel {
         return hasMore;
     }
 
+    public boolean isPaginationLoading() {
+        return isLoading && loadedCount > 0;
+    }
+
     public int getLoadedCount() {
         return loadedCount;
     }
@@ -91,7 +95,7 @@ public class GitHistoryViewModel extends ViewModel {
         // Reset pagination for fresh load
         loadedCount = 0;
         hasMore = true;
-        isLoading = false;
+        isLoading = true;
 
         currentPath.setValue(remotePath);
         uiState.setValue(UiState.LOADING);
