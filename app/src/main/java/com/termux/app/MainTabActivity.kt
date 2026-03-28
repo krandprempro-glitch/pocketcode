@@ -14,6 +14,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.termux.R
 import com.termux.app.configuration.fragments.ConfigurationMainFragment
 import com.termux.app.floating.views.FloatingActionButton
+import com.termux.app.floating.managers.FloatingWindowManager
 import android.widget.Toast
 import com.termux.app.ui.SSHConfigDialog
 import com.termux.app.managers.ClaudeCodeCommandManager
@@ -173,9 +174,12 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
             }
         })
 
-        // 在Activity的根布局中显示悬浮按钮
+        // 检查悬浮按钮是否启用，默认关闭
         val rootContainer = findViewById<android.widget.FrameLayout>(android.R.id.content)
-        floatingActionButton?.show(rootContainer)
+        val floatingManager = FloatingWindowManager.getInstance(this)
+        if (floatingManager.isFloatingEnabled()) {
+            floatingActionButton?.show(rootContainer)
+        }
     }
 
     private fun showSSHConnectionDialog() {
