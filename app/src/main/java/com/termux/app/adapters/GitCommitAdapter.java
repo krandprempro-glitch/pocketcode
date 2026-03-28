@@ -51,6 +51,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
     }
 
     public void setOnCommitExpandListener(OnCommitExpandListener listener) {
+        android.util.Log.d("GitCommitAdapter", "setOnCommitExpandListener called, listener is null: " + (listener == null));
         this.expandListener = listener;
     }
 
@@ -62,9 +63,15 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
      * Set the expanded files for a specific commit hash
      */
     public void setExpandedFiles(String commitHash, List<GitChangedFile> files) {
+        android.util.Log.d("GitCommitAdapter", "setExpandedFiles called: commitHash=" + commitHash +
+            ", expandedCommitHash=" + expandedCommitHash +
+            ", files.size=" + (files != null ? files.size() : "null") +
+            ", matches=" + (commitHash != null && commitHash.equals(expandedCommitHash)));
         if (commitHash != null && commitHash.equals(expandedCommitHash)) {
             expandedFiles = files != null ? new ArrayList<>(files) : Collections.emptyList();
+            android.util.Log.d("GitCommitAdapter", "expandedFiles updated, size=" + expandedFiles.size());
             int idx = findExpandedIndex();
+            android.util.Log.d("GitCommitAdapter", "findExpandedIndex returned: " + idx);
             if (idx >= 0) {
                 notifyItemChanged(idx);
             }
@@ -141,32 +148,38 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
 
             changedFilesRecyclerView.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
             changedFilesRecyclerView.setAdapter(changedFileAdapter);
-        }
 
-        void bind(GitCommit commit, boolean isExpanded, List<GitChangedFile> files) {
-            boolean isLoading = isExpanded && files.isEmpty();
-            hashView.setText(commit.getHash());
-            messageView.setText(commit.getMessage());
-            authorView.setText(commit.getAuthor());
-            timeView.setText(formatTimeAgo(commit.getTimestamp()));
-
-            // Handle click to toggle expand/collapse
+            // Set click listener ONCE in constructor, not in bind()
             itemView.setOnClickListener(v -> {
                 int pos = getAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION) {
                     GitCommit clickedCommit = getItem(pos);
                     String commitHash = clickedCommit.getFullHash();
 
+                    android.util.Log.d("GitCommitAdapter", "Item clicked: hash=" + commitHash +
+                        ", expandedCommitHash=" + expandedCommitHash +
+                        ", equals=" + commitHash.equals(expandedCommitHash));
+
                     if (commitHash.equals(expandedCommitHash)) {
                         // Collapse
+                        android.util.Log.d("GitCommitAdapter", "Collapsing");
                         expandedCommitHash = null;
                         expandedFiles = Collections.emptyList();
                     } else {
                         // Expand - set hash first so UI updates immediately
+                        android.util.Log.d("GitCommitAdapter", "Expanding, calling listener. expandListener is null: " + (expandListener == null));
                         expandedCommitHash = commitHash;
                         expandedFiles = Collections.emptyList();
                         if (expandListener != null) {
-                            expandListener.onCommitExpand(commitHash);
+                            android.util.Log.d("GitCommitAdapter", "Calling expandListener.onCommitExpand with hash: " + commitHash);
+                            try {
+                                expandListener.onCommitExpand(commitHash);
+                                android.util.Log.d("GitCommitAdapter", "expandListener.onCommitExpand completed successfully");
+                            } catch (Exception e) {
+                                android.util.Log.e("GitCommitAdapter", "Exception in expandListener.onCommitExpand: " + e.getMessage(), e);
+                            }
+                        } else {
+                            android.util.Log.e("GitCommitAdapter", "expandListener is NULL! Cannot load files.");
                         }
                     }
 
@@ -180,6 +193,18 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                     }
                 }
             });
+        }
+
+        void bind(GitCommit commit, boolean isExpanded, List<GitChangedFile> files) {
+            boolean isLoading = isExpanded && files.isEmpty();
+            android.util.Log.d("GitCommitAdapter", "bind called: hash=" + commit.getHash() +
+                ", isExpanded=" + isExpanded +
+                ", files.size=" + files.size() +
+                ", isLoading=" + isLoading);
+            hashView.setText(commit.getHash());
+            messageView.setText(commit.getMessage());
+            authorView.setText(commit.getAuthor());
+            timeView.setText(formatTimeAgo(commit.getTimestamp()));
 
             // Update expanded state UI
             if (isExpanded) {

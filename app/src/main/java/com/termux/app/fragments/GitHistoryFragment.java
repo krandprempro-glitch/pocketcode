@@ -115,7 +115,15 @@ public class GitHistoryFragment extends Fragment {
         branchChip.setOnClickListener(v -> showBranchSwitchDialog());
 
         // Handle commit expand/collapse
-        commitAdapter.setOnCommitExpandListener(commitHash -> loadChangedFiles(commitHash));
+        commitAdapter.setOnCommitExpandListener(commitHash -> {
+            try {
+                Logger.logDebug("GitHistoryFragment", "OnCommitExpandListener called with hash: " + commitHash);
+                loadChangedFiles(commitHash);
+            } catch (Exception e) {
+                Logger.logError("GitHistoryFragment", "Exception in loadChangedFiles: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
 
         // Handle file click - open GitFileDetailActivity
         commitAdapter.setOnFileClickListener((commitHash, file) -> {
@@ -211,16 +219,23 @@ public class GitHistoryFragment extends Fragment {
      * Load the list of changed files for a commit
      */
     private void loadChangedFiles(String commitHash) {
+        Logger.logDebug("GitHistoryFragment", "loadChangedFiles called for: " + commitHash);
         String path = viewModel.getCurrentPath().getValue();
+        Logger.logDebug("GitHistoryFragment", "Current path: " + path);
+        Logger.logDebug("GitHistoryFragment", "Is connected: " + viewModel.isConnected());
         if (path == null || path.isEmpty() || !viewModel.isConnected()) {
+            Logger.logDebug("GitHistoryFragment", "Aborting loadChangedFiles - path or connection issue");
             return;
         }
 
         // Use git diff-tree to get file list with status (cleaner output)
         String command = "git -C \"" + path + "\" diff-tree --no-commit-header --name-status -r \"" + commitHash + "\" 2>&1";
-        Logger.logDebug("GitHistoryFragment", "Loading changed files: " + command);
+        Logger.logDebug("GitHistoryFragment", "Executing command: " + command);
 
-        viewModel.executeGitCommand(command, output -> parseChangedFiles(commitHash, output));
+        viewModel.executeGitCommand(command, output -> {
+            Logger.logDebug("GitHistoryFragment", "Git command callback received, output length: " + (output != null ? output.length() : "null"));
+            parseChangedFiles(commitHash, output);
+        });
     }
 
     /**
@@ -228,9 +243,11 @@ public class GitHistoryFragment extends Fragment {
      * Format: status\tpath (e.g., "M\tfile.txt", "A\tnewfile.txt")
      */
     private void parseChangedFiles(String commitHash, String output) {
+        Logger.logDebug("GitHistoryFragment", "parseChangedFiles called: commitHash=" + commitHash + ", output length=" + (output != null ? output.length() : "null"));
         List<GitChangedFile> files = new ArrayList<>();
         if (output != null && !output.isEmpty()) {
             String[] lines = output.split("\n");
+            Logger.logDebug("GitHistoryFragment", "Split into " + lines.length + " lines");
             for (String line : lines) {
                 if (line == null || line.trim().isEmpty()) continue;
                 // Parse status\tpath format
@@ -240,6 +257,7 @@ public class GitHistoryFragment extends Fragment {
                     String filePath = parts[1].trim();
                     if (!status.isEmpty() && !filePath.isEmpty() && filePath.length() > 1) {
                         files.add(new GitChangedFile(filePath, status));
+                        Logger.logDebug("GitHistoryFragment", "Added file: " + status + " " + filePath);
                     }
                 }
             }
