@@ -149,6 +149,18 @@
             android:layout_gravity="center_horizontal"
             android:visibility="gone" />
 
+        <!-- No more data indicator -->
+        <TextView
+            android:id="@+id/no_more_data"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:gravity="center"
+            android:text="— 没有更多了 —"
+            android:textSize="12sp"
+            android:textColor="#999999"
+            android:visibility="gone" />
+
     </LinearLayout>
 
 </LinearLayout>

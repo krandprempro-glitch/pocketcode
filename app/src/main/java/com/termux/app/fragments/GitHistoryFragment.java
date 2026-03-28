@@ -34,6 +34,7 @@ public class GitHistoryFragment extends Fragment {
 
     private ProgressBar progressBar;
     private ProgressBar loadingMore;
+    private TextView noMoreData;
     private TextView statusText;
     private TextView tvCurrentBranch;
     private View branchChip;
@@ -65,6 +66,7 @@ public class GitHistoryFragment extends Fragment {
     private void initViews(View view) {
         progressBar = view.findViewById(R.id.progress_bar);
         loadingMore = view.findViewById(R.id.loading_more);
+        noMoreData = view.findViewById(R.id.no_more_data);
         statusText = view.findViewById(R.id.status_text);
         tvCurrentBranch = view.findViewById(R.id.tv_current_branch);
         branchChip = view.findViewById(R.id.branch_chip);
@@ -132,12 +134,14 @@ public class GitHistoryFragment extends Fragment {
                 commitsRecyclerView.setVisibility(View.GONE);
                 commitsHeader.setVisibility(View.GONE);
                 retryButton.setVisibility(View.GONE);
+                noMoreData.setVisibility(View.GONE);
                 break;
             case LOADING:
                 progressBar.setVisibility(View.VISIBLE);
                 statusBar.setVisibility(View.GONE);
                 branchChip.setVisibility(View.GONE);
                 retryButton.setVisibility(View.GONE);
+                noMoreData.setVisibility(View.GONE);
                 break;
             case SUCCESS:
                 progressBar.setVisibility(View.GONE);
@@ -152,6 +156,7 @@ public class GitHistoryFragment extends Fragment {
                 statusBar.setVisibility(View.VISIBLE);
                 branchChip.setVisibility(View.GONE);
                 retryButton.setVisibility(View.VISIBLE);
+                noMoreData.setVisibility(View.GONE);
                 break;
         }
     }
@@ -171,14 +176,24 @@ public class GitHistoryFragment extends Fragment {
         // Show loadingMore when pagination loading is in progress
         if (viewModel.isPaginationLoading()) {
             loadingMore.setVisibility(View.VISIBLE);
+            noMoreData.setVisibility(View.GONE);
         } else {
             loadingMore.setVisibility(View.GONE);
+            // Show "no more data" when all pages loaded and has at least one page
+            if (!viewModel.hasMore() && viewModel.getLoadedCount() > 0) {
+                noMoreData.setVisibility(View.VISIBLE);
+            } else {
+                noMoreData.setVisibility(View.GONE);
+            }
         }
     }
 
     private void showError(String message) {
         if (loadingMore != null) {
             loadingMore.setVisibility(View.GONE);
+        }
+        if (noMoreData != null) {
+            noMoreData.setVisibility(View.GONE);
         }
         if (message != null && !message.isEmpty()) {
             statusBar.setVisibility(View.VISIBLE);
