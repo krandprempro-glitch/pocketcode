@@ -121,6 +121,7 @@ public class GitHistoryFragment extends Fragment {
         switch (state) {
             case NOT_CONNECTED:
                 progressBar.setVisibility(View.GONE);
+                statusBar.setVisibility(View.VISIBLE);
                 statusText.setText("请先在文件浏览页连接 SSH");
                 branchChip.setVisibility(View.GONE);
                 commitsRecyclerView.setVisibility(View.GONE);
@@ -129,14 +130,13 @@ public class GitHistoryFragment extends Fragment {
                 break;
             case LOADING:
                 progressBar.setVisibility(View.VISIBLE);
-                statusText.setText("加载中...");
+                statusBar.setVisibility(View.GONE);
                 branchChip.setVisibility(View.GONE);
                 retryButton.setVisibility(View.GONE);
                 break;
             case SUCCESS:
                 progressBar.setVisibility(View.GONE);
-                statusText.setVisibility(View.VISIBLE);
-                statusText.setText("");
+                statusBar.setVisibility(View.GONE);
                 branchChip.setVisibility(View.VISIBLE);
                 commitsRecyclerView.setVisibility(View.VISIBLE);
                 commitsHeader.setVisibility(View.VISIBLE);
@@ -144,7 +144,7 @@ public class GitHistoryFragment extends Fragment {
                 break;
             case ERROR:
                 progressBar.setVisibility(View.GONE);
-                statusText.setVisibility(View.VISIBLE);
+                statusBar.setVisibility(View.VISIBLE);
                 branchChip.setVisibility(View.GONE);
                 retryButton.setVisibility(View.VISIBLE);
                 break;
@@ -176,7 +176,10 @@ public class GitHistoryFragment extends Fragment {
             loadingMore.setVisibility(View.GONE);
         }
         if (message != null && !message.isEmpty()) {
+            statusBar.setVisibility(View.VISIBLE);
             statusText.setText(message);
+        } else {
+            statusBar.setVisibility(View.GONE);
         }
     }
 
