@@ -162,7 +162,8 @@ public final class TermuxService extends Service implements AppShell.AppShellCli
 
         // If this service really do get killed, there is no point restarting it automatically - let the user do on next
         // start of {@link Term):
-        return Service.START_NOT_STICKY;
+        Logger.logDebug(LOG_TAG, "Returning START_STICKY for service survival");
+        return Service.START_STICKY;
     }
 
     @Override
