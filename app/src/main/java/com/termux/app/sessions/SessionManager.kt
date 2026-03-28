@@ -37,8 +37,41 @@ object SessionManager {
     }
 
     fun closeSession(sessionId: String) {
+        // 先找到 session，获取 terminalHandle 用于关闭终端
+        val session = sessions.find { it.id == sessionId }
+        val handle = session?.terminalHandle
+
+        // 从列表移除
         sessions.removeAll { it.id == sessionId }
         saveToStorage()
+
+        // 如果有 terminalHandle，尝试关闭终端进程
+        if (handle != null) {
+            Thread {
+                try {
+                    // 尝试用 ps 找到相关进程并 kill
+                    val pid = findPidByHandle(handle)
+                    if (pid > 0) {
+                        // 先尝试正常退出
+                        Runtime.getRuntime().exec(arrayOf("kill", "-HUP", pid.toString())).waitFor()
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
+            }.start()
+        }
+    }
+
+    private fun findPidByHandle(handle: String): Int {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "ps -ef | grep '$handle' | grep -v grep | awk '{print \$2}' | head -1"))
+            val reader = process.inputStream.bufferedReader()
+            val line = reader.readLine()?.trim()
+            reader.close()
+            line?.toIntOrNull() ?: -1
+        } catch (e: Exception) {
+            -1
+        }
     }
 
     fun updateSessionStatus(sessionId: String, status: SessionStatus, detail: String?) {

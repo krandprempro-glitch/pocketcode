@@ -99,28 +99,20 @@ class SshConnectionDialog(context: Context) : Dialog(context, R.style.Theme_Floa
         private var configurations: List<SSHConnectionConfig> = emptyList()
         
         class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            val tvName: TextView = itemView.findViewById(R.id.tv_config_name)
-            val tvConnection: TextView = itemView.findViewById(R.id.tv_connection_info)
-            val tvStatus: TextView = itemView.findViewById(R.id.tv_connection_status)
+            val tvName: TextView = itemView.findViewById(R.id.ssh_config_name)
+            val tvConnection: TextView = itemView.findViewById(R.id.ssh_user_host)
         }
-        
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val view = android.view.LayoutInflater.from(context)
                 .inflate(R.layout.item_ssh_connection, parent, false)
             return ViewHolder(view)
         }
-        
+
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val config = configurations[position]
             holder.tvName.text = config.name
             holder.tvConnection.text = "${config.username}@${config.host}:${config.port}"
-            
-            // 显示连接状态（暂时显示为未连接，实际实现可以添加连接状态检查）
-            holder.tvStatus.text = "未连接"
-            
-            // 设置颜色
-            val statusColor = ContextCompat.getColor(context, R.color.secondary_text_color)
-            holder.tvStatus.setTextColor(statusColor)
             
             holder.itemView.setOnClickListener {
                 onConfigClick(config)
