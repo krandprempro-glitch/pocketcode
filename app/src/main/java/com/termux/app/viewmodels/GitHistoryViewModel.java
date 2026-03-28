@@ -75,6 +75,10 @@ public class GitHistoryViewModel extends ViewModel {
         return hasMore;
     }
 
+    public int getLoadedCount() {
+        return loadedCount;
+    }
+
     public void loadGitHistory(String remotePath) {
         Logger.logDebug("GitHistoryViewModel", "loadGitHistory called with path: " + remotePath);
         Logger.logDebug("GitHistoryViewModel", "isConnected: " + sftpManager.isConnected());

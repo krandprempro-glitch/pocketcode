@@ -29,6 +29,7 @@ public class GitHistoryFragment extends Fragment {
     private GitHistoryViewModel viewModel;
 
     private ProgressBar progressBar;
+    private ProgressBar loadingMore;
     private TextView statusText;
     private TextView tvCurrentBranch;
     private View branchChip;
@@ -58,6 +59,7 @@ public class GitHistoryFragment extends Fragment {
 
     private void initViews(View view) {
         progressBar = view.findViewById(R.id.progress_bar);
+        loadingMore = view.findViewById(R.id.loading_more);
         statusText = view.findViewById(R.id.status_text);
         tvCurrentBranch = view.findViewById(R.id.tv_current_branch);
         branchChip = view.findViewById(R.id.branch_chip);
@@ -144,6 +146,12 @@ public class GitHistoryFragment extends Fragment {
 
     private void updateCommits(List<GitCommit> commits) {
         commitAdapter.submitList(commits);
+        // Show loadingMore when pagination loading is in progress (loadedCount > 0 means not initial load)
+        if (viewModel.isLoading() && viewModel.getLoadedCount() > 0) {
+            loadingMore.setVisibility(View.VISIBLE);
+        } else {
+            loadingMore.setVisibility(View.GONE);
+        }
     }
 
     private void showError(String message) {
