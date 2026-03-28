@@ -25,6 +25,11 @@ public class GitHistoryViewModel extends ViewModel {
         ERROR
     }
 
+    private static final int PAGE_SIZE = 30;
+    private int loadedCount = 0;
+    private boolean isLoading = false;
+    private boolean hasMore = true;
+
     private final SFTPConnectionManager sftpManager;
     private final CompositeDisposable disposables = new CompositeDisposable();
 
@@ -62,6 +67,14 @@ public class GitHistoryViewModel extends ViewModel {
         return sftpManager.isConnected();
     }
 
+    public boolean isLoading() {
+        return isLoading;
+    }
+
+    public boolean hasMore() {
+        return hasMore;
+    }
+
     public void loadGitHistory(String remotePath) {
         Logger.logDebug("GitHistoryViewModel", "loadGitHistory called with path: " + remotePath);
         Logger.logDebug("GitHistoryViewModel", "isConnected: " + sftpManager.isConnected());
@@ -70,6 +83,11 @@ public class GitHistoryViewModel extends ViewModel {
             uiState.setValue(UiState.NOT_CONNECTED);
             return;
         }
+
+        // Reset pagination for fresh load
+        loadedCount = 0;
+        hasMore = true;
+        isLoading = false;
 
         currentPath.setValue(remotePath);
         uiState.setValue(UiState.LOADING);
@@ -115,7 +133,7 @@ public class GitHistoryViewModel extends ViewModel {
 
         // 2. 获取当前分支的 Commit 历史，使用 -C 指定工作目录
         String path = currentPath.getValue();
-        String logCommand = "git -C \"" + path + "\" log --oneline -20 --format=\"%H|%s|%an|%ad\" --date=unix 2>&1";
+        String logCommand = "git -C \"" + path + "\" log --oneline -" + PAGE_SIZE + " --skip " + loadedCount + " --format=\"%H|%s|%an|%ad\" --date=unix 2>&1";
 
         disposables.add(
             sftpManager.executeCommand(logCommand)
@@ -153,7 +171,26 @@ public class GitHistoryViewModel extends ViewModel {
             }
         }
 
-        commits.setValue(commitList);
+        // Append new commits to existing list
+        List<GitCommit> currentCommits = commits.getValue();
+        if (currentCommits == null) {
+            currentCommits = new ArrayList<>();
+        }
+        if (loadedCount == 0) {
+            // Fresh load, replace the list
+            commits.setValue(commitList);
+        } else {
+            // Pagination load, append to existing list
+            List<GitCommit> newList = new ArrayList<>(currentCommits);
+            newList.addAll(commitList);
+            commits.setValue(newList);
+        }
+
+        // Update pagination state
+        loadedCount += commitList.size();
+        hasMore = (commitList.size() >= PAGE_SIZE);
+        isLoading = false;
+
         uiState.setValue(UiState.SUCCESS);
     }
 
@@ -184,6 +221,32 @@ public class GitHistoryViewModel extends ViewModel {
         if (path != null && !path.isEmpty()) {
             loadGitHistory(path);
         }
+    }
+
+    public void loadMore() {
+        if (isLoading || !hasMore || !sftpManager.isConnected()) {
+            return;
+        }
+
+        String path = currentPath.getValue();
+        if (path == null || path.isEmpty()) {
+            return;
+        }
+
+        isLoading = true;
+
+        String logCommand = "git -C \"" + path + "\" log --oneline -" + PAGE_SIZE + " --skip " + loadedCount + " --format=\"%H|%s|%an|%ad\" --date=unix 2>&1";
+        Logger.logDebug("GitHistoryViewModel", "loadMore: " + logCommand);
+
+        disposables.add(
+            sftpManager.executeCommand(logCommand)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(this::parseCommits, error -> {
+                    isLoading = false;
+                    handleError(error);
+                })
+        );
     }
 
     public void switchBranch(String branchName) {

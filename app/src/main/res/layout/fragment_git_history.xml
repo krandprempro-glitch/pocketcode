@@ -141,6 +141,14 @@
             android:paddingHorizontal="12dp"
             android:visibility="gone" />
 
+        <!-- Loading footer for pagination -->
+        <ProgressBar
+            android:id="@+id/loading_more"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone" />
+
     </LinearLayout>
 
 </LinearLayout>

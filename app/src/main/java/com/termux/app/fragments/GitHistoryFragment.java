@@ -68,6 +68,22 @@ public class GitHistoryFragment extends Fragment {
         commitsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         commitAdapter = new GitCommitAdapter();
         commitsRecyclerView.setAdapter(commitAdapter);
+
+        // Add scroll listener for pagination
+        commitsRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                LinearLayoutManager lm = (LinearLayoutManager) recyclerView.getLayoutManager();
+                if (lm == null) return;
+                int total = lm.getItemCount();
+                int last = lm.findLastVisibleItemPosition();
+                if (total <= 0) return;
+                if (last >= total - 3 && !viewModel.isLoading() && viewModel.hasMore()) {
+                    viewModel.loadMore();
+                }
+            }
+        });
     }
 
     private void setupObservers() {
