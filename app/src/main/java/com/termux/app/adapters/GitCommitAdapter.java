@@ -141,7 +141,9 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                         expandedCommitHash = null;
                         expandedFiles = Collections.emptyList();
                     } else {
-                        // Expand - notify listener to load files
+                        // Expand - set hash first so UI updates immediately
+                        expandedCommitHash = commitHash;
+                        expandedFiles = Collections.emptyList();
                         if (expandListener != null) {
                             expandListener.onCommitExpand(commitHash);
                         }
