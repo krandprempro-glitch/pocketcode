@@ -124,4 +124,20 @@
     <color name="git_status_modified">#F79F28</color>
     <color name="git_status_deleted">#D73A49</color>
     <color name="git_status_renamed">#6F42C1</color>
+
+    <!-- Diff viewer colors -->
+    <color name="diff_add_background">#1B2E1B</color>
+    <color name="diff_add_text">#85E89D</color>
+    <color name="diff_add_line_number">#3FB950</color>
+    <color name="diff_remove_background">#2E1B1B</color>
+    <color name="diff_remove_text">#F85149</color>
+    <color name="diff_remove_line_number">#F85149</color>
+    <color name="diff_hunk_background">#1B2433</color>
+    <color name="diff_hunk_text">#79C0FF</color>
+    <color name="diff_context_background">@android:color/transparent</color>
+    <color name="diff_context_text">#C9D1D9</color>
+    <color name="diff_line_number">#6E7681</color>
+    <color name="diff_file_header_background">#1C2128</color>
+    <color name="diff_file_header_text">#8B949E</color>
+    <color name="diff_no_newline_text">#6E7681</color>
 </resources>
