@@ -23,6 +23,7 @@ public class CommandGroupAdapter extends RecyclerView.Adapter<CommandGroupAdapte
         SSH_CONNECTIONS("SSH连接", R.drawable.ic_ssh_group),
         QUICK_COMMANDS("常用指令", R.drawable.ic_terminal),  // 新增常用指令分组
         AI_COMMANDS("AI指令", R.drawable.ic_ai_group),
+        AI_CUSTOM_COMMANDS("自定义AI指令", R.drawable.ic_ai_group),
         SYSTEM_COMMANDS("系统指令", R.drawable.ic_system_group);
 
         private final String title;
@@ -63,11 +64,18 @@ public class CommandGroupAdapter extends RecyclerView.Adapter<CommandGroupAdapte
         void onCommandClick(ClaudeCodeMenuHelper.Command command);
     }
     
-    public CommandGroupAdapter(List<CommandGroup> commandGroups, EditText commandInput, 
+    public CommandGroupAdapter(List<CommandGroup> commandGroups, EditText commandInput,
                               OnCommandClickListener listener) {
         this.commandGroups = commandGroups;
         this.commandInput = commandInput;
         this.commandClickListener = listener;
+    }
+
+    /** Replaces the group list and refreshes the displayed data. */
+    public void updateGroups(List<CommandGroup> newGroups) {
+        this.commandGroups.clear();
+        this.commandGroups.addAll(newGroups);
+        notifyDataSetChanged();
     }
     
     @NonNull

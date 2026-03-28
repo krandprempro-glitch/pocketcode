@@ -1,48 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="?attr/selectableItemBackground"
+    android:layout_marginVertical="2dp"
+    android:layout_marginHorizontal="4dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="1dp"
+    app:cardBackgroundColor="?android:colorBackground"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
         android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/tv_config_name"
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_ssh"
+            android:contentDescription="SSH" />
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/primary_text"
-            android:text="开发服务器" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tv_connection_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:text="已连接"
-            android:background="@drawable/bg_status_chip"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp" />
+            <TextView
+                android:id="@+id/ssh_config_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?android:textColorPrimary"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/ssh_user_host"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?android:textColorSecondary"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tv_connection_info"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textColor="@color/secondary_text"
-        android:layout_marginTop="4dp"
-        android:text="user@192.168.1.100:22" />
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

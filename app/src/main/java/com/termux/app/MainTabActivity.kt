@@ -16,6 +16,7 @@ import com.termux.app.configuration.fragments.ConfigurationMainFragment
 import com.termux.app.floating.views.FloatingActionButton
 import android.widget.Toast
 import com.termux.app.ui.SSHConfigDialog
+import com.termux.app.managers.ClaudeCodeCommandManager
 import com.termux.app.sftp.SFTPConnectionManager
 import com.termux.shared.logger.Logger
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
@@ -220,6 +221,9 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
                         Toast.makeText(this@MainTabActivity, "SSH连接成功: ${config.name}", Toast.LENGTH_LONG).show()
                         // 同步更新RemoteFileBrowserFragment的抽屉文件显示
                         syncRemoteFileBrowserConnection(config)
+                        // Fetch Claude Code custom commands from remote
+                        ClaudeCodeCommandManager.getInstance().fetchRemoteCommands(true)
+                            .subscribe({}, { /* silently ignore */ })
                     } else {
                         Toast.makeText(this@MainTabActivity, "SSH连接失败: 连接未建立", Toast.LENGTH_LONG).show()
                     }
@@ -259,6 +263,7 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
         super.onDestroy()
         floatingActionButton?.hide()
         disposables.clear()
+        ClaudeCodeCommandManager.getInstance().clearCache()
     }
 
     /**

@@ -12,57 +12,39 @@
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground">
 
+    <!-- Single row: command left, space, description right -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
         android:gravity="center_vertical">
 
-        <ImageView
-            android:id="@+id/cmd_icon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginEnd="12dp"
-            android:visibility="gone"
-            android:contentDescription="指令图标" />
-
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/cmd_text"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="?android:textColorPrimary"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
-            <TextView
-                android:id="@+id/cmd_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="?android:textColorPrimary"
-                android:maxLines="1"
-                android:ellipsize="end" />
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-            <TextView
-                android:id="@+id/cmd_description"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="?android:textColorSecondary"
-                android:layout_marginTop="2dp"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
-        </LinearLayout>
-
-        <ImageView
-            android:id="@+id/cmd_arrow"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/ic_chevron_right"
-            android:alpha="0.6"
-            android:contentDescription="执行指令" />
+        <TextView
+            android:id="@+id/cmd_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="?android:textColorSecondary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:gravity="end" />
 
     </LinearLayout>
 

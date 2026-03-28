@@ -4,7 +4,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -12,113 +11,166 @@ import com.termux.R;
 import java.util.List;
 
 /**
- * 单个指令项适配器 - 使用Material Card设计
+ * 单个指令项适配器 - 支持两种布局:
+ * - item_command_improved: 单行命令左+描述右 (普通指令)
+ * - item_ssh_connection: 两行卡片config名+用户@IP (SSH连接)
  */
-public class CommandItemAdapter extends RecyclerView.Adapter<CommandItemAdapter.CommandViewHolder> {
-    
+public class CommandItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final int VIEW_TYPE_NORMAL = 0;
+    private static final int VIEW_TYPE_SSH = 1;
+
     private List<ClaudeCodeMenuHelper.Command> commands;
     private final EditText commandInput;
     private final CommandGroupAdapter.OnCommandClickListener commandClickListener;
-    
+
     public CommandItemAdapter(List<ClaudeCodeMenuHelper.Command> commands, EditText commandInput,
                              CommandGroupAdapter.OnCommandClickListener listener) {
         this.commands = commands;
         this.commandInput = commandInput;
         this.commandClickListener = listener;
     }
-    
+
     public void updateCommands(List<ClaudeCodeMenuHelper.Command> newCommands) {
         this.commands = newCommands;
         notifyDataSetChanged();
     }
-    
+
+    private boolean isSSHCommand(ClaudeCodeMenuHelper.Command command) {
+        String cmd = command.command != null ? command.command.toLowerCase() : "";
+        return cmd.startsWith("ssh") || cmd.startsWith("sshpass");
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return isSSHCommand(commands.get(position)) ? VIEW_TYPE_SSH : VIEW_TYPE_NORMAL;
+    }
+
     @NonNull
     @Override
-    public CommandViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_command_improved, parent, false);
-        return new CommandViewHolder(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == VIEW_TYPE_SSH) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_ssh_connection, parent, false);
+            return new SSHViewHolder(view);
+        } else {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_command_improved, parent, false);
+            return new NormalViewHolder(view);
+        }
     }
-    
+
     @Override
-    public void onBindViewHolder(@NonNull CommandViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         ClaudeCodeMenuHelper.Command command = commands.get(position);
-        holder.bind(command);
+        if (holder instanceof SSHViewHolder) {
+            ((SSHViewHolder) holder).bind(command);
+        } else {
+            ((NormalViewHolder) holder).bind(command);
+        }
     }
-    
+
     @Override
     public int getItemCount() {
         return commands.size();
     }
-    
-    class CommandViewHolder extends RecyclerView.ViewHolder {
-        private final ImageView cmdIcon;
+
+    // ---- Normal (single-line) ViewHolder ----
+    class NormalViewHolder extends RecyclerView.ViewHolder {
         private final TextView cmdText;
         private final TextView cmdDescription;
-        private final ImageView cmdArrow;
-        
-        public CommandViewHolder(@NonNull View itemView) {
+
+        public NormalViewHolder(@NonNull View itemView) {
             super(itemView);
-            cmdIcon = itemView.findViewById(R.id.cmd_icon);
             cmdText = itemView.findViewById(R.id.cmd_text);
             cmdDescription = itemView.findViewById(R.id.cmd_description);
-            cmdArrow = itemView.findViewById(R.id.cmd_arrow);
-            
-            // 设置点击监听器
+
             itemView.setOnClickListener(v -> {
-                int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION) {
-                    ClaudeCodeMenuHelper.Command command = commands.get(position);
-                    handleCommandClick(command);
-                    if (commandClickListener != null) {
-                        commandClickListener.onCommandClick(command);
-                    }
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) {
+                    ClaudeCodeMenuHelper.Command command = commands.get(pos);
+                    handleClick(command);
                 }
             });
         }
-        
+
         public void bind(ClaudeCodeMenuHelper.Command command) {
             cmdText.setText(command.command);
             cmdDescription.setText(command.description);
-            
-            // 根据指令类型设置不同的图标
-            int iconRes = getCommandIcon(command.command);
-            if (iconRes != 0) {
-                cmdIcon.setVisibility(View.VISIBLE);
-                cmdIcon.setImageResource(iconRes);
-            } else {
-                cmdIcon.setVisibility(View.GONE);
-            }
         }
-        
-        private void handleCommandClick(ClaudeCodeMenuHelper.Command command) {
+
+        private void handleClick(ClaudeCodeMenuHelper.Command command) {
             if (commandInput != null) {
                 commandInput.setText(command.command);
-                
-                // 如果命令以空格结尾，光标移到末尾；否则全选
                 if (command.command.endsWith(" ")) {
                     commandInput.setSelection(command.command.length());
                 } else {
                     commandInput.selectAll();
                 }
-                
                 commandInput.requestFocus();
             }
-        }
-        
-        private int getCommandIcon(String command) {
-            // 根据指令类型返回对应图标
-            if (command.startsWith("/")) {
-                if (command.contains("help")) return R.drawable.ic_info;
-                if (command.contains("config")) return R.drawable.ic_settings_small;
-                if (command.contains("clear")) return R.drawable.ic_delete;
-                return R.drawable.ic_code;
-            } else if (command.startsWith("ssh://") || command.contains("@")) {
-                return R.drawable.ic_ssh;
-            } else if (command.contains("think")) {
-                return R.drawable.ic_ai_group;
+            if (commandClickListener != null) {
+                commandClickListener.onCommandClick(command);
             }
-            return 0; // 无图标
+        }
+    }
+
+    // ---- SSH (two-line) ViewHolder ----
+    class SSHViewHolder extends RecyclerView.ViewHolder {
+        private final TextView sshConfigName;
+        private final TextView sshUserHost;
+
+        public SSHViewHolder(@NonNull View itemView) {
+            super(itemView);
+            sshConfigName = itemView.findViewById(R.id.ssh_config_name);
+            sshUserHost = itemView.findViewById(R.id.ssh_user_host);
+
+            itemView.setOnClickListener(v -> {
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) {
+                    ClaudeCodeMenuHelper.Command command = commands.get(pos);
+                    handleClick(command);
+                }
+            });
+        }
+
+        public void bind(ClaudeCodeMenuHelper.Command command) {
+            // command.command = the SSH command, command.description = user@host
+            // Extract config name from description (format: "user@host" or "user@host:port")
+            sshUserHost.setText(command.description);
+            // For config name, we can extract from command or use description
+            // The SSH command format is like: sshpass -p password ssh -o ... user@host
+            // Try to extract user@host part from command as config name fallback
+            String cmd = command.command != null ? command.command : "";
+            String configName = cmd.contains("-p ") ? "SSH连接" : extractConfigName(cmd);
+            sshConfigName.setText(configName);
+        }
+
+        private String extractConfigName(String cmd) {
+            // Try to find user@host pattern in the command
+            int atIdx = cmd.indexOf('@');
+            if (atIdx > 0) {
+                int hostStart = atIdx + 1;
+                int hostEnd = cmd.indexOf(' ', hostStart);
+                if (hostEnd < 0) hostEnd = cmd.length();
+                return cmd.substring(0, atIdx) + "@" + cmd.substring(hostStart, hostEnd);
+            }
+            return "SSH连接";
+        }
+
+        private void handleClick(ClaudeCodeMenuHelper.Command command) {
+            if (commandInput != null) {
+                commandInput.setText(command.command);
+                if (command.command.endsWith(" ")) {
+                    commandInput.setSelection(command.command.length());
+                } else {
+                    commandInput.selectAll();
+                }
+                commandInput.requestFocus();
+            }
+            if (commandClickListener != null) {
+                commandClickListener.onCommandClick(command);
+            }
         }
     }
 }

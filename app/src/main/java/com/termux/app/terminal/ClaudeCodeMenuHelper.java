@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
 import com.termux.app.TermuxActivity;
+import com.termux.app.managers.ClaudeCodeCommandManager;
 import com.termux.terminal.TerminalSession;
 
 import java.util.Arrays;
@@ -104,28 +105,10 @@ public class ClaudeCodeMenuHelper {
     }
 
     /**
-     * Default command configuration - can be easily modified
+     * Default command configuration - delegates to ClaudeCodeCommandManager
      */
     private List<Command> getDefaultCommands() {
-        return Arrays.asList(
-            new Command("/add-dir", "添加目录"),
-            new Command("/agents", "代理管理"),
-            new Command("/clear", "清屏"),
-            new Command("/compact", "紧凑模式"),
-            new Command("/config", "配置设置"),
-            new Command("/doctor", "系统诊断"),
-            new Command("/help", "获取帮助"),
-            new Command("/init", "初始化"),
-            new Command("/mcp", "MCP协议"),
-            new Command("/memory", "内存管理"),
-            new Command("/model", "模型设置"),
-            new Command("/review", "代码审查"),
-            new Command("/resume", "恢复会话"),
-            new Command("thinkharder", "深度思考"),
-            new Command("ultrathink", "超级思考"),
-            new Command("!(bash)", "执行bash命令"),
-            new Command("#(memory)", "访问记忆")
-        );
+        return ClaudeCodeCommandManager.getInstance().getDefaultCommands();
     }
 
     /**

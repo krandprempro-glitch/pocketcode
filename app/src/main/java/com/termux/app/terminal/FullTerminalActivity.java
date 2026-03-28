@@ -725,8 +725,8 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
                 })
         );
 
-        // Trigger a fetch if not yet populated
-        ClaudeCodeCommandManager.getInstance().fetchRemoteCommands(false)
+        // Trigger a fetch when menu opens (force refresh to get latest)
+        ClaudeCodeCommandManager.getInstance().fetchRemoteCommands(true)
             .subscribe();
     }
 

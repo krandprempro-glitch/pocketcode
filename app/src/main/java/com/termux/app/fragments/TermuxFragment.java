@@ -56,6 +56,8 @@ import com.termux.app.terminal.TermuxActivityRootView;
 import com.termux.app.terminal.TermuxTerminalSessionActivityClient;
 import com.termux.app.terminal.ClaudeCodeMenuHelper;
 import com.termux.app.terminal.io.TermuxTerminalExtraKeys;
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import com.termux.app.ui.SSHFloatingActionButton;
 import com.termux.app.ui.SSHConfigDialog;
 import com.termux.app.models.SSHConnectionConfig;
@@ -64,6 +66,7 @@ import com.termux.app.configuration.managers.QuickCommandManager;
 import com.termux.app.configuration.models.QuickCommand;
 import com.termux.app.models.DirectoryBookmark;
 import com.termux.app.ssh.SSHConnectionManager;
+import com.termux.app.managers.ClaudeCodeCommandManager;
 import com.termux.app.managers.ProjectWorkspaceManager;
 import com.termux.shared.activities.ReportActivity;
 import com.termux.shared.activity.ActivityUtils;
@@ -183,6 +186,9 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
      * Project workspace manager for handling bookmarks.
      */
     private ProjectWorkspaceManager mProjectWorkspaceManager;
+
+    private CommandGroupAdapter mCommandAdapter;
+    private final CompositeDisposable mCommandMenuDisposables = new CompositeDisposable();
 
     /**
      * The termux sessions list controller.
@@ -419,6 +425,8 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
             mClaudeCodeMenuHelper.dismiss();
             mClaudeCodeMenuHelper = null;
         }
+
+        mCommandMenuDisposables.clear();
 
         // Cleanup SSH dialog
         if (mSSHConfigDialog != null) {
@@ -1186,17 +1194,34 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         List<CommandGroupAdapter.CommandGroup> commandGroups = prepareCommandGroups();
 
         // 设置适配器
-        CommandGroupAdapter adapter = new CommandGroupAdapter(
+        mCommandAdapter = new CommandGroupAdapter(
             commandGroups,
             commandInput,
             command -> bottomSheetDialog.dismiss()
         );
 
         commandsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        commandsRecyclerView.setAdapter(adapter);
+        commandsRecyclerView.setAdapter(mCommandAdapter);
 
         // 显示BottomSheet
         bottomSheetDialog.show();
+
+        // Subscribe to custom commands updates
+        mCommandMenuDisposables.clear();
+        mCommandMenuDisposables.add(
+            ClaudeCodeCommandManager.getInstance().customCommandsObservable
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(commands -> {
+                    if (mCommandAdapter != null) {
+                        List<CommandGroupAdapter.CommandGroup> updatedGroups = prepareCommandGroups();
+                        mCommandAdapter.updateGroups(updatedGroups);
+                    }
+                })
+        );
+
+        // Trigger a fetch when menu opens (force refresh to get latest)
+        ClaudeCodeCommandManager.getInstance().fetchRemoteCommands(true)
+            .subscribe();
     }
 
     /**
@@ -1240,7 +1265,9 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
                 String sshCommand = config.generateSSHCommand();
                 if (sshCommand != null) {
                     String displayName = config.getDisplayName();
-                    sshCommands.add(new ClaudeCodeMenuHelper.Command(sshCommand, "连接: " + displayName));
+                    String desc = config.getUsername() + "@" + config.getHost();
+                    if (config.getPort() != 22) desc += ":" + config.getPort();
+                    sshCommands.add(new ClaudeCodeMenuHelper.Command(sshCommand, desc));
                 }
             }
         } catch (Exception e) {
@@ -1276,34 +1303,24 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         groups.add(new CommandGroupAdapter.CommandGroup(
             CommandGroupAdapter.CommandCategory.QUICK_COMMANDS, quickCommands));
 
-        // 4. AI指令类 (第四类)
-        List<ClaudeCodeMenuHelper.Command> aiCommands = Arrays.asList(
-            new ClaudeCodeMenuHelper.Command("/agents", "代理管理"),
-            new ClaudeCodeMenuHelper.Command("/review", "代码审查"),
-            new ClaudeCodeMenuHelper.Command("thinkharder", "深度思考"),
-            new ClaudeCodeMenuHelper.Command("ultrathink", "超级思考"),
-            new ClaudeCodeMenuHelper.Command("#(memory)", "访问记忆"),
-            new ClaudeCodeMenuHelper.Command("/memory", "内存管理"),
-            new ClaudeCodeMenuHelper.Command("/model", "模型设置"),
-            new ClaudeCodeMenuHelper.Command("/help", "获取帮助"),
-            new ClaudeCodeMenuHelper.Command("/config", "配置设置"),
-            new ClaudeCodeMenuHelper.Command("/clear", "清屏"),
-            new ClaudeCodeMenuHelper.Command("/init", "初始化"),
-            new ClaudeCodeMenuHelper.Command("!(bash)", "执行bash命令"),
-            new ClaudeCodeMenuHelper.Command("/add-dir", "添加目录"),
-            new ClaudeCodeMenuHelper.Command("/compact", "紧凑模式"),
-            new ClaudeCodeMenuHelper.Command("/doctor", "系统诊断"),
-            new ClaudeCodeMenuHelper.Command("/mcp", "MCP协议"),
-            new ClaudeCodeMenuHelper.Command("/resume", "恢复会话")
-        );
+        // 4. AI指令类 (内置命令)
+        List<ClaudeCodeMenuHelper.Command> aiCommands = ClaudeCodeCommandManager.getInstance().getDefaultCommands();
         groups.add(new CommandGroupAdapter.CommandGroup(
             CommandGroupAdapter.CommandCategory.AI_COMMANDS, aiCommands));
 
-        // 4. 系统指令类 (第四类)
-        List<ClaudeCodeMenuHelper.Command> systemCommands = Arrays.asList(
-            new ClaudeCodeMenuHelper.Command("codex --dangerously-bypass-approvals-and-sandbox", "codex"),
-            new ClaudeCodeMenuHelper.Command("claude", "claude")
+        // 4b. AI自定义指令 (远程用户自定义命令)
+        List<ClaudeCodeMenuHelper.Command> customCommands = ClaudeCodeCommandManager.getInstance().getCustomCommands();
+        if (!customCommands.isEmpty()) {
+            groups.add(new CommandGroupAdapter.CommandGroup(
+                CommandGroupAdapter.CommandCategory.AI_CUSTOM_COMMANDS, customCommands));
+        }
 
+        // 5. 系统指令类
+        List<ClaudeCodeMenuHelper.Command> systemCommands = Arrays.asList(
+            new ClaudeCodeMenuHelper.Command("claude", "启动Claude Code"),
+            new ClaudeCodeMenuHelper.Command("claude --resume", "恢复上次会话"),
+            new ClaudeCodeMenuHelper.Command("claude -p \"\"", "快速提问模式"),
+            new ClaudeCodeMenuHelper.Command("codex", "启动Codex")
         );
         groups.add(new CommandGroupAdapter.CommandGroup(
             CommandGroupAdapter.CommandCategory.SYSTEM_COMMANDS, systemCommands));
