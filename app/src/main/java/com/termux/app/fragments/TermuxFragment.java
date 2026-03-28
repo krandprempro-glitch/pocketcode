@@ -1260,23 +1260,26 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
         try {
             SSHConfigManager sshConfigManager = SSHConfigManager.getInstance(getContext());
             List<SSHConnectionConfig> sshConfigs = sshConfigManager.getAllConfigs();
+            Logger.logDebug(LOG_TAG, "SSH configs loaded: " + sshConfigs.size());
 
             for (SSHConnectionConfig config : sshConfigs) {
                 String sshCommand = config.generateSSHCommand();
+                Logger.logDebug(LOG_TAG, "SSH command for " + config.getName() + ": " + sshCommand);
                 if (sshCommand != null) {
                     String displayName = config.getDisplayName();
                     String desc = config.getUsername() + "@" + config.getHost();
                     if (config.getPort() != 22) desc += ":" + config.getPort();
-                    sshCommands.add(new ClaudeCodeMenuHelper.Command(sshCommand, desc));
+                    sshCommands.add(new ClaudeCodeMenuHelper.Command(sshCommand, desc, config.getName()));
                 }
             }
+            Logger.logDebug(LOG_TAG, "SSH commands prepared: " + sshCommands.size());
         } catch (Exception e) {
             Logger.logError(LOG_TAG, "Failed to load SSH configs for menu: " + e.getMessage());
         }
 
         if (!sshCommands.isEmpty()) {
             groups.add(new CommandGroupAdapter.CommandGroup(
-                CommandGroupAdapter.CommandCategory.SSH_CONNECTIONS, sshCommands));
+                CommandGroupAdapter.CommandCategory.SSH_CONNECTIONS, sshCommands, true));
         }
 
         // 3. 常用指令类 (第三类) - 从 QuickCommandManager 加载用户保存的指令

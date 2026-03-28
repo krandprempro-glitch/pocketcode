@@ -229,8 +229,10 @@ public class GitHistoryFragment extends Fragment {
             return;
         }
 
-        // Use git diff-tree to get file list with status (cleaner output)
-        String command = "git -C \"" + path + "\" diff-tree --no-commit-header --name-status -r \"" + commitHash + "\" 2>&1";
+        // Use git diff-tree to get file list with status
+        // Note: --no-commit-id is compatible with older git versions (replaces --no-commit-header which requires git 2.36+)
+        // -m flag: show diffs separately for each parent of merge commits (without it, merge commits show combined diff with very few files)
+        String command = "git -C \"" + path + "\" diff-tree --no-commit-id --name-status -r -m \"" + commitHash + "\" 2>&1";
         Logger.logDebug("GitHistoryFragment", "Executing command: " + command);
 
         viewModel.executeGitCommand(command, output -> {
@@ -244,26 +246,42 @@ public class GitHistoryFragment extends Fragment {
      * Format: status\tpath (e.g., "M\tfile.txt", "A\tnewfile.txt")
      */
     private void parseChangedFiles(String commitHash, String output) {
-        Logger.logDebug("GitHistoryFragment", "parseChangedFiles called: commitHash=" + commitHash + ", output length=" + (output != null ? output.length() : "null"));
+        Logger.logDebug("GitHistoryFragment", "parseChangedFiles RAW OUTPUT for " + commitHash + ": [" + (output != null ? output.substring(0, Math.min(output.length(), 500)) : "null") + "]");
         List<GitChangedFile> files = new ArrayList<>();
         if (output != null && !output.isEmpty()) {
             String[] lines = output.split("\n");
             Logger.logDebug("GitHistoryFragment", "Split into " + lines.length + " lines");
-            for (String line : lines) {
-                if (line == null || line.trim().isEmpty()) continue;
-                // Parse status\tpath format
-                String[] parts = line.split("\t", 2);
+            for (int i = 0; i < lines.length; i++) {
+                String line = lines[i];
+                if (line == null || line.trim().isEmpty()) {
+                    Logger.logDebug("GitHistoryFragment", "Line " + i + ": SKIPPED (empty)");
+                    continue;
+                }
+                // Parse status\tpath format (git uses tab, but handle spaces too)
+                String[] parts = line.split("[\t]+", 2);
+                if (parts.length < 2) {
+                    // Fallback: split by multiple spaces
+                    parts = line.trim().split("\\s+", 2);
+                }
                 if (parts.length >= 2) {
                     String status = parts[0].trim();
                     String filePath = parts[1].trim();
-                    if (!status.isEmpty() && !filePath.isEmpty() && filePath.length() > 1) {
-                        files.add(new GitChangedFile(filePath, status));
-                        Logger.logDebug("GitHistoryFragment", "Added file: " + status + " " + filePath);
+                    // Take only the status letter(s) before any score (e.g., "R100" → "R")
+                    if (status.length() > 1 && Character.isDigit(status.charAt(status.length() - 1))) {
+                        status = status.substring(0, 1);
                     }
+                    if (!status.isEmpty() && !filePath.isEmpty()) {
+                        files.add(new GitChangedFile(filePath, status));
+                        Logger.logDebug("GitHistoryFragment", "Line " + i + ": PARSED status=" + status + " path=" + filePath);
+                    } else {
+                        Logger.logDebug("GitHistoryFragment", "Line " + i + ": SKIPPED (empty status or path) status=[" + status + "] path=[" + filePath + "]");
+                    }
+                } else {
+                    Logger.logDebug("GitHistoryFragment", "Line " + i + ": SKIPPED (split produced " + parts.length + " parts) line=[" + line + "]");
                 }
             }
         }
-        Logger.logDebug("GitHistoryFragment", "Parsed " + files.size() + " changed files for " + commitHash);
+        Logger.logDebug("GitHistoryFragment", "TOTAL: Parsed " + files.size() + " changed files for " + commitHash);
         commitAdapter.setExpandedFiles(commitHash, files);
     }
 

@@ -779,6 +779,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     }
 
     private List<CommandGroupAdapter.CommandGroup> prepareCommandGroups() {
+        android.util.Log.d(TAG, ">>> prepareCommandGroups START");
         List<CommandGroupAdapter.CommandGroup> groups = new ArrayList<>();
 
         // 1. Bookmarks
@@ -800,22 +801,35 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
         // 2. SSH Connections
         List<ClaudeCodeMenuHelper.Command> sshCommands = new ArrayList<>();
+        Log.d(TAG, "Before SSH try block");
         try {
             SSHConfigManager mgr = SSHConfigManager.getInstance(this);
-            for (SSHConnectionConfig config : mgr.getAllConfigs()) {
-                String cmd = SSHConnectionManager.generateTerminalSSHCommand(config);
+            List<SSHConnectionConfig> configs = mgr.getAllConfigs();
+            Log.d(TAG, "SSH configs loaded: " + configs.size());
+            for (SSHConnectionConfig config : configs) {
+                String cmd = config.generateSSHCommand();
+                Log.d(TAG, "SSH command for " + config.getName() + ": " + cmd);
                 if (cmd != null) {
                     String desc = config.getUsername() + "@" + config.getHost();
                 if (config.getPort() != 22) desc += ":" + config.getPort();
-                sshCommands.add(new ClaudeCodeMenuHelper.Command(cmd, desc));
+                sshCommands.add(new ClaudeCodeMenuHelper.Command(cmd, desc, config.getName()));
                 }
             }
+            Log.d(TAG, "SSH commands prepared: " + sshCommands.size());
         } catch (Exception e) {
             Log.e(TAG, "Failed to load SSH configs: " + e.getMessage());
         }
-        if (!sshCommands.isEmpty()) {
-            groups.add(new CommandGroupAdapter.CommandGroup(CommandGroupAdapter.CommandCategory.SSH_CONNECTIONS, sshCommands));
+        Log.d(TAG, "After SSH try block, before if");
+        Log.d(TAG, "sshCommands check: size=" + sshCommands.size() + ", isEmpty=" + sshCommands.isEmpty());
+        boolean shouldAddGroup = !sshCommands.isEmpty();
+        Log.d(TAG, "shouldAddGroup=" + shouldAddGroup);
+        if (shouldAddGroup) {
+            Log.d(TAG, "Adding SSH group with " + sshCommands.size() + " commands");
+            groups.add(new CommandGroupAdapter.CommandGroup(CommandGroupAdapter.CommandCategory.SSH_CONNECTIONS, sshCommands, true));
+        } else {
+            Log.d(TAG, "SSH commands is empty, size=" + sshCommands.size());
         }
+        Log.d(TAG, "After SSH if-else block, groups.size=" + groups.size());
 
         // 3. Quick Commands
         List<ClaudeCodeMenuHelper.Command> quickCommands = new ArrayList<>();
@@ -1133,7 +1147,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
                     // If path specified, SSH with cd: ssh ... "cd /path; exec bash"
                     // Use ; so bash starts even if cd fails, exec replaces shell for interactive use
                     if (mInitialPath != null && !mInitialPath.isEmpty()) {
-                        sshCmd += " \"cd " + mInitialPath + " 2>/dev/null; exec bash\"";
+                        sshCmd += " \"cd " + mInitialPath + " 2>/dev/null; source ~/.bashrc 2>/dev/null; source ~/.zshrc 2>/dev/null; source ~/.profile 2>/dev/null; exec \\$SHELL -l\"";
                     }
                     Log.d(TAG, "Auto SSH: " + sshCmd);
                     sendCommandToTerminal(sshCmd);

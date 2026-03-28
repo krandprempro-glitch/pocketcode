@@ -29,16 +29,22 @@ public class CommandItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         this.commands = commands;
         this.commandInput = commandInput;
         this.commandClickListener = listener;
+        android.util.Log.d("CommandItemAdapter", "Constructor: commands=" + (commands != null ? commands.size() : "null"));
     }
 
     public void updateCommands(List<ClaudeCodeMenuHelper.Command> newCommands) {
+        android.util.Log.d("CommandItemAdapter", "updateCommands: " + (newCommands != null ? newCommands.size() : "null"));
         this.commands = newCommands;
         notifyDataSetChanged();
     }
 
     private boolean isSSHCommand(ClaudeCodeMenuHelper.Command command) {
-        String cmd = command.command != null ? command.command.toLowerCase() : "";
-        return cmd.startsWith("ssh") || cmd.startsWith("sshpass");
+        // SSH连接有sshDisplayName字段，或者description是user@host格式
+        if (command.sshDisplayName != null && !command.sshDisplayName.isEmpty()) {
+            return true;
+        }
+        String desc = command.description != null ? command.description : "";
+        return desc.contains("@");
     }
 
     @Override
@@ -72,7 +78,8 @@ public class CommandItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
     @Override
     public int getItemCount() {
-        return commands.size();
+        android.util.Log.d("CommandItemAdapter", "getItemCount: " + (commands != null ? commands.size() : "null"));
+        return commands != null ? commands.size() : 0;
     }
 
     // ---- Normal (single-line) ViewHolder ----
@@ -135,27 +142,15 @@ public class CommandItemAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         public void bind(ClaudeCodeMenuHelper.Command command) {
-            // command.command = the SSH command, command.description = user@host
-            // Extract config name from description (format: "user@host" or "user@host:port")
+            // command.command = the SSH command
+            // command.description = user@host
+            // command.sshDisplayName = SSH config name (e.g., "home")
             sshUserHost.setText(command.description);
-            // For config name, we can extract from command or use description
-            // The SSH command format is like: sshpass -p password ssh -o ... user@host
-            // Try to extract user@host part from command as config name fallback
-            String cmd = command.command != null ? command.command : "";
-            String configName = cmd.contains("-p ") ? "SSH连接" : extractConfigName(cmd);
-            sshConfigName.setText(configName);
-        }
-
-        private String extractConfigName(String cmd) {
-            // Try to find user@host pattern in the command
-            int atIdx = cmd.indexOf('@');
-            if (atIdx > 0) {
-                int hostStart = atIdx + 1;
-                int hostEnd = cmd.indexOf(' ', hostStart);
-                if (hostEnd < 0) hostEnd = cmd.length();
-                return cmd.substring(0, atIdx) + "@" + cmd.substring(hostStart, hostEnd);
+            String displayName = command.sshDisplayName;
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = "SSH连接";
             }
-            return "SSH连接";
+            sshConfigName.setText(displayName);
         }
 
         private void handleClick(ClaudeCodeMenuHelper.Command command) {

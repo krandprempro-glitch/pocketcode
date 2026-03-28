@@ -59,8 +59,10 @@ public class ChangedFileAdapter extends ListAdapter<GitChangedFile, ChangedFileA
         }
 
         void bind(GitChangedFile file) {
+            android.util.Log.d("ChangedFileAdapter", "bind called: status=" + file.getStatus() + ", path=" + file.getPath());
             statusView.setText(file.getStatus());
             pathView.setText(file.getPath());
+            android.util.Log.d("ChangedFileAdapter", "statusView.getText()=" + statusView.getText() + ", pathView.getText()=" + pathView.getText());
 
             // Set status color based on type
             int colorRes;

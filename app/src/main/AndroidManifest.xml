@@ -166,6 +166,12 @@
             android:theme="@style/Theme.ConfigurationActivity.Dark" />
 
         <activity
+            android:name=".app.activities.GitFileDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".app.MainTabActivity"
+            android:theme="@style/Theme.TermuxActivity.DayNight.NoActionBar" />
+
+        <activity
             android:name=".app.configuration.activities.GlobalSettingsActivity"
             android:exported="false"
             android:label="全局设置"

@@ -121,7 +121,17 @@
       "Bash(find /home/swenze/StudioProjects/termux-ai-dev/app/build -name R.class -o -name R$*lass)",
       "Bash(find ~/.gradle/caches -name sshj*.jar)",
       "Bash(jar tf:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git -C /home/swenze/StudioProjects/termux-ai-dev check-ignore -q .worktrees)",
+      "Bash(git worktree:*)",
+      "Bash(git status:*)",
+      "Bash(git merge:*)",
+      "Bash(bash)",
+      "Bash(while read:*)",
+      "Bash(do echo:*)",
+      "Read(//home/swenze/StudioProjects/termux-ai-dev/**)",
+      "Bash(done)",
+      "mcp__MiniMax__understand_image"
     ],
     "deny": [],
     "ask": [],

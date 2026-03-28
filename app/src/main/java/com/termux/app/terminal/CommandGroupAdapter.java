@@ -42,11 +42,15 @@ public class CommandGroupAdapter extends RecyclerView.Adapter<CommandGroupAdapte
         private final CommandCategory category;
         private final List<ClaudeCodeMenuHelper.Command> commands;
         private boolean isExpanded;
-        
+
         public CommandGroup(CommandCategory category, List<ClaudeCodeMenuHelper.Command> commands) {
+            this(category, commands, false);
+        }
+
+        public CommandGroup(CommandCategory category, List<ClaudeCodeMenuHelper.Command> commands, boolean isExpanded) {
             this.category = category;
             this.commands = commands;
-            this.isExpanded = false; // 所有分组默认折叠
+            this.isExpanded = isExpanded;
         }
         
         // Getters

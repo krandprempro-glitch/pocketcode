@@ -77,12 +77,12 @@
             android:padding="8dp"
             android:visibility="gone" />
 
-        <!-- Changed files list -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/changed_files_recycler_view"
+        <!-- Changed files list - using LinearLayout instead of RecyclerView for better nested layout support -->
+        <LinearLayout
+            android:id="@+id/changed_files_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
+            android:orientation="vertical" />
 
     </LinearLayout>
 
