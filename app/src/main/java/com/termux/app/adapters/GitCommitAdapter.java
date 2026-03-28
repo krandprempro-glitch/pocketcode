@@ -41,7 +41,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
     }
 
     public interface OnFileClickListener {
-        void onFileClick(GitChangedFile file);
+        void onFileClick(String commitHash, GitChangedFile file);
     }
 
     public GitCommitAdapter() {
@@ -164,7 +164,7 @@ public class GitCommitAdapter extends ListAdapter<GitCommit, GitCommitAdapter.Co
                 changedFileAdapter.submitList(files);
                 changedFileAdapter.setOnFileClickListener(file -> {
                     if (fileClickListener != null) {
-                        fileClickListener.onFileClick(file);
+                        fileClickListener.onFileClick(commit.getFullHash(), file);
                     }
                 });
             } else {

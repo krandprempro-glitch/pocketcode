@@ -111,9 +111,14 @@ public class GitHistoryFragment extends Fragment {
         // Handle commit expand/collapse
         commitAdapter.setOnCommitExpandListener(commitHash -> loadChangedFiles(commitHash));
 
-        // Handle file click (navigation comes in Task 4)
-        commitAdapter.setOnFileClickListener(file -> {
-            Logger.logDebug("GitHistoryFragment", "File clicked: " + file.getPath());
+        // Handle file click - open GitFileDetailActivity
+        commitAdapter.setOnFileClickListener((commitHash, file) -> {
+            Intent intent = new Intent(getContext(), GitFileDetailActivity.class);
+            intent.putExtra(GitFileDetailActivity.EXTRA_COMMIT_HASH, commitHash);
+            intent.putExtra(GitFileDetailActivity.EXTRA_FILE_PATH, file.getPath());
+            String workDir = viewModel.getCurrentPath().getValue();
+            intent.putExtra(GitFileDetailActivity.EXTRA_WORKDIR, workDir != null ? workDir : "");
+            startActivity(intent);
         });
     }
 

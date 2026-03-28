@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/dark_background">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/dark_tab_background"
+        app:titleTextColor="@color/white"
+        app:navigationIconTint="@color/white" />
+
+    <!-- Tab Layout for Diff/File tabs -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/dark_tab_background"
+        app:tabTextColor="@color/dark_tab_text"
+        app:tabSelectedTextColor="@color/dark_tab_text_selected"
+        app:tabIndicatorColor="@color/dark_tab_indicator"
+        app:tabMode="fixed"
+        app:tabGravity="fill" />
+
+    <!-- Content Area -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- Diff Content -->
+        <ScrollView
+            android:id="@+id/diff_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible">
+
+            <TextView
+                android:id="@+id/diff_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:textColor="@color/white"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true"
+                android:textSize="13sp"
+                android:lineSpacingExtra="4dp" />
+        </ScrollView>
+
+        <!-- File Content -->
+        <ScrollView
+            android:id="@+id/file_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/file_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:textColor="@color/white"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true"
+                android:textSize="13sp"
+                android:lineSpacingExtra="4dp" />
+        </ScrollView>
+
+        <!-- Loading Progress -->
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+        <!-- Error View -->
+        <TextView
+            android:id="@+id/error_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Error loading content"
+            android:textColor="@color/error"
+            android:textSize="14sp"
+            android:padding="16dp"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+</LinearLayout>
