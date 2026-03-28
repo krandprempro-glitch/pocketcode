@@ -86,6 +86,10 @@ object SessionManager {
         return sessions.find { it.id == sessionId }
     }
 
+    fun getSessionByHandle(handle: String): SessionInfo? {
+        return sessions.find { it.terminalHandle == handle }
+    }
+
     fun getAllSessions(): List<SessionInfo> = sessions.toList()
 
     private fun saveToStorage() {
