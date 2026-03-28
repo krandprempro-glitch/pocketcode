@@ -125,7 +125,7 @@ class SessionListFragment : Fragment() {
     }
 
     private fun showSshInitRequiredDialog() {
-        AlertDialog.Builder(requireContext(), R.style.AppTheme_Dialog_Dark)
+        AlertDialog.Builder(requireContext(), R.style.AppTheme_Dialog_Blue)
             .setTitle("创建终端")
             .setMessage("首次使用需要先初始化 SSH 环境，是否立即初始化？")
             .setPositiveButton("确认初始化") { _, _ ->

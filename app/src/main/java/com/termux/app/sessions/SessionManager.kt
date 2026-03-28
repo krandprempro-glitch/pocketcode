@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken
 object SessionManager {
     private const val PREFS_NAME = "termux_sessions"
     private const val KEY_SESSIONS = "sessions"
+    private const val KEY_SSH_INITIALIZED = "ssh_initialized"
 
     private lateinit var prefs: SharedPreferences
     private val sessions = mutableListOf<SessionInfo>()
@@ -16,6 +17,14 @@ object SessionManager {
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         loadFromStorage()
+    }
+
+    fun isSshInitialized(): Boolean {
+        return prefs.getBoolean(KEY_SSH_INITIALIZED, false)
+    }
+
+    fun setSshInitialized(initialized: Boolean) {
+        prefs.edit().putBoolean(KEY_SSH_INITIALIZED, initialized).apply()
     }
 
     fun createSession(name: String, sshConfigName: String?, path: String): SessionInfo {

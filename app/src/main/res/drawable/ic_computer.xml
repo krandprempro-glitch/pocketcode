@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0">
+    <!-- Monitor -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,4h16v12H4V4zM6,6v8h12V6H6z" />
+    <!-- Screen inner -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M6,7h12v6H6V7z" />
+    <!-- Stand -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,16h4v2h-4z" />
+    <!-- Base -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8,18h8v1H8z" />
+</vector>

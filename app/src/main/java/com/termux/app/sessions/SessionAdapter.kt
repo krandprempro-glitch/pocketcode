@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.termux.R
 import com.termux.databinding.ItemSessionBinding
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -39,26 +40,27 @@ class SessionAdapter(
                 sessionTime.text = formatTime(session.lastActiveTime)
 
                 // Status icon and text
-                val (icon, color, statusText) = getStatusDisplay(session.status)
-                sessionStatusIcon.text = icon
-                sessionStatusIcon.setTextColor(color)
+                val (iconRes, bgColor, statusText) = getStatusDisplay(session.status)
+                sessionStatusIcon.setImageResource(iconRes)
+                sessionStatusIcon.setColorFilter(android.graphics.Color.WHITE)
+                sessionStatusIcon.backgroundTintList = android.content.res.ColorStateList.valueOf(bgColor)
                 sessionStatusText.text = statusText
-                sessionStatusText.setTextColor(color)
+                sessionStatusText.setTextColor(bgColor)
 
                 root.setOnClickListener { onSessionClick(session) }
                 root.setOnLongClickListener { onSessionLongClick(session) }
             }
         }
 
-        private fun getStatusDisplay(status: SessionStatus): Triple<String, Int, String> {
+        private fun getStatusDisplay(status: SessionStatus): Triple<Int, Int, String> {
             val context = binding.root.context
             return when (status) {
-                SessionStatus.IDLE -> Triple("○", getColor(context, "status_idle"), "空闲")
-                SessionStatus.RUNNING -> Triple("●", getColor(context, "status_running"), "运行中")
-                SessionStatus.CLAUDE_THINKING -> Triple("◐", getColor(context, "status_thinking"), "思考中")
-                SessionStatus.CLAUDE_WORKING -> Triple("◑", getColor(context, "status_working"), "输出中")
-                SessionStatus.WAITING_INPUT -> Triple("◕", getColor(context, "status_waiting"), "等待输入")
-                SessionStatus.ERROR -> Triple("⚠", getColor(context, "status_error"), "错误")
+                SessionStatus.IDLE -> Triple(R.drawable.ic_computer, getColor(context, "status_idle"), "空闲")
+                SessionStatus.RUNNING -> Triple(R.drawable.ic_computer, getColor(context, "status_running"), "运行中")
+                SessionStatus.CLAUDE_THINKING -> Triple(R.drawable.ic_computer, getColor(context, "status_thinking"), "思考中")
+                SessionStatus.CLAUDE_WORKING -> Triple(R.drawable.ic_computer, getColor(context, "status_working"), "输出中")
+                SessionStatus.WAITING_INPUT -> Triple(R.drawable.ic_computer, getColor(context, "status_waiting"), "等待输入")
+                SessionStatus.ERROR -> Triple(R.drawable.ic_computer, getColor(context, "status_error"), "错误")
             }
         }
 
