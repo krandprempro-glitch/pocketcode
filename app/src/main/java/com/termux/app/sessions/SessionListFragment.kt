@@ -168,11 +168,38 @@ class SessionListFragment : Fragment() {
     }
 
     private fun showSessionOptions(session: SessionInfo) {
+        val options = arrayOf("重命名", "关闭会话")
         AlertDialog.Builder(requireContext())
             .setTitle(session.name)
-            .setItems(arrayOf("关闭会话")) { _, _ ->
-                SessionManager.closeSession(session.id)
-                refreshSessions()
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showRenameDialog(session)
+                    1 -> {
+                        SessionManager.closeSession(session.id)
+                        refreshSessions()
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showRenameDialog(session: SessionInfo) {
+        val editText = android.widget.EditText(requireContext()).apply {
+            setText(session.name)
+            setSelection(session.name.length)
+            setPadding(48, 32, 48, 16)
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("重命名会话")
+            .setView(editText)
+            .setPositiveButton("确定") { _, _ ->
+                val newName = editText.text.toString().trim()
+                if (newName.isNotEmpty() && newName != session.name) {
+                    SessionManager.renameSession(session.id, newName)
+                    refreshSessions()
+                }
             }
             .setNegativeButton("取消", null)
             .show()

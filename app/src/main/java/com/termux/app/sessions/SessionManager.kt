@@ -124,6 +124,16 @@ object SessionManager {
         }
     }
 
+    fun renameSession(sessionId: String, newName: String) {
+        sessions.indexOfFirst { it.id == sessionId }.takeIf { it >= 0 }?.let { index ->
+            sessions[index] = sessions[index].copy(
+                name = newName,
+                lastActiveTime = System.currentTimeMillis()
+            )
+            saveToStorage()
+        }
+    }
+
     fun getSession(sessionId: String): SessionInfo? {
         return sessions.find { it.id == sessionId }
     }
