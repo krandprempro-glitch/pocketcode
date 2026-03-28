@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.termux.R;
+import com.termux.app.MainTabActivity;
 import com.termux.app.activities.GitFileDetailActivity;
 import com.termux.app.decorations.DividerItemDecoration;
 import com.termux.app.models.GitBranch;
@@ -325,13 +326,23 @@ public class GitHistoryFragment extends Fragment {
         super.onResume();
         Logger.logDebug("GitHistoryFragment", "onResume called");
         Logger.logDebug("GitHistoryFragment", "isConnected: " + (viewModel != null && viewModel.isConnected()));
+
         if (viewModel != null && viewModel.isConnected()) {
             String path = viewModel.getCurrentPath().getValue();
             Logger.logDebug("GitHistoryFragment", "currentPath from viewModel: " + path);
-            if (path == null || path.isEmpty()) {
+
+            // Try to get current directory from MainTabActivity
+            if ((path == null || path.isEmpty()) && getActivity() instanceof MainTabActivity) {
+                MainTabActivity activity = (MainTabActivity) getActivity();
+                // Request sync from Tab2
+                Logger.logDebug("GitHistoryFragment", "Requesting directory sync from MainTabActivity");
+                activity.syncGitHistoryWithFileBrowser();
+            } else if (path == null || path.isEmpty()) {
                 // 默认使用 SSH 家目录
+                Logger.logDebug("GitHistoryFragment", "Loading default path: /");
                 viewModel.loadGitHistory("/");
             } else {
+                Logger.logDebug("GitHistoryFragment", "Refreshing with existing path: " + path);
                 viewModel.refresh();
             }
         }

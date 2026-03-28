@@ -322,6 +322,24 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
     }
 
     /**
+     * 主动同步 Tab2 的当前目录到 Tab3
+     * 当 Tab3 onResume 时调用
+     */
+    fun syncGitHistoryWithFileBrowser() {
+        Logger.logDebug("MainTabActivity", "syncGitHistoryWithFileBrowser called")
+        val fileBrowserFragment = pagerAdapter.getCurrentFragment(1)
+        val gitHistoryFragment = pagerAdapter.getCurrentFragment(2)
+
+        if (fileBrowserFragment is RemoteFileBrowserFragment && gitHistoryFragment is GitHistoryFragment) {
+            val currentDir = fileBrowserFragment.getCurrentDirectory()
+            Logger.logDebug("MainTabActivity", "Current directory from Tab2: $currentDir")
+            if (currentDir.isNotEmpty()) {
+                gitHistoryFragment.onDirectoryChanged(currentDir)
+            }
+        }
+    }
+
+    /**
      * Tab页面适配器 - 包含4个Fragment
      */
     private class TabPagerAdapter(@NonNull private val fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
