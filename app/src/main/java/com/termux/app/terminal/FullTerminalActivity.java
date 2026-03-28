@@ -400,7 +400,20 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         if (toolbar != null) {
             toolbar.setTitle(mSessionName != null ? mSessionName : "终端");
             toolbar.setNavigationOnClickListener(v -> onBackPressed());
+            toolbar.inflateMenu(R.menu.menu_full_terminal);
+            toolbar.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.action_scripts) {
+                    showScriptSelectionDialog();
+                    return true;
+                }
+                return false;
+            });
         }
+    }
+
+    private void showScriptSelectionDialog() {
+        // TODO: 用户手动处理脚本选择逻辑
+        android.widget.Toast.makeText(this, "脚本功能开发中", android.widget.Toast.LENGTH_SHORT).show();
     }
 
     private void setupTerminalView() {
