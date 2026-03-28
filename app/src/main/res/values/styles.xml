@@ -98,6 +98,24 @@
         <item name="android:windowExitAnimation">@android:anim/slide_out_right</item>
     </style>
 
+    <style name="AppTheme.BottomSheetDialog" parent="Theme.MaterialComponents.BottomSheetDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="bottomSheetStyle">@style/ScriptBottomSheetStyle</item>
+    </style>
+
+    <style name="ScriptBottomSheetStyle" parent="Widget.MaterialComponents.BottomSheet">
+        <item name="backgroundTint">#1E293B</item>
+        <item name="shapeAppearanceOverlay">@style/ScriptBottomSheetShape</item>
+    </style>
+
+    <style name="ScriptBottomSheetShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">16dp</item>
+        <item name="cornerSizeTopRight">16dp</item>
+    </style>
+
     <!-- Claude Code 快捷指令分组样式 -->
     <style name="CommandGroupHeaderStyle">
         <item name="android:layout_width">match_parent</item>

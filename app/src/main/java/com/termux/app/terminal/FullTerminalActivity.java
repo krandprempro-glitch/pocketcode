@@ -420,51 +420,30 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
             return;
         }
 
-        // 使用自定义对话框布局
-        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        // 使用底部弹窗（BottomSheet），背景保持可见
+        com.google.android.material.bottomsheet.BottomSheetDialog bottomSheet = new com.google.android.material.bottomsheet.BottomSheetDialog(this, R.style.AppTheme_BottomSheetDialog);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_script_selection, null);
-        dialog.setContentView(dialogView);
-
-        // 设置背景透明
-        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        bottomSheet.setContentView(dialogView);
 
         // 设置RecyclerView
         androidx.recyclerview.widget.RecyclerView recyclerView = dialogView.findViewById(R.id.scripts_recycler_view);
         recyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
         com.termux.app.adapters.ScriptAdapter adapter = new com.termux.app.adapters.ScriptAdapter(scripts, script -> {
-            dialog.dismiss();
+            bottomSheet.dismiss();
             executeScript(script);
         });
         recyclerView.setAdapter(adapter);
 
         // 取消按钮
-        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> bottomSheet.dismiss());
 
-        dialog.show();
+        bottomSheet.show();
     }
 
     private void executeScript(com.termux.app.models.ScriptItem script) {
-        com.termux.app.sftp.SFTPConnectionManager sftpManager = com.termux.app.sftp.SFTPConnectionManager.getInstance();
-
-        if (!sftpManager.isConnected()) {
-            Toast.makeText(this, "请先建立SSH连接", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
+        // 直接发送脚本内容到终端执行
         Toast.makeText(this, "正在执行脚本: " + script.getName(), Toast.LENGTH_SHORT).show();
-
-        // Escape script content for bash -c
-        String escapedContent = script.getContent()
-            .replace("\\", "\\\\")
-            .replace("'", "'\\''");
-
-        String command = "bash -c '" + escapedContent + "'";
-
-        sftpManager.executeCommand(command)
-            .subscribe(
-                result -> runOnUiThread(() -> Toast.makeText(this, "脚本执行完成", Toast.LENGTH_SHORT).show()),
-                error -> runOnUiThread(() -> Toast.makeText(this, "脚本执行失败: " + error.getMessage(), Toast.LENGTH_LONG).show())
-            );
+        sendCommandToTerminal(script.getContent());
     }
 
     private void setupTerminalView() {
