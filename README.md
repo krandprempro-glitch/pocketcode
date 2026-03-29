@@ -1,273 +1,543 @@
-# Termux application
-请执行Termux远程文件浏览器项目的批次任务。工作目录是：D:\as\termux-app-master
-执行步骤：
-1. 先读取总规划：todos/task_0904_1300.md （了解整体架构）
-2. 读取具体批次：todos/batch_0904_XXXX.md （获取详细任务）
-3. 使用TodoWrite工具跟踪每个子任务进度
-4. 严格按批次文件的检查清单逐项完成
+<p align="center">
+  <img src="https://avatars.githubusercontent.com/u/29275069?s=200&v=4" width="120" alt="Termux Logo"/>
+</p>
 
+<h1 align="center">Termux AI Dev</h1>
 
-[![Build status](https://github.com/termux/termux-app/workflows/Build/badge.svg)](https://github.com/termux/termux-app/actions)
-[![Testing status](https://github.com/termux/termux-app/workflows/Unit%20tests/badge.svg)](https://github.com/termux/termux-app/actions)
-[![Join the chat at https://gitter.im/termux/termux](https://badges.gitter.im/termux/termux.svg)](https://gitter.im/termux/termux)
-[![Join the Termux discord server](https://img.shields.io/discord/641256914684084234.svg?label=&logo=discord&logoColor=ffffff&color=5865F2)](https://discord.gg/HXpF69X)
-[![Termux library releases at Jitpack](https://jitpack.io/v/termux/termux-app.svg)](https://jitpack.io/#termux/termux-app)
+<p align="center">
+  <strong>Android 上的远程开发工作站 —— 为 Claude Code / AI 辅助编程而生</strong>
+</p>
 
+<p align="center">
+  <a href="#功能概览">功能概览</a> •
+  <a href="#下载安装">下载安装</a> •
+  <a href="#快速开始">快速开始</a> •
+  <a href="#使用指南">使用指南</a> •
+  <a href="#远程连接技巧">远程连接技巧</a> •
+  <a href="#致谢">致谢</a>
+</p>
 
-[Termux](https://termux.com) is an Android terminal application and Linux environment.
+---
 
-Note that this repository is for the app itself (the user interface and the terminal emulation). For the packages installable inside the app, see [termux/termux-packages](https://github.com/termux/termux-packages).
+## 项目简介
 
-Quick how-to about Termux package management is available at [Package Management](https://github.com/termux/termux-packages/wiki/Package-Management). It also has info on how to fix **`repository is under maintenance or down`** errors when running `apt` or `pkg` commands.
+**Termux AI Dev** 是基于 [Termux](https://github.com/termux/termux-app) (v0.118.0) 深度定制的 Android 终端应用，专为移动端远程开发场景设计。在保留 Termux 完整终端能力的基础上，新增了 VSCode 风格的远程文件浏览器、Git 历史查看器、Claude Code 快捷指令集成、剪贴板同步、项目管理等工作站级功能。
 
-**We are looking for Termux Android application maintainers.**
+> **本项目基于 [Termux](https://github.com/termux/termux-app) 开源项目开发，遵循 GPLv3 许可证。**
+> Termux 是一个强大的 Android 终端模拟器和 Linux 环境应用，由 Termux 社区维护。感谢 Termux 团队的卓越工作。
 
-***
+### 核心特性
 
-**NOTICE: Termux may be unstable on Android 12+.** Android OS will kill any (phantom) processes greater than 32 (limit is for all apps combined) and also kill any processes using excessive CPU. You may get `[Process completed (signal 9) - press Enter]` message in the terminal without actually exiting the shell process yourself. Check the related issue [#2366](https://github.com/termux/termux-app/issues/2366), [issue tracker](https://issuetracker.google.com/u/1/issues/205156966), [phantom cached and empty processes docs](https://github.com/agnostic-apollo/Android-Docs/blob/master/en/docs/apps/processes/phantom-cached-and-empty-processes.md) and [this TLDR comment](https://github.com/termux/termux-app/issues/2366#issuecomment-1237468220) on how to disable trimming of phantom and excessive cpu usage processes. A proper docs page will be added later. An option to disable the killing should be available in Android 12L or 13, so upgrade at your own risk if you are on Android 11, specially if you are not rooted.
+- **四标签页工作台** — 终端会话 / 远程文件浏览 / Git 历史 / 配置中心
+- **Claude Code 深度集成** — 18 个内置快捷指令 + 自定义指令菜单 + 剪贴板同步
+- **VSCode 风格文件浏览** — 目录树导航 + 书签管理 + 语法高亮预览
+- **Git 可视化** — 提交历史 + 分支切换 + 彩色 Diff 查看器
+- **一键项目运行** — 预配置 Node.js / Python / Java / Go / PHP / Ruby 运行命令
 
-***
+---
 
-## Contents
-- [Termux App and Plugins](#termux-app-and-plugins)
-- [Installation](#installation)
-- [Uninstallation](#uninstallation)
-- [Important Links](#important-links)
-- [Debugging](#debugging)
-- [For Maintainers and Contributors](#for-maintainers-and-contributors)
-- [Forking](#forking)
-##
-
-
-
-## Termux App and Plugins
-
-The core [Termux](https://github.com/termux/termux-app) app comes with the following optional plugin apps.
-
-- [Termux:API](https://github.com/termux/termux-api)
-- [Termux:Boot](https://github.com/termux/termux-boot)
-- [Termux:Float](https://github.com/termux/termux-float)
-- [Termux:Styling](https://github.com/termux/termux-styling)
-- [Termux:Tasker](https://github.com/termux/termux-tasker)
-- [Termux:Widget](https://github.com/termux/termux-widget)
-##
-
-
-
-## Installation
-
-Latest version is `v0.118.3`.
-
-**NOTICE: It is highly recommended that you update to `v0.118.0` or higher ASAP for various bug fixes, including a critical world-readable vulnerability reported [here](https://termux.github.io/general/2022/02/15/termux-apps-vulnerability-disclosures.html). See [below](#google-play-store-experimental-branch) for information regarding Termux on Google Play.**
-
-Termux can be obtained through various sources listed below for **only** Android `>= 7` with full support for apps and packages.
-
-Support for both app and packages was dropped for Android `5` and `6` on [2020-01-01](https://www.reddit.com/r/termux/comments/dnzdbs/end_of_android56_support_on_20200101/) at `v0.83`, however it was re-added just for the app *without any support for package updates* on [2022-05-24](https://github.com/termux/termux-app/pull/2740) via the [GitHub](#github) sources. Check [here](https://github.com/termux/termux-app/wiki/Termux-on-android-5-or-6) for the details.
-
-The APK files of different sources are signed with different signature keys. The `Termux` app and all its plugins use the same [`sharedUserId`](https://developer.android.com/guide/topics/manifest/manifest-element) `com.termux` and so all their APKs installed on a device must have been signed with the same signature key to work together and so they must all be installed from the same source. Do not attempt to mix them together, i.e do not try to install an app or plugin from `F-Droid` and another one from a different source like `GitHub`. Android Package Manager will also normally not allow installation of APKs with different signatures and you will get errors on installation like `App not installed`, `Failed to install due to an unknown error`, `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE`, `signatures do not match previously installed version`, etc. This restriction can be bypassed with root or with custom roms.
-
-If you wish to install from a different source, then you must **uninstall any and all existing Termux or its plugin app APKs** from your device first, then install all new APKs from the same new source. Check [Uninstallation](#uninstallation) section for details. You may also want to consider [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux) before the uninstallation so that you can restore it after re-installing from Termux different source.
-
-In the following paragraphs, *"bootstrap"* refers to the minimal packages that are shipped with the `termux-app` itself to start a working shell environment. Its zips are built and released [here](https://github.com/termux/termux-packages/releases).
-
-### F-Droid
-
-Termux application can be obtained from `F-Droid` from [here](https://f-droid.org/en/packages/com.termux/).
-
-You **do not** need to download the `F-Droid` app (via the `Download F-Droid` link) to install Termux. You can download the Termux APK directly from the site by clicking the `Download APK` link at the bottom of each version section.
-
-It usually takes a few days (or even a week or more) for updates to be available on `F-Droid` once an update has been released on `GitHub`. The `F-Droid` releases are built and published by `F-Droid` once they [detect](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/com.termux.yml) a new `GitHub` release. The Termux maintainers **do not** have any control over the building and publishing of the Termux apps on `F-Droid`. Moreover, the Termux maintainers also do not have access to the APK signing keys of `F-Droid` releases, so we cannot release an APK ourselves on `GitHub` that would be compatible with `F-Droid` releases.
-
-The `F-Droid` app often may not notify you of updates and you will manually have to do a pull down swipe action in the `Updates` tab of the app for it to check updates. Make sure battery optimizations are disabled for the app, check https://dontkillmyapp.com/ for details on how to do that.
-
-Only a universal APK is released, which will work on all supported architectures. The APK and bootstrap installation size will be `~180MB`. `F-Droid` does [not support](https://github.com/termux/termux-app/pull/1904) architecture specific APKs.
-
-### GitHub
-
-Termux application can be obtained on `GitHub` either from [`GitHub Releases`](https://github.com/termux/termux-app/releases) for version `>= 0.118.0` or from [`GitHub Build Action`](https://github.com/termux/termux-app/actions/workflows/debug_build.yml?query=branch%3Amaster+event%3Apush) workflows. **For android `>= 7`, only install `apt-android-7` variants. For android `5` and `6`, only install `apt-android-5` variants.**
-
-The APKs for `GitHub Releases` will be listed under `Assets` drop-down of a release. These are automatically attached when a new version is released.
-
-The APKs for `GitHub Build` action workflows will be listed under `Artifacts` section of a workflow run. These are created for each commit/push done to the repository and can be used by users who don't want to wait for releases and want to try out the latest features immediately or want to test their pull requests. Note that for action workflows, you need to be [**logged into a `GitHub` account**](https://github.com/login) for the `Artifacts` links to be enabled/clickable. If you are using the [`GitHub` app](https://github.com/mobile), then make sure to open workflow link in a browser like Chrome or Firefox that has your GitHub account logged in since the in-app browser may not be logged in.
-
-The APKs for both of these are [`debuggable`](https://developer.android.com/studio/debug) and are compatible with each other but they are not compatible with other sources.
-
-Both universal and architecture specific APKs are released. The APK and bootstrap installation size will be `~180MB` if using universal and `~120MB` if using architecture specific. Check [here](https://github.com/termux/termux-app/issues/2153) for details.
-
-**Security warning**: APK files on GitHub are signed with a test key that has been [shared with community](https://github.com/termux/termux-app/blob/master/app/testkey_untrusted.jks). This IS NOT an official developer key and everyone can use it to generate releases for own testing. Be very careful when using Termux GitHub builds obtained elsewhere except https://github.com/termux/termux-app. Everyone is able to use it to forge a malicious Termux update installable over the GitHub build. Think twice about installing Termux builds distributed via Telegram or other social media. If your device get caught by malware, we will not be able to help you.
-
-The [test key](https://github.com/termux/termux-app/blob/master/app/testkey_untrusted.jks) shall not be used to impersonate @termux and can't be used for this anyway. This key is not trusted by us and it is quite easy to detect its use in user generated content.
-
-<details>
-<summary>Keystore information</summary>
+## 功能概览
 
 ```
-Alias name: alias
-Creation date: Oct 4, 2019
-Entry type: PrivateKeyEntry
-Certificate chain length: 1
-Certificate[1]:
-Owner: CN=APK Signer, OU=Earth, O=Earth
-Issuer: CN=APK Signer, OU=Earth, O=Earth
-Serial number: 29be297b
-Valid from: Wed Sep 04 02:03:24 EEST 2019 until: Tue Oct 26 02:03:24 EEST 2049
-Certificate fingerprints:
-         SHA1: 51:79:55:EA:BF:69:FC:05:7C:41:C7:D3:79:DB:BC:EF:20:AD:85:F2
-         SHA256: B6:DA:01:48:0E:EF:D5:FB:F2:CD:37:71:B8:D1:02:1E:C7:91:30:4B:DD:6C:4B:F4:1D:3F:AA:BA:D4:8E:E5:E1
-Signature algorithm name: SHA1withRSA (disabled)
-Subject Public Key Algorithm: 2048-bit RSA key
-Version: 3
+┌──────────────────────────────────────────────────┐
+│  Tab 0: 终端会话    │  Tab 1: 远程文件浏览       │
+│  · 多会话管理       │  · SFTP 文件浏览            │
+│  · SSH 快速连接     │  · 目录树 + 书签            │
+│  · Claude Code 菜单 │  · 语法高亮预览             │
+│  · 快捷指令         │  · 文件下载 / 属性查看       │
+├──────────────────────────────────────────────────┤
+│  Tab 2: Git 历史    │  Tab 3: 配置中心            │
+│  · 提交历史列表     │  · SSH 连接配置              │
+│  · 分支切换         │  · 运行配置管理              │
+│  · 文件 Diff 查看   │  · 快捷指令管理              │
+│  · 跟随目录联动     │  · 全局设置                  │
+└──────────────────────────────────────────────────┘
 ```
 
-</details>
+---
 
-### Google Play Store **(Experimental branch)**
+## 下载安装
 
-There is currently a build of Termux available on Google Play for Android 11+ devices, with extensive adjustments in order to pass policy requirements there. This is under development and has missing functionality and bugs (see [here](https://github.com/termux-play-store/) for status updates) compared to the stable F-Droid build, which is why most users who can should still use F-Droid or GitHub build as mentioned above.
+### 环境要求
 
-Currently, Google Play will try to update installations away from F-Droid ones. Updating will still fail as [sharedUserId](https://developer.android.com/guide/topics/manifest/manifest-element#uid) has been removed. A planned 0.118.1 F-Droid release will fix this by setting a higher version code than used for the PlayStore app. Meanwhile, to prevent Google Play from attempting to download and then fail to install the Google Play releases over existing installations, you can open the Termux apps pages on Google Play and then click on the 3 dots options button in the top right and then disable the Enable auto update toggle. However, the Termux apps updates will still show in the PlayStore app updates list.
+- Android 5.0 (API 21) 及以上
+- 支持架构：`arm64-v8a`、`armeabi-v7a`、`x86_64`
 
-If you want to help out with testing the Google Play build (or cannot install Termux from other sources), be aware that it's built from a separate repository (https://github.com/termux-play-store/) - be sure to report issues [there](https://github.com/termux-play-store/termux-issues/issues/new/choose), as any issues encountered might very well be specific to that repository.
+### 构建
 
-## Uninstallation
+```bash
+# 克隆项目
+git clone https://github.com/YOUR_USERNAME/termux-ai-dev.git
+cd termux-ai-dev
 
-Uninstallation may be required if a user doesn't want Termux installed in their device anymore or is switching to a different [install source](#installation). You may also want to consider [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux) before the uninstallation.
+# 构建 Debug APK
+./gradlew app:assembleDebug
 
-To uninstall Termux completely, you must uninstall **any and all existing Termux or its plugin app APKs** listed in [Termux App and Plugins](#termux-app-and-plugins).
+# 构建 Release APK
+./gradlew app:assembleRelease
 
-Go to `Android Settings` -> `Applications` and then look for those apps. You can also use the search feature if it’s available on your device and search `termux` in the applications list.
-
-Even if you think you have not installed any of the plugins, it's strongly suggested to go through the application list in Android settings and double-check.
-##
-
-
-
-## Important Links
-
-### Community
-All community links are available [here](https://wiki.termux.com/wiki/Community).
-
-The main ones are the following.
-
-- [Termux Reddit community](https://reddit.com/r/termux)
-- [Termux User Matrix Channel](https://matrix.to/#/#termux_termux:gitter.im) ([Gitter](https://gitter.im/termux/termux))
-- [Termux Dev Matrix Channel](https://matrix.to/#/#termux_dev:gitter.im) ([Gitter](https://gitter.im/termux/dev))
-- [Termux X (Twitter)](https://twitter.com/termuxdevs)
-- [Termux Support Email](mailto:support@termux.dev)
-
-### Wikis
-
-- [Termux Wiki](https://wiki.termux.com/wiki/)
-- [Termux App Wiki](https://github.com/termux/termux-app/wiki)
-- [Termux Packages Wiki](https://github.com/termux/termux-packages/wiki)
-
-### Miscellaneous
-- [FAQ](https://wiki.termux.com/wiki/FAQ)
-- [Termux File System Layout](https://github.com/termux/termux-packages/wiki/Termux-file-system-layout)
-- [Differences From Linux](https://wiki.termux.com/wiki/Differences_from_Linux)
-- [Package Management](https://wiki.termux.com/wiki/Package_Management)
-- [Remote Access](https://wiki.termux.com/wiki/Remote_Access)
-- [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux)
-- [Terminal Settings](https://wiki.termux.com/wiki/Terminal_Settings)
-- [Touch Keyboard](https://wiki.termux.com/wiki/Touch_Keyboard)
-- [Android Storage and Sharing Data with Other Apps](https://wiki.termux.com/wiki/Internal_and_external_storage)
-- [Android APIs](https://wiki.termux.com/wiki/Termux:API)
-- [Moved Termux Packages Hosting From Bintray to IPFS](https://github.com/termux/termux-packages/issues/6348)
-- [Running Commands in Termux From Other Apps via `RUN_COMMAND` intent](https://github.com/termux/termux-app/wiki/RUN_COMMAND-Intent)
-- [Termux and Android 10](https://github.com/termux/termux-packages/wiki/Termux-and-Android-10)
-
-
-### Terminal
-
-<details>
-<summary></summary>
-
-### Terminal resources
-
-- [XTerm control sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)
-- [vt100.net](https://vt100.net/)
-- [Terminal codes (ANSI and terminfo equivalents)](https://wiki.bash-hackers.org/scripting/terminalcodes)
-
-### Terminal emulators
-
-- VTE (libvte): Terminal emulator widget for GTK+, mainly used in gnome-terminal. [Source](https://github.com/GNOME/vte), [Open Issues](https://bugzilla.gnome.org/buglist.cgi?quicksearch=product%3A%22vte%22+), and [All (including closed) issues](https://bugzilla.gnome.org/buglist.cgi?bug_status=RESOLVED&bug_status=VERIFIED&chfield=resolution&chfieldfrom=-2000d&chfieldvalue=FIXED&product=vte&resolution=FIXED).
-
-- iTerm 2: OS X terminal application. [Source](https://github.com/gnachman/iTerm2), [Issues](https://gitlab.com/gnachman/iterm2/issues) and [Documentation](https://iterm2.com/documentation.html) (which includes [iTerm2 proprietary escape codes](https://iterm2.com/documentation-escape-codes.html)).
-
-- Konsole: KDE terminal application. [Source](https://projects.kde.org/projects/kde/applications/konsole/repository), in particular [tests](https://projects.kde.org/projects/kde/applications/konsole/repository/revisions/master/show/tests), [Bugs](https://bugs.kde.org/buglist.cgi?bug_severity=critical&bug_severity=grave&bug_severity=major&bug_severity=crash&bug_severity=normal&bug_severity=minor&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&product=konsole) and [Wishes](https://bugs.kde.org/buglist.cgi?bug_severity=wishlist&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&product=konsole).
-
-- hterm: JavaScript terminal implementation from Chromium. [Source](https://github.com/chromium/hterm), including [tests](https://github.com/chromium/hterm/blob/master/js/hterm_vt_tests.js), and [Google group](https://groups.google.com/a/chromium.org/forum/#!forum/chromium-hterm).
-
-- xterm: The grandfather of terminal emulators. [Source](https://invisible-island.net/datafiles/release/xterm.tar.gz).
-
-- Connectbot: Android SSH client. [Source](https://github.com/connectbot/connectbot)
-
-- Android Terminal Emulator: Android terminal app which Termux terminal handling is based on. Inactive. [Source](https://github.com/jackpal/Android-Terminal-Emulator).
-</details>
-
-##
-
-
-
-### Debugging
-
-You can help debug problems of the `Termux` app and its plugins by setting appropriate `logcat` `Log Level` in `Termux` app settings -> `<APP_NAME>` -> `Debugging` -> `Log Level` (Requires `Termux` app version `>= 0.118.0`). The `Log Level` defaults to `Normal` and log level `Verbose` currently logs additional information. Its best to revert log level to `Normal` after you have finished debugging since private data may otherwise be passed to `logcat` during normal operation and moreover, additional logging increases execution time.
-
-The plugin apps **do not execute the commands themselves** but send execution intents to `Termux` app, which has its own log level which can be set in `Termux` app settings -> `Termux` -> `Debugging` -> `Log Level`. So you must set log level for both `Termux` and the respective plugin app settings to get all the info.
-
-Once log levels have been set, you can run the `logcat` command in `Termux` app terminal to view the logs in realtime (`Ctrl+c` to stop) or use `logcat -d > logcat.txt` to take a dump of the log. You can also view the logs from a PC over `ADB`. For more information, check official android `logcat` guide [here](https://developer.android.com/studio/command-line/logcat).
-
-Moreover, users can generate termux files `stat` info and `logcat` dump automatically too with terminal's long hold options menu `More` -> `Report Issue` option and selecting `YES` in the prompt shown to add debug info. This can be helpful for reporting and debugging other issues. If the report generated is too large, then `Save To File` option in context menu (3 dots on top right) of `ReportActivity` can be used and the file viewed/shared instead.
-
-Users must post complete report (optionally without sensitive info) when reporting issues. Issues opened with **(partial) screenshots of error reports** instead of text will likely be automatically closed/deleted.
-
-##### Log Levels
-
-- `Off` - Log nothing.
-- `Normal` - Start logging error, warn and info messages and stacktraces.
-- `Debug` - Start logging debug messages.
-- `Verbose` - Start logging verbose messages.
-##
-
-
-
-## For Maintainers and Contributors
-
-The [termux-shared](termux-shared) library was added in [`v0.109`](https://github.com/termux/termux-app/releases/tag/v0.109). It defines shared constants and utils of the Termux app and its plugins. It was created to allow for the removal of all hardcoded paths in the Termux app. Some of the termux plugins are using this as well and rest will in future. If you are contributing code that is using a constant or a util that may be shared, then define it in `termux-shared` library if it currently doesn't exist and reference it from there. Update the relevant changelogs as well. Pull requests using hardcoded values **will/should not** be accepted. Termux app and plugin specific classes must be added under `com.termux.shared.termux` package and general classes outside it. The [`termux-shared` `LICENSE`](termux-shared/LICENSE.md) must also be checked and updated if necessary when contributing code. The licenses of any external library or code must be honoured.
-
-The main Termux constants are defined by [`TermuxConstants`](https://github.com/termux/termux-app/blob/master/termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java) class. It also contains information on how to fork Termux or build it with your own package name. Changing the package name will require building the bootstrap zip packages and other packages with the new `$PREFIX`, check [Building Packages](https://github.com/termux/termux-packages/wiki/Building-packages) for more info.
-
-Check [Termux Libraries](https://github.com/termux/termux-app/wiki/Termux-Libraries) for how to import termux libraries in plugin apps and [Forking and Local Development](https://github.com/termux/termux-app/wiki/Termux-Libraries#forking-and-local-development) for how to update termux libraries for plugins.
-
-The `versionName` in `build.gradle` files of Termux and its plugin apps must follow the [semantic version `2.0.0` spec](https://semver.org/spec/v2.0.0.html) in the format `major.minor.patch(-prerelease)(+buildmetadata)`. When bumping `versionName` in `build.gradle` files and when creating a tag for new releases on GitHub, make sure to include the patch number as well, like `v0.1.0` instead of just `v0.1`. The `build.gradle` files and `attach_debug_apks_to_release` workflow validates the version as well and the build/attachment will fail if `versionName` does not follow the spec.
-
-### Commit Messages Guidelines
-
-Commit messages **must** use the [Conventional Commits](https://www.conventionalcommits.org) spec so that chagelogs as per the [Keep a Changelog](https://github.com/olivierlacan/keep-a-changelog) spec can automatically be generated by the [`create-conventional-changelog`](https://github.com/termux/create-conventional-changelog) script, check its repo for further details on the spec. **The first letter for `type` and `description` must be capital and description should be in the present tense.** The space after the colon `:` is necessary. For a breaking change, add an exclamation mark `!` before the colon `:`, so that it is highlighted in the chagelog automatically.
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
+# APK 输出路径
+# app/build/outputs/apk/debug/app-debug.apk
+# app/build/outputs/apk/release/app-release.apk
 ```
 
-**Only the `types` listed below must be used exactly as they are used in the changelog headings.** For example, `Added: Add foo`, `Added|Fixed: Add foo and fix bar`, `Changed!: Change baz as a breaking change`, etc. You can optionally add a scope as well, like `Fixed(terminal): Fix some bug`. **Do not use anything else as type, like `add` instead of `Added`, etc.**
+---
 
-- **Added** for new features.
-- **Changed** for changes in existing functionality.
-- **Deprecated** for soon-to-be removed features.
-- **Removed** for now removed features.
-- **Fixed** for any bug fixes.
-- **Security** in case of vulnerabilities.
-##
+## 快速开始
 
+### 1. 首次启动
 
+安装 APK 后首次打开，应用会自动完成以下初始化：
 
-## Forking
+- **Bootstrap 安装** — 自动解压架构对应的 Linux 文件系统（包含基础包管理器）
+- **环境配置** — 创建 `$PREFIX` 目录、设置 PATH、创建符号链接
+- **存储挂载** — 在 `~/storage/` 下创建共享存储、下载、图片等目录的符号链接
 
-- Check [`TermuxConstants`](https://github.com/termux/termux-app/blob/master/termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java) javadocs for instructions on what changes to make in the app to change package name.
-- You also need to recompile bootstrap zip for the new package name. Check [building bootstrap](https://github.com/termux/termux-packages/wiki/For-maintainers#build-bootstrap-archives), [here](https://github.com/termux/termux-app/issues/1983) and [here](https://github.com/termux/termux-app/issues/2081#issuecomment-865280111).
-- Currently, not all plugins use `TermuxConstants` from `termux-shared` library and have hardcoded `com.termux` values and will need to be manually patched.
-- If forking termux plugins, check [Forking and Local Development](https://github.com/termux/termux-app/wiki/Termux-Libraries#forking-and-local-development) for info on how to use termux libraries for plugins.
+> 如果初始化失败，可尝试删除应用数据后重新启动。
+
+### 2. SSH 初始化
+
+首次使用 SSH 功能前，需安装 OpenSSH：
+
+1. 打开 **终端会话** 标签页
+2. 点击右上角 **脚本** 按钮 (📜 图标)
+3. 选择执行 **SSH 初始化**，自动执行 `pkg install openssh sshpass -y`
+
+或者手动在终端中执行：
+```bash
+pkg install openssh sshpass -y
+```
+
+### 3. 配置 SSH 连接
+
+1. 进入 **配置中心** 标签页
+2. 点击 **SSH 配置**
+3. 点击 `+` 新建连接，填写：
+   - **配置名称**：如 `我的服务器`
+   - **IP 地址**：服务器 IP 或域名
+   - **端口**：默认 22
+   - **用户名**：登录用户名
+   - **密码**：登录密码（可选密钥认证）
+4. 点击 **测试连接** 验证，然后 **保存**
+
+---
+
+## 使用指南
+
+### Tab 0：终端会话
+
+#### 多会话管理
+
+- **新建会话** — 点击右下角 `+` 按钮，可选择：
+  - 关联 SSH 连接（自动登录远程服务器）
+  - 指定启动路径（通过收藏路径）
+  - 自定义会话名称
+- **切换会话** — 在会话列表中点击目标会话
+- **会话操作** — 长按会话卡片弹出选项菜单（重命名 / 关闭）
+- **会话状态** — 每个会话显示实时状态标签（运行中 / 空闲 / 错误等）
+
+#### Claude Code 快捷指令菜单
+
+在终端界面点击 **命令输入框左侧的菜单按钮**（或按 `Ctrl+/` / `Shift+Tab`），打开 BottomSheet 菜单：
+
+| 分类 | 内容 |
+|------|------|
+| **收藏路径** | 已保存的常用目录，点击自动 `cd` 到目标路径 |
+| **SSH 连接** | 已保存的 SSH 配置，点击自动连接 |
+| **快捷指令** | 用户自定义的常用命令 |
+| **AI 内置指令** | 18 个 Claude Code 内置指令 |
+| **AI 自定义指令** | 从远程服务器 `~/.claude/commands/` 同步的自定义技能 |
+| **系统命令** | `claude`、`claude --resume`、`claude -p`、`codex` |
+
+**内置 Claude Code 指令列表：**
+
+| 指令 | 功能 |
+|------|------|
+| `/resume` | 恢复上次会话 |
+| `/clear` | 清空对话 |
+| `/compact` | 压缩对话上下文 |
+| `/model` | 切换模型 |
+| `/config` | 打开配置 |
+| `/help` | 帮助信息 |
+| `/init` | 初始化项目 |
+| `/cost` | 查看 Token 用量 |
+| `/status` | 查看状态 |
+| `/permissions` | 权限管理 |
+| `/memory` | 编辑记忆文件 |
+| `/doctor` | 健康检查 |
+| `/mcp` | MCP 服务器管理 |
+| `/add-dir` | 添加工作目录 |
+| `/review` | 代码审查 |
+| `/bug` | 报告 Bug |
+| `/terminal-setup` | 终端设置 |
+| `/vim` | Vim 输入模式 |
+
+#### 键盘快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl + /` | 打开 Claude Code 菜单 |
+| `Shift + Tab` | 打开 Claude Code 菜单 |
+| `Ctrl + L` | 清屏 |
+| `Ctrl + C` | 中断信号 |
+| `Ctrl + Enter` | 发送命令 |
+
+#### 额外按键栏
+
+终端底部提供常用控制键快捷栏：`ESC`、`TAB`、`CTRL`、方向键、`ALT`、`SHIFT` 等，方便在没有硬件键盘的设备上操作。
+
+---
+
+### Tab 1：远程文件浏览
+
+#### 文件浏览
+
+- **左侧抽屉** — VSCode 风格的目录树导航（占屏幕 50% 宽度）
+- **连接状态指示** — 绿色/灰色圆点显示当前 SSH 连接状态
+- **文件列表** — 显示文件名、大小、修改时间、权限
+- **下拉刷新** — 支持 SwipeRefreshLayout 刷新当前目录
+- **首页按钮** — 一键返回远程用户 Home 目录
+
+#### 文件操作
+
+长按文件或点击文件右侧操作按钮，弹出操作面板：
+
+| 操作 | 说明 |
+|------|------|
+| **查看内容** | 内置代码查看器，支持语法高亮（Java/Kotlin/XML/HTML/CSS/JS/JSON/Markdown/Python/Shell/C/C++ 等） |
+| **下载到本地** | 通过 SFTP 下载文件到 Android 设备 |
+| **添加到书签** | 将文件/目录路径添加到收藏夹 |
+| **复制路径** | 复制远程路径到剪贴板 |
+| **文件信息** | 查看详细属性（类型/路径/大小/修改时间/权限/MIME 类型等） |
+
+**图片预览** — 对 JPG/PNG/GIF/WebP 图片文件，点击直接弹出图片预览弹窗。
+
+#### 书签管理
+
+- **添加书签** — 在文件操作面板中点击"添加到书签"
+- **管理书签** — 通过左侧抽屉菜单打开书签管理，支持：
+  - 重命名书签
+  - 移除书签
+  - 将书签路径发送到终端（自动执行 `cd`）
+- **路径收藏** — 长按目录路径栏可快速收藏当前目录
+- **工作区持久化** — 每个 SSH 连接维护独立的工作区状态，保存展开的目录、滚动位置等
+
+#### 目录联动
+
+文件浏览器与 **Git 历史** 标签页联动 — 切换目录时自动同步 Git 历史到当前目录。
+
+---
+
+### Tab 2：Git 历史
+
+#### 提交历史浏览
+
+- **分页加载** — 滚动到底部自动加载更多提交记录
+- **分支显示** — 顶部显示当前分支名
+- **分支切换** — 点击分支名弹出分支选择对话框
+- **展开详情** — 点击提交记录展开查看变更文件列表
+
+#### 变更文件查看
+
+每个提交展开后显示变更文件列表，带状态标识：
+
+| 标识 | 含义 |
+|------|------|
+| `A` | 新增文件 (Added) |
+| `M` | 修改文件 (Modified) |
+| `D` | 删除文件 (Deleted) |
+| `R` | 重命名文件 (Renamed) |
+
+#### Diff 查看器
+
+点击变更文件打开 **GitFileDetailActivity**，提供 GitLab 风格的彩色 Diff 视图：
+
+- `+` 增加行：绿色背景
+- `-` 删除行：红色背景
+- 上下文行：正常显示
+- Hunk 头部信息：显示 `@@ ... @@` 行号范围
+
+---
+
+### Tab 3：配置中心
+
+配置中心是统一的设置入口，包含五个模块：
+
+#### SSH 配置
+
+管理所有远程 SSH 连接，每个配置包含：
+- 配置名称、IP 地址、端口、用户名、密码
+- 支持密钥认证（ED25519 / ECDSA）
+- 一键测试连接
+
+#### 运行配置
+
+预配置项目运行命令，支持 **6 种语言** 自动识别：
+
+| 语言 | 预置命令示例 |
+|------|-------------|
+| **Node.js** | `npm run dev`、`yarn dev`、`pnpm dev`、`npm start` |
+| **Python** | `python app.py`、`flask run`、`gunicorn app:app` |
+| **Java** | `mvn spring-boot:run`、`gradle bootRun`、`java -jar app.jar` |
+| **Go** | `go run main.go`、`go build && ./app` |
+| **PHP** | `php artisan serve`、`composer serve` |
+| **Ruby** | `rails server`、`bundle exec rails s` |
+
+每个运行配置可设置：
+- 关联的 SSH 连接
+- 项目路径
+- 工作目录
+- 环境变量
+- 端口号
+- 是否后台运行
+- 日志文件名
+
+**执行流程**：选择运行配置 → 确认执行（显示命令预览）→ 远程执行 → 实时显示输出
+
+#### 快捷指令
+
+管理常用命令快捷方式，每个指令包含：
+- 名称、命令内容、描述
+- 分类标签
+- 使用次数统计
+
+#### 全局设置
+
+- **悬浮窗开关** — 开启后在其他应用上层显示快捷操作按钮
+- **远程命令测试** — 快速执行测试命令验证连接
+
+---
+
+### 悬浮窗系统
+
+开启悬浮窗后，在任何应用中可通过悬浮按钮快速操作：
+
+- **SSH 快速连接** — 从悬浮菜单选择已保存的 SSH 配置直接连接
+- **运行命令** — 选择运行配置，一键远程执行
+- **快捷设置** — 快速切换常用设置
+
+> 需要在系统设置中授予「显示在其他应用上层」权限。
+
+---
+
+### 剪贴板同步
+
+**自动双向同步** Android 设备与远程服务器的剪贴板内容：
+
+- **自动检测后端** — macOS 使用 `pbcopy`/`pbpaste`，Linux 使用 `xclip`
+- **定时轮询** — 每 5 秒检查一次剪贴板变化
+- **MD5 去重** — 通过指纹比对避免重复同步
+- **大小限制** — 单次同步上限 1MB
+- **自动启停** — SSH 连接建立时自动启动，断开时自动停止
+
+使用场景：在服务器上 `git clone` 一个仓库 URL，手机剪贴板自动获得该 URL，直接粘贴到浏览器中查看。
+
+---
+
+### 内置脚本
+
+通过终端会话标签页右上角的 **脚本按钮** (📜) 访问：
+
+#### 1. Claude Code 技能初始化 (`setup-claude-commands.sh`)
+
+在远程服务器上安装 Claude Code 自定义技能索引系统：
+
+```bash
+# 安装到远程服务器
+./setup-claude-commands.sh --install
+
+# 更新索引
+./setup-claude-commands.sh --update
+```
+
+**作用**：扫描远程服务器上 `~/.claude/commands/` 目录下的所有自定义命令和技能，生成 `commands.md` 索引文件。该索引文件会被 App 通过 SFTP 读取，用于填充终端中的「AI 自定义指令」菜单。
+
+#### 2. SSH Keepalive 配置 (`ssh-keepalive-setup.sh`)
+
+配置 SSH 服务端 Keepalive 参数，防止移动网络环境下 SSH 长连接断开：
+
+```bash
+# 自动应用（需 root）
+./ssh-keepalive-setup.sh --apply
+
+# 检查当前配置
+./ssh-keepalive-setup.sh --check
+
+# 恢复默认配置
+./ssh-keepalive-setup.sh --undo
+```
+
+**配置参数**：
+- `ClientAliveInterval 30` — 每 30 秒发送一次心跳
+- `ClientAliveCountMax 3` — 3 次无响应后断开
+- `TCPKeepAlive yes` — 启用 TCP 保活
+
+> **强烈推荐在移动端使用前执行此脚本**，移动网络切换（WiFi ↔ 4G/5G）极易导致 SSH 断连。
+
+---
+
+## 远程连接技巧
+
+### Tailscale 组网（推荐）
+
+在移动开发场景中，**Tailscale** 是最简单的远程连接方案，无需公网 IP、无需端口映射、无需担心防火墙。
+
+#### 为什么用 Tailscale？
+
+| 场景 | 传统方案 | Tailscale |
+|------|---------|-----------|
+| 公司内网开发机 | VPN / 跳板机 | 直接连接 |
+| 家里的服务器 | 内网穿透 / DDNS | 直接连接 |
+| 咖啡馆 / 公共 WiFi | 无法连接 | 自动打洞直连 |
+| 多台设备互连 | 配置复杂 | 一键组网 |
+
+#### 配置步骤
+
+**1. 在远程服务器上安装 Tailscale**
+
+```bash
+# Ubuntu/Debian
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+
+# macOS
+brew install tailscale
+```
+
+**2. 在 Android 设备上安装 Tailscale**
+
+从 [Google Play](https://play.google.com/store/apps/details?id=com.tailscale.ipn) 或 [F-Droid](https://f-droid.org/packages/com.tailscale.ipn/) 安装 Tailscale 客户端，登录同一账号并开启 VPN。
+
+**3. 在 Termux AI Dev 中使用 Tailscale IP**
+
+- 在 SSH 配置中使用 Tailscale 分配的 IP 地址（通常是 `100.x.x.x`）
+- 无论服务器在家里的 NAT 后面还是公司内网，都能直接 SSH 连接
+- Tailscale 连接是端到端加密的，安全性有保障
+
+**4. 获取服务器 Tailscale IP**
+
+```bash
+# 在远程服务器上执行
+tailscale ip -4
+# 输出类似: 100.64.0.1
+```
+
+> **提示**：Tailscale 免费套餐支持 100 台设备，个人开发完全够用。开启 `tailscale up --accept-routes` 还可以访问远程服务器所在局域网的其他设备。
+
+### SSH 连接优化建议
+
+#### 保持后台连接
+
+Android 系统可能会杀掉后台进程，建议：
+
+1. 在 Termux 通知栏中点击 **Acquire Wakelock**（防止 CPU 休眠）
+2. 在系统设置中关闭 Termux 的电池优化
+3. 使用内置的 `ssh-keepalive-setup.sh` 脚本配置服务端心跳
+
+#### 密钥认证（更安全）
+
+```bash
+# 在 Termux 中生成密钥对
+ssh-keygen -t ed25519
+
+# 将公钥复制到服务器
+ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
+
+# 之后在 SSH 配置中填写私钥路径即可
+```
+
+#### 多服务器管理
+
+在配置中心创建多个 SSH 配置，每个配置可绑定不同的：
+- 运行配置（一键启动不同项目）
+- 工作区（独立的目录状态和书签）
+- 快捷指令（不同服务器的常用命令）
+
+---
+
+## 技术架构
+
+```
+├── app/                          # 主应用模块
+│   ├── activities/               # Activity 层
+│   ├── fragments/                # Fragment 层（MVVM）
+│   ├── terminal/                 # 终端集成
+│   ├── filebrowser/              # 远程文件浏览器
+│   ├── configuration/            # 配置管理（SSH/运行/快捷指令）
+│   ├── sessions/                 # 会话管理
+│   ├── clipboard/                # 剪贴板同步
+│   ├── floating/                 # 悬浮窗系统
+│   ├── models/                   # 数据模型
+│   ├── managers/                 # 业务逻辑管理器
+│   ├── adapters/                 # RecyclerView 适配器
+│   ├── sftp/                     # SFTP 连接管理
+│   └── api/                      # 外部 API 接口
+├── terminal-view/                # 终端视图库（Apache 2.0）
+├── terminal-emulator/            # 终端模拟器库（Apache 2.0）
+└── termux-shared/                # 共享工具库（MIT）
+```
+
+### 关键依赖
+
+| 库 | 版本 | 用途 |
+|----|------|------|
+| SSHJ | 0.34.0 | SSH/SFTP 客户端 |
+| RxJava3 | 3.1.5 | 响应式异步编程 |
+| Gson | 2.10.1 | JSON 序列化 |
+| BouncyCastle | 1.70 | 加密算法支持 |
+| EDDSA | 0.3.0 | ED25519 密钥支持 |
+| Markwon | — | Markdown 渲染 |
+| Material Components | — | Material Design UI |
+
+---
+
+## 常见问题
+
+### Q: 首次启动卡在 Bootstrap 安装？
+
+尝试清除应用数据后重新启动。确保网络畅通（部分架构需要下载 bootstrap 包）。
+
+### Q: SSH 连接频繁断开？
+
+1. 执行内置脚本 `ssh-keepalive-setup.sh --apply`（需服务端 root 权限）
+2. 在 Termux 通知中开启 Wakelock
+3. 关闭 Android 系统对 Termux 的电池优化
+4. 考虑使用 Tailscale 组网（更稳定的网络通道）
+
+### Q: 悬浮窗不显示？
+
+需要在系统设置 → 应用 → Termux → 权限中开启「显示在其他应用上层」权限。
+
+### Q: 剪贴板同步不工作？
+
+- 确认远程服务器已安装 `xclip`（Linux）或使用 macOS 自带的 `pbcopy`/`pbpaste`
+- Linux 安装：`sudo apt install xclip`
+- 同步大小限制为 1MB
+
+---
+
+## 致谢
+
+### 上游项目
+
+- **[Termux](https://github.com/termux/termux-app)** — 本项目基于 Termux 开发，感谢 Termux 团队和社区的贡献
+- **[Terminal Emulator for Android](https://github.com/jackpal/Android-Terminal-Emulator)** — 终端视图和模拟器核心（Apache 2.0）
+- **[SSHJ](https://github.com/hierynomus/sshj)** — SSH/SFTP 连接库
+
+### 许可证
+
+本项目遵循 **GPLv3 only** 许可证。部分代码遵循不同许可证：
+
+| 模块 | 许可证 |
+|------|--------|
+| termux-app | GPLv3 only |
+| terminal-view / terminal-emulator | Apache 2.0 |
+| termux-shared | MIT (含 GPLv3 / GPLv2+CE 部分) |
+
+详见 [LICENSE.md](LICENSE.md)。
+
+---
+
+<p align="center">
+  Made with ❤️ for mobile developers
+</p>
