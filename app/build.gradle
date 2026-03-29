@@ -274,9 +274,24 @@ clean {
     }
 }
 
+// 注入额外包（openssh, sshpass）到 bootstrap ZIP 中
+task injectExtraPackages {
+    description 'Inject openssh and sshpass into bootstrap ZIPs from termux repo'
+    doLast {
+        def injectScript = file('bootstrap/inject-packages.sh')
+        if (injectScript.exists()) {
+            exec {
+                executable 'bash'
+                args injectScript.absolutePath
+            }
+        }
+    }
+}
+
 // 从bootstrap目录复制文件到cpp目录，用于NDK构建（不放在assets中避免打包进APK）
 task copyBootstrapsToCpp(type: Copy) {
     description 'Copy bootstrap files from bootstrap/ to cpp/ directory for NDK build'
+    dependsOn injectExtraPackages
     from 'bootstrap'
     into 'src/main/cpp'
     include 'bootstrap-*.zip'

@@ -271,6 +271,9 @@ public final class TermuxInstaller {
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);
 
+                    // Auto-install additional packages needed for SSH features
+                    installExtraPackages(TERMUX_PREFIX_DIR_PATH);
+
                     activity.runOnUiThread(whenDone);
 
                 } catch (final Exception e) {
@@ -423,6 +426,63 @@ public final class TermuxInstaller {
 
     private static Error ensureDirectoryExists(File directory) {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
+    }
+
+    /**
+     * Auto-install extra packages (openssh, sshpass) after bootstrap extraction.
+     * Uses a marker file to avoid repeated installations on subsequent launches.
+     * Fails silently if no network — existing fallbacks in SSHConnectionManager will handle it.
+     */
+    private static void installExtraPackages(String prefixPath) {
+        final String LOG_TAG = "TermuxInstaller-PostInstall";
+        final File marker = new File(prefixPath, ".termux-ai-dev-packages-installed");
+
+        if (marker.exists()) {
+            Logger.logInfo(LOG_TAG, "Extra packages already installed, skipping.");
+            return;
+        }
+
+        Logger.logInfo(LOG_TAG, "Installing extra packages (openssh, sshpass)...");
+
+        try {
+            String[] env = {
+                "HOME=" + TermuxConstants.TERMUX_HOME_DIR_PATH,
+                "PATH=" + prefixPath + "/bin:/system/bin:/system/xbin",
+                "PREFIX=" + prefixPath,
+                "TMPDIR=" + prefixPath + "/tmp"
+            };
+
+            ProcessBuilder pb = new ProcessBuilder(
+                prefixPath + "/bin/bash", "-c",
+                prefixPath + "/bin/pkg install openssh sshpass -y 2>&1 && touch " + marker.getAbsolutePath()
+            );
+            pb.environment().clear();
+            for (String e : env) {
+                String[] parts = e.split("=", 2);
+                pb.environment().put(parts[0], parts[1]);
+            }
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+
+            boolean completed = process.waitFor(120, java.util.concurrent.TimeUnit.SECONDS);
+            if (completed && process.exitValue() == 0) {
+                Logger.logInfo(LOG_TAG, "Extra packages installed successfully.");
+            } else {
+                Logger.logError(LOG_TAG, "Extra packages installation failed." +
+                    (completed ? " Exit code: " + process.exitValue() : " Timed out after 120s") +
+                    "\nOutput: " + output);
+            }
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "Failed to install extra packages: " + e.getMessage());
+        }
     }
 
     public static byte[] loadZipBytes() {

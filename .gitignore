@@ -12,6 +12,9 @@ release/
 *.zip
 # 保留 bootstrap 目录中的 zip 文件
 !app/bootstrap/*.zip
+# Bootstrap injection markers
+app/bootstrap/*.injected
+app/bootstrap/*.original
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -42,3 +45,7 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# Bootstrap injection markers
+app/bootstrap/*.injected
+app/bootstrap/*.original
