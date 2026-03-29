@@ -49,10 +49,6 @@ class SessionListFragment : Fragment() {
             popup.menuInflater.inflate(R.menu.menu_session_list, popup.menu)
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    R.id.action_init_ssh -> {
-                        openInitTerminal()
-                        true
-                    }
                     R.id.action_ssh_config -> {
                         showSshConfigDialog()
                         true
@@ -62,21 +58,6 @@ class SessionListFragment : Fragment() {
             }
             popup.show()
         }
-    }
-
-    private fun openInitTerminal() {
-        // 创建会话，这样会在列表中持续保留状态
-        val session = SessionManager.createSession(
-            name = "SSH 初始化",
-            sshConfigName = null,
-            path = ""
-        )
-        val intent = Intent(requireContext(), FullTerminalActivity::class.java).apply {
-            putExtra(FullTerminalActivity.EXTRA_SESSION_ID, session.id)
-            putExtra(FullTerminalActivity.EXTRA_SESSION_NAME, session.name)
-            putExtra(FullTerminalActivity.EXTRA_INITIAL_COMMAND, "pkg install openssh sshpass -y")
-        }
-        startActivity(intent)
     }
 
     private fun showSshConfigDialog() {
@@ -116,25 +97,8 @@ class SessionListFragment : Fragment() {
 
     private fun setupFab() {
         binding.fabNewSession.setOnClickListener {
-            if (!SessionManager.isSshInitialized()) {
-                showSshInitRequiredDialog()
-            } else {
-                showNewSessionDialog()
-            }
+            showNewSessionDialog()
         }
-    }
-
-    private fun showSshInitRequiredDialog() {
-        AlertDialog.Builder(requireContext(), R.style.AppTheme_Dialog_Blue)
-            .setTitle("创建终端")
-            .setMessage("首次使用需要先初始化 SSH 环境，是否立即初始化？")
-            .setPositiveButton("确认初始化") { _, _ ->
-                SessionManager.setSshInitialized(true)
-                openInitTerminal()
-            }
-            .setNegativeButton("取消", null)
-            .setCancelable(false)
-            .show()
     }
 
     private fun refreshSessions() {
