@@ -135,6 +135,8 @@ public class DiffLineAdapter extends RecyclerView.Adapter<DiffLineAdapter.DiffVi
             newLineNum = itemView.findViewById(R.id.new_line_number);
             diffPrefix = itemView.findViewById(R.id.diff_prefix);
             diffContent = itemView.findViewById(R.id.diff_content);
+            // Ensure text selection works in RecyclerView (parent intercepts touch events by default)
+            diffContent.setTextIsSelectable(true);
         }
     }
 }
