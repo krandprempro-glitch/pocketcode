@@ -219,16 +219,43 @@ class ClipboardSyncManager private constructor() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ output ->
                 if (output.contains("xclip")) {
-                    backend = ClipboardBackend.XCLIP
-                    readCommand = "xclip -selection clipboard -o"
-                    writeCommand = "xclip -selection clipboard -i"
+                    // xclip 存在，但需要验证它能否实际工作（需要 DISPLAY 环境变量）
+                    Logger.logInfo(LOG_TAG, "检测到xclip，验证是否可用...")
+                    verifyXclipWorks()
                 } else {
                     backend = ClipboardBackend.NONE
+                    Logger.logInfo(LOG_TAG, "未检测到xclip")
+                    onBackendDetected()
                 }
-                onBackendDetected()
             }, {
                 backend = ClipboardBackend.NONE
                 Logger.logInfo(LOG_TAG, "未检测到可用的剪贴板后端 (xclip/termux-clipboard)")
+                onBackendDetected()
+            })
+    }
+
+    /**
+     * 验证 xclip 是否能实际工作（需要 X11 display）
+     */
+    private fun verifyXclipWorks() {
+        // 尝试用 echo 管道写入 xclip，如果失败说明没有 display
+        SFTPConnectionManager.getInstance().executeCommand("echo test | xclip -selection clipboard -i 2>&1")
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({ output ->
+                if (output.contains("Can't open display") || output.contains("Error")) {
+                    Logger.logWarn(LOG_TAG, "xclip 存在但无法工作（无X11 display），跳过")
+                    backend = ClipboardBackend.NONE
+                } else {
+                    backend = ClipboardBackend.XCLIP
+                    readCommand = "xclip -selection clipboard -o"
+                    writeCommand = "xclip -selection clipboard -i"
+                    Logger.logInfo(LOG_TAG, "xclip 验证通过，使用xclip后端")
+                }
+                onBackendDetected()
+            }, {
+                Logger.logWarn(LOG_TAG, "xclip 验证失败: ${it.message}，跳过")
+                backend = ClipboardBackend.NONE
                 onBackendDetected()
             })
     }
