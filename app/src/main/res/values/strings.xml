@@ -12,7 +12,7 @@
     ]>
 
 <resources>
-    <string name="app_name">TERMUX</string>
+    <string name="app_name">PocketCode</string>
     <string name="application_name">&TERMUX_APP_NAME;</string>
     <string name="shared_user_label">&TERMUX_APP_NAME; user</string>
 

@@ -2,7 +2,7 @@
   <img src="https://avatars.githubusercontent.com/u/29275069?s=200&v=4" width="120" alt="Termux Logo"/>
 </p>
 
-<h1 align="center">Termux AI Dev</h1>
+<h1 align="center">PocketCode</h1>
 
 <p align="center">
   <strong>Android 上的远程开发工作站 —— 为 Claude Code / AI 辅助编程而生</strong>
