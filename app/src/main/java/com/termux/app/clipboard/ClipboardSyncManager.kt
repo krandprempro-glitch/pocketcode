@@ -77,7 +77,11 @@ class ClipboardSyncManager private constructor() {
      * 检测后端后，根据SharedPreferences中的设置决定启动哪些同步
      */
     fun startSync() {
-        if (isEnabled) return
+        Logger.logInfo(LOG_TAG, ">>> startSync() 被调用, isEnabled=$isEnabled, applicationContext=${applicationContext != null}")
+        if (isEnabled) {
+            Logger.logInfo(LOG_TAG, ">>> startSync() 已启用，跳过")
+            return
+        }
         isEnabled = true
 
         detectClipboardBackend()
@@ -88,6 +92,7 @@ class ClipboardSyncManager private constructor() {
      * 读取SharedPreferences设置并应用
      */
     private fun onBackendDetected() {
+        Logger.logInfo(LOG_TAG, ">>> onBackendDetected() isEnabled=$isEnabled, backend=$backend, readCmd=$readCommand, writeCmd=$writeCommand")
         if (!isEnabled) return
 
         val context = applicationContext ?: return
@@ -96,6 +101,7 @@ class ClipboardSyncManager private constructor() {
         val serverToPhone = prefs.getBoolean(PREF_CLIPBOARD_SYNC_SERVER_TO_PHONE, true)
         val phoneToServer = prefs.getBoolean(PREF_CLIPBOARD_SYNC_PHONE_TO_SERVER, false)
 
+        Logger.logInfo(LOG_TAG, ">>> onBackendDetected() 读取设置: master=$master, serverToPhone=$serverToPhone, phoneToServer=$phoneToServer")
         updateSettings(master, serverToPhone, phoneToServer)
     }
 
@@ -104,8 +110,10 @@ class ClipboardSyncManager private constructor() {
      * 由 GlobalSettingsFragment 和 onBackendDetected 调用
      */
     fun updateSettings(master: Boolean, serverToPhone: Boolean, phoneToServer: Boolean) {
+        Logger.logInfo(LOG_TAG, ">>> updateSettings() master=$master, serverToPhone=$serverToPhone, phoneToServer=$phoneToServer, isEnabled=$isEnabled, backend=$backend")
         // Bug fix: 如果尚未启动同步但master被打开，先启动同步（后端检测）
         if (!isEnabled && master) {
+            Logger.logInfo(LOG_TAG, ">>> updateSettings: 未启用但master打开，触发startSync")
             startSync()
             // startSync -> detectClipboardBackend -> onBackendDetected -> 会再次读取设置并调用 updateSettings
             // 所以这里不需要继续执行，等后端检测完成后自动处理
@@ -115,6 +123,7 @@ class ClipboardSyncManager private constructor() {
         if (!isEnabled) return
 
         if (!master) {
+            Logger.logInfo(LOG_TAG, ">>> updateSettings: master关闭，停止所有同步")
             stopPolling()
             stopAutoPush()
             return
@@ -122,14 +131,18 @@ class ClipboardSyncManager private constructor() {
 
         // Master is ON
         if (serverToPhone && backend != ClipboardBackend.NONE) {
+            Logger.logInfo(LOG_TAG, ">>> updateSettings: 启动轮询 serverToPhone")
             startPolling()
         } else {
+            Logger.logInfo(LOG_TAG, ">>> updateSettings: 停止轮询 serverToPhone=$serverToPhone, backend=$backend")
             stopPolling()
         }
 
         if (phoneToServer && backend != ClipboardBackend.NONE) {
+            Logger.logInfo(LOG_TAG, ">>> updateSettings: 启动自动推送 phoneToServer")
             startAutoPush()
         } else {
+            Logger.logInfo(LOG_TAG, ">>> updateSettings: 停止自动推送 phoneToServer=$phoneToServer, backend=$backend")
             stopAutoPush()
         }
     }
@@ -149,7 +162,9 @@ class ClipboardSyncManager private constructor() {
      */
     private fun detectClipboardBackend() {
         val sftpManager = SFTPConnectionManager.getInstance()
-        if (!sftpManager.isConnected()) {
+        val connected = sftpManager.isConnected()
+        Logger.logInfo(LOG_TAG, ">>> detectClipboardBackend() SFTP connected=$connected")
+        if (!connected) {
             backend = ClipboardBackend.NONE
             Logger.logWarn(LOG_TAG, "SSH未连接，无法检测剪贴板后端，等待连接后重试")
             // 不直接return，仍调用onBackendDetected让上层知道状态
@@ -298,10 +313,12 @@ class ClipboardSyncManager private constructor() {
     private fun syncFromServer() {
         if (!isEnabled || readCommand.isEmpty()) return
 
+        Logger.logDebug(LOG_TAG, ">>> syncFromServer() 执行命令: $readCommand")
         SFTPConnectionManager.getInstance().executeCommand(readCommand)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ content ->
+                Logger.logDebug(LOG_TAG, ">>> syncFromServer() 成功，内容长度: ${content.length}")
                 if (content.length > MAX_CONTENT_SIZE) {
                     Logger.logInfo(LOG_TAG, "剪贴板内容过大，跳过同步")
                     return@subscribe
@@ -319,10 +336,14 @@ class ClipboardSyncManager private constructor() {
                         setPhoneClipboard(content)
                         lastPhoneFingerprint = fingerprint
                         Logger.logDebug(LOG_TAG, "剪贴板已同步，内容长度: ${content.length}")
+                    } else {
+                        Logger.logDebug(LOG_TAG, ">>> syncFromServer() 内容与手机相同，跳过")
                     }
+                } else {
+                    Logger.logDebug(LOG_TAG, ">>> syncFromServer() 内容未变化，跳过")
                 }
-            }, { _ ->
-                // 静默失败，不打扰用户
+            }, { error ->
+                Logger.logError(LOG_TAG, ">>> syncFromServer() 失败: ${error.message}")
             })
     }
 
@@ -330,7 +351,10 @@ class ClipboardSyncManager private constructor() {
      * 将手机剪贴板推送到服务器
      */
     fun pushToServer(content: String) {
-        if (!isEnabled || writeCommand.isEmpty()) return
+        if (!isEnabled || writeCommand.isEmpty()) {
+            Logger.logWarn(LOG_TAG, ">>> pushToServer() 跳过: isEnabled=$isEnabled, writeCommand='$writeCommand'")
+            return
+        }
 
         if (content.length > MAX_CONTENT_SIZE) {
             Logger.logInfo(LOG_TAG, "剪贴板内容过大，跳过推送")
