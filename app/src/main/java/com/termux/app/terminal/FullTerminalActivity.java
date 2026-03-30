@@ -672,12 +672,15 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     // ==================== Input View ====================
 
     private void setupInputView() {
-        // Send button click
+        // Send button click — 空输入时发送回车(\r)，非空时发送命令
         mTerminalSendButton.setOnClickListener(v -> {
             String command = mTerminalCommandInput.getText().toString();
             if (!command.isEmpty()) {
                 sendCommandToTerminal(command);
                 mTerminalCommandInput.setText("");
+            } else {
+                // 空输入时直接发送回车，用于确认选择等场景
+                sendEnterToTerminal();
             }
         });
 
@@ -689,6 +692,9 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
                 if (!command.isEmpty()) {
                     sendCommandToTerminal(command);
                     mTerminalCommandInput.setText("");
+                } else {
+                    // 空输入时直接发送回车
+                    sendEnterToTerminal();
                 }
                 return true;
             }
@@ -989,6 +995,8 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         finish();
     }
 
+    private boolean mIsReattachingExistingSession = false;
+
     private void attachSession() {
         Log.d(TAG, "attachSession: START rendererInit=" + mRendererInitialized + " handle=" + mSessionHandle);
 
@@ -997,6 +1005,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
             if (session != null) {
                 Log.d(TAG, "Found existing session: " + session.mHandle);
                 mTerminalSession = session;
+                mIsReattachingExistingSession = true;
                 doAttachSession(session);
                 return;
             } else {
@@ -1061,8 +1070,12 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
                 Log.d(TAG, "doAttachSession: SUCCESS");
 
-                // Auto-execute SSH and/or cd commands for new sessions
-                sendAutoCommands();
+                // Auto-execute SSH and/or cd commands for new sessions only (skip for reattached sessions)
+                if (!mIsReattachingExistingSession) {
+                    sendAutoCommands();
+                } else {
+                    Log.d(TAG, "Skipping auto commands for reattached session");
+                }
 
             } catch (Exception e) {
                 Log.e(TAG, "doAttachSession FAILED: " + e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -1184,6 +1197,18 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
             byte[] commandBytes = (command.trim() + "\r").getBytes(StandardCharsets.UTF_8);
             mTerminalSession.write(commandBytes, 0, commandBytes.length);
         }
+    }
+
+    /**
+     * 发送纯回车(\r)到终端，用于空输入时确认选择等场景
+     */
+    private void sendEnterToTerminal() {
+        if (mTerminalSession == null || !mTerminalSession.isRunning()) {
+            showToast("终端会话未运行");
+            return;
+        }
+        byte[] enterBytes = "\r".getBytes(StandardCharsets.UTF_8);
+        mTerminalSession.write(enterBytes, 0, enterBytes.length);
     }
 
     // ==================== Lifecycle ====================
