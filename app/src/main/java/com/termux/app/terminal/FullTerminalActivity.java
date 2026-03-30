@@ -166,7 +166,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
         @Override
         public boolean shouldBackButtonBeMappedToEscape() {
-            return true;
+            return false;
         }
 
         @Override
