@@ -21,7 +21,7 @@
 
 ## 项目简介
 
-**Termux AI Dev** 是基于 [Termux](https://github.com/termux/termux-app) (v0.118.0) 深度定制的 Android 终端应用，专为移动端远程开发场景设计。在保留 Termux 完整终端能力的基础上，新增了 VSCode 风格的远程文件浏览器、Git 历史查看器、Claude Code 快捷指令集成、剪贴板同步、项目管理等工作站级功能。
+**PocketCode** 是基于 [Termux](https://github.com/termux/termux-app) (v0.118.0) 深度定制的 Android 终端应用，专为移动端远程开发场景设计。在保留 Termux 完整终端能力的基础上，新增了 VSCode 风格的远程文件浏览器、Git 历史查看器、Claude Code 快捷指令集成、剪贴板同步、项目管理等工作站级功能。
 
 > **本项目基于 [Termux](https://github.com/termux/termux-app) 开源项目开发，遵循 GPLv3 许可证。**
 > Termux 是一个强大的 Android 终端模拟器和 Linux 环境应用，由 Termux 社区维护。感谢 Termux 团队的卓越工作。
