@@ -1,5 +1,7 @@
 package com.termux.app.clipboard
 
+import android.content.Context
+import androidx.preference.PreferenceManager
 import com.termux.app.sftp.SFTPConnectionManager
 import com.termux.shared.logger.Logger
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
@@ -20,6 +22,11 @@ class ClipboardSyncManager private constructor() {
         private const val SYNC_INTERVAL_SECONDS = 5L
         private const val MAX_CONTENT_SIZE = 1024 * 1024 // 1MB
 
+        // SharedPreferences keys (must match GlobalSettingsFragment)
+        private const val PREF_CLIPBOARD_SYNC_MASTER = "clipboard_sync_master"
+        private const val PREF_CLIPBOARD_SYNC_SERVER_TO_PHONE = "clipboard_sync_server_to_phone"
+        private const val PREF_CLIPBOARD_SYNC_PHONE_TO_SERVER = "clipboard_sync_phone_to_server"
+
         @Volatile
         private var instance: ClipboardSyncManager? = null
 
@@ -30,7 +37,7 @@ class ClipboardSyncManager private constructor() {
         }
     }
 
-    private var applicationContext: android.content.Context? = null
+    private var applicationContext: Context? = null
     private val disposables = CompositeDisposable()
     private var syncDisposable: io.reactivex.rxjava3.disposables.Disposable? = null
 
@@ -39,17 +46,18 @@ class ClipboardSyncManager private constructor() {
     private var lastPhoneFingerprint: String? = null
     private var isEnabled = false
 
-    /**
-     * 初始化剪贴板管理器
-     */
-    fun init(context: android.content.Context) {
-        applicationContext = context.applicationContext
-    }
+    // 独立的轮询和自动推送状态
+    private var isPolling = false
+    private var isAutoPushing = false
+
+    // Android剪贴板监听器
+    private var clipboardListener: android.content.ClipboardManager.OnPrimaryClipChangedListener? = null
 
     // 服务器剪贴板命令（根据环境检测）
     private enum class ClipboardBackend {
-        XCLIP,       // Linux桌面
-        PBPASTE,     // macOS
+        XCLIP,       // Linux桌面 (xclip)
+        PBPASTE,     // macOS (pbpaste/pbcopy)
+        TERMUX,      // Termux (termux-clipboard-get/set)
         NONE         // 不支持
     }
     private var backend: ClipboardBackend = ClipboardBackend.NONE
@@ -58,22 +66,72 @@ class ClipboardSyncManager private constructor() {
     private var writeCommand: String = ""
 
     /**
-     * 初始化并开始同步
+     * 初始化剪贴板管理器
+     */
+    fun init(context: Context) {
+        applicationContext = context.applicationContext
+    }
+
+    /**
+     * 初始化并开始同步（向后兼容入口）
+     * 检测后端后，根据SharedPreferences中的设置决定启动哪些同步
      */
     fun startSync() {
         if (isEnabled) return
         isEnabled = true
 
-        // 检测服务器环境
         detectClipboardBackend()
-        if (backend == ClipboardBackend.NONE) {
-            Logger.logInfo(LOG_TAG, "剪贴板同步: 服务器不支持剪贴板访问")
+    }
+
+    /**
+     * 后端检测完成后的回调处理
+     * 读取SharedPreferences设置并应用
+     */
+    private fun onBackendDetected() {
+        if (!isEnabled) return
+
+        val context = applicationContext ?: return
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val master = prefs.getBoolean(PREF_CLIPBOARD_SYNC_MASTER, false)
+        val serverToPhone = prefs.getBoolean(PREF_CLIPBOARD_SYNC_SERVER_TO_PHONE, true)
+        val phoneToServer = prefs.getBoolean(PREF_CLIPBOARD_SYNC_PHONE_TO_SERVER, false)
+
+        updateSettings(master, serverToPhone, phoneToServer)
+    }
+
+    /**
+     * 根据设置更新同步状态
+     * 由 GlobalSettingsFragment 和 onBackendDetected 调用
+     */
+    fun updateSettings(master: Boolean, serverToPhone: Boolean, phoneToServer: Boolean) {
+        // Bug fix: 如果尚未启动同步但master被打开，先启动同步（后端检测）
+        if (!isEnabled && master) {
+            startSync()
+            // startSync -> detectClipboardBackend -> onBackendDetected -> 会再次读取设置并调用 updateSettings
+            // 所以这里不需要继续执行，等后端检测完成后自动处理
             return
         }
 
-        // 开始定时同步
-        startPeriodicSync()
-        Logger.logInfo(LOG_TAG, "剪贴板同步已启动，使用后端: $backend")
+        if (!isEnabled) return
+
+        if (!master) {
+            stopPolling()
+            stopAutoPush()
+            return
+        }
+
+        // Master is ON
+        if (serverToPhone && backend != ClipboardBackend.NONE) {
+            startPolling()
+        } else {
+            stopPolling()
+        }
+
+        if (phoneToServer && backend != ClipboardBackend.NONE) {
+            startAutoPush()
+        } else {
+            stopAutoPush()
+        }
     }
 
     /**
@@ -81,8 +139,8 @@ class ClipboardSyncManager private constructor() {
      */
     fun stopSync() {
         isEnabled = false
-        syncDisposable?.dispose()
-        syncDisposable = null
+        stopPolling()
+        stopAutoPush()
         Logger.logInfo(LOG_TAG, "剪贴板同步已停止")
     }
 
@@ -96,7 +154,6 @@ class ClipboardSyncManager private constructor() {
             return
         }
 
-        // 尝试检测macOS
         sftpManager.executeCommand("uname -s")
             .map { it.trim() }
             .subscribeOn(Schedulers.io())
@@ -107,13 +164,34 @@ class ClipboardSyncManager private constructor() {
                         backend = ClipboardBackend.PBPASTE
                         readCommand = "pbpaste"
                         writeCommand = "pbcopy"
+                        onBackendDetected()
                     }
-                    else -> {
-                        // 尝试xclip
-                        detectXclip()
-                    }
+                    else -> detectTermuxClipboard()
                 }
-            }, { detectXclip() })
+            }, { detectTermuxClipboard() })
+    }
+
+    /**
+     * 检测Termux剪贴板环境（termux-clipboard-get/set）
+     */
+    private fun detectTermuxClipboard() {
+        SFTPConnectionManager.getInstance().executeCommand("which termux-clipboard-get")
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({ output ->
+                if (output.contains("termux-clipboard-get")) {
+                    backend = ClipboardBackend.TERMUX
+                    readCommand = "termux-clipboard-get"
+                    writeCommand = "termux-clipboard-set"
+                    Logger.logInfo(LOG_TAG, "检测到Termux剪贴板后端")
+                    onBackendDetected()
+                } else {
+                    detectXclip()
+                }
+            }, {
+                // termux-clipboard-get not found, try xclip
+                detectXclip()
+            })
     }
 
     private fun detectXclip() {
@@ -128,25 +206,86 @@ class ClipboardSyncManager private constructor() {
                 } else {
                     backend = ClipboardBackend.NONE
                 }
+                onBackendDetected()
             }, {
                 backend = ClipboardBackend.NONE
+                Logger.logInfo(LOG_TAG, "未检测到可用的剪贴板后端 (xclip/termux-clipboard)")
+                onBackendDetected()
             })
     }
 
     /**
-     * 开始定时同步
+     * 开始定时轮询（服务器→手机）
      */
-    private fun startPeriodicSync() {
+    private fun startPolling() {
+        if (isPolling) return
+        isPolling = true
+
         syncDisposable = Observable.interval(SYNC_INTERVAL_SECONDS, TimeUnit.SECONDS)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({
-                if (isEnabled && backend != ClipboardBackend.NONE) {
+                if (isEnabled && isPolling && backend != ClipboardBackend.NONE) {
                     syncFromServer()
                 }
             }, { error ->
                 Logger.logError(LOG_TAG, "同步出错: ${error.message}")
             })
+        Logger.logInfo(LOG_TAG, "剪贴板轮询已启动，使用后端: $backend")
+    }
+
+    /**
+     * 停止定时轮询
+     */
+    private fun stopPolling() {
+        if (!isPolling) return
+        isPolling = false
+        syncDisposable?.dispose()
+        syncDisposable = null
+    }
+
+    /**
+     * 启动自动推送（手机→服务器）
+     * 监听Android剪贴板变化并推送到服务器
+     */
+    private fun startAutoPush() {
+        if (isAutoPushing) return
+        isAutoPushing = true
+
+        val context = applicationContext ?: return
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            ?: return
+
+        clipboardListener = android.content.ClipboardManager.OnPrimaryClipChangedListener {
+            val clipText = getPhoneClipboardContent()
+            if (clipText.isEmpty()) return@OnPrimaryClipChangedListener
+
+            val fingerprint = md5(clipText)
+
+            // 跳过来自服务器同步的内容（防止循环）
+            if (fingerprint == lastServerFingerprint) return@OnPrimaryClipChangedListener
+            // 跳过未变化的内容
+            if (fingerprint == lastPhoneFingerprint) return@OnPrimaryClipChangedListener
+
+            pushToServer(clipText)
+        }
+        clipboard.addPrimaryClipChangedListener(clipboardListener)
+        Logger.logInfo(LOG_TAG, "剪贴板自动推送已启动")
+    }
+
+    /**
+     * 停止自动推送
+     */
+    private fun stopAutoPush() {
+        if (!isAutoPushing) return
+        isAutoPushing = false
+
+        val context = applicationContext ?: return
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            ?: return
+
+        clipboardListener?.let { clipboard.removePrimaryClipChangedListener(it) }
+        clipboardListener = null
     }
 
     /**
@@ -159,31 +298,26 @@ class ClipboardSyncManager private constructor() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ content ->
-                // 检查内容大小
                 if (content.length > MAX_CONTENT_SIZE) {
                     Logger.logInfo(LOG_TAG, "剪贴板内容过大，跳过同步")
                     return@subscribe
                 }
 
-                // 计算指纹
                 val fingerprint = md5(content)
 
-                // 对比指纹，避免重复
                 if (fingerprint != lastServerFingerprint) {
                     lastServerFingerprint = fingerprint
 
-                    // 获取手机当前剪贴板指纹
                     val phoneContent = getPhoneClipboardContent()
                     val phoneFingerprint = md5(phoneContent)
 
-                    // 只有手机剪贴板和服务器不同时才更新
                     if (fingerprint != phoneFingerprint) {
                         setPhoneClipboard(content)
                         lastPhoneFingerprint = fingerprint
                         Logger.logDebug(LOG_TAG, "剪贴板已同步，内容长度: ${content.length}")
                     }
                 }
-            }, { error ->
+            }, { _ ->
                 // 静默失败，不打扰用户
             })
     }
@@ -199,7 +333,6 @@ class ClipboardSyncManager private constructor() {
             return
         }
 
-        // 使用echo传递内容避免shell转义问题
         val escapedContent = content
             .replace("\\", "\\\\")
             .replace("'", "'\\''")
@@ -209,9 +342,7 @@ class ClipboardSyncManager private constructor() {
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({
-                // 更新服务器指纹缓存
                 lastServerFingerprint = md5(content)
-                // 更新手机指纹缓存，避免下次被服务器内容覆盖
                 lastPhoneFingerprint = md5(content)
                 Logger.logDebug(LOG_TAG, "剪贴板已推送到服务器")
             }, { error ->
@@ -219,12 +350,9 @@ class ClipboardSyncManager private constructor() {
             })
     }
 
-    /**
-     * 获取手机剪贴板内容
-     */
     private fun getPhoneClipboardContent(): String {
         val context = applicationContext ?: return ""
-        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
             ?: return ""
 
         val clip = clipboard.primaryClip
@@ -237,37 +365,24 @@ class ClipboardSyncManager private constructor() {
         }
     }
 
-    /**
-     * 设置手机剪贴板
-     */
     private fun setPhoneClipboard(content: String) {
         val context = applicationContext ?: return
-        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
             ?: return
 
         val clip = android.content.ClipData.newPlainText("server_clipboard", content)
         clipboard.setPrimaryClip(clip)
-        // 立即更新手机指纹，避免重复拉取
         lastPhoneFingerprint = md5(content)
     }
 
-    /**
-     * 计算MD5指纹
-     */
     private fun md5(input: String): String {
         val md = MessageDigest.getInstance("MD5")
         val digest = md.digest(input.toByteArray())
         return digest.joinToString("") { "%02x".format(it) }
     }
 
-    /**
-     * 是否正在同步
-     */
     fun isSyncEnabled(): Boolean = isEnabled
 
-    /**
-     * 销毁
-     */
     fun destroy() {
         stopSync()
         disposables.clear()
