@@ -140,9 +140,15 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
                 when (status) {
                     SFTPConnectionManager.ConnectionStatus.CONNECTED -> {
                         clipboardSyncStatus?.showSyncing()
+                        // SSH连接成功，检查用户设置并启动剪贴板同步
+                        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this@MainTabActivity)
+                        if (prefs.getBoolean("clipboard_sync_master", false)) {
+                            ClipboardSyncManager.getInstance().startSync()
+                        }
                     }
                     else -> {
                         clipboardSyncStatus?.hide()
+                        ClipboardSyncManager.getInstance().stopSync()
                     }
                 }
             }

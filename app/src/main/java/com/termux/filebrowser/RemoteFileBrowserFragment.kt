@@ -3,6 +3,8 @@ package com.termux.filebrowser
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -834,8 +836,11 @@ class RemoteFileBrowserFragment : Fragment(),
     fun onSSHConnected(config: SSHConnectionConfig) {
         Logger.logInfo(LOG_TAG, "SSH connected notification from SSH tab: ${config.host}")
         viewModel.connect(config)
-        // 启动剪贴板同步
-        ClipboardSyncManager.getInstance().startSync()
+        // 根据用户设置决定是否启动剪贴板同步
+        val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+        if (prefs.getBoolean("clipboard_sync_master", false)) {
+            ClipboardSyncManager.getInstance().startSync()
+        }
     }
 
     /**

@@ -1,77 +1,206 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="全局设置"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp"
-        android:textColor="?attr/colorOnSurface" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="快速测试"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="?attr/colorOnSurface"
-        android:layout_marginTop="16dp" />
+    android:background="@color/dark_background"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:clipToPadding="false">
 
-        <Button
-            android:id="@+id/btn_quick_test_pwd"
-            android:layout_width="0dp"
+        <!-- Section Header -->
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="pwd" />
+            android:text="剪贴板同步"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/dark_tab_text"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp" />
 
-        <View
-            android:layout_width="12dp"
-            android:layout_height="0dp" />
-
-        <Button
-            android:id="@+id/btn_quick_test_ls"
-            android:layout_width="0dp"
+        <!-- CardView 1 — Master Toggle -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="ls -la" />
+            android:layout_marginBottom="8dp"
+            app:cardBackgroundColor="@color/dark_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/stat_notify_sync"
+                    android:contentDescription="剪贴板同步"
+                    app:tint="@color/dark_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="剪贴板同步"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/dark_tab_text_selected" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="与远程服务器同步剪贴板内容"
+                        android:textSize="12sp"
+                        android:textColor="@color/dark_tab_text"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_clipboard_master"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- CardView 2 — Sub-toggle: 服务器→手机 -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_server_to_phone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            app:cardBackgroundColor="@color/dark_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/stat_notify_sync"
+                    android:contentDescription="自动拉取服务器剪贴板"
+                    android:alpha="0.7"
+                    app:tint="@color/dark_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="自动拉取服务器剪贴板"
+                        android:textSize="14sp"
+                        android:textColor="@color/dark_tab_text_selected" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="每5秒从服务器同步剪贴板到手机"
+                        android:textSize="12sp"
+                        android:textColor="@color/dark_tab_text"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_server_to_phone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- CardView 3 — Sub-toggle: 手机→服务器 -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_phone_to_server"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            app:cardBackgroundColor="@color/dark_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/stat_notify_sync"
+                    android:contentDescription="自动推送手机剪贴板"
+                    android:alpha="0.7"
+                    app:tint="@color/dark_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="自动推送手机剪贴板"
+                        android:textSize="14sp"
+                        android:textColor="@color/dark_tab_text_selected" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="手机复制内容时自动推送到服务器"
+                        android:textSize="12sp"
+                        android:textColor="@color/dark_tab_text"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_phone_to_server"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="悬浮按钮说明"
-        android:textSize="14sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginTop="16dp"
-        android:lineHeight="20sp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="• 启用后可在全局范围内快速访问SSH连接和运行命令\n• 悬浮按钮可拖拽移动位置\n• 点击展开快捷操作菜单\n• 需要悬浮窗权限"
-        android:textSize="12sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginTop="8dp"
-        android:lineHeight="18sp" />
-
-</LinearLayout>
+</ScrollView>

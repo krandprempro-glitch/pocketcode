@@ -151,9 +151,13 @@ class ClipboardSyncManager private constructor() {
         val sftpManager = SFTPConnectionManager.getInstance()
         if (!sftpManager.isConnected()) {
             backend = ClipboardBackend.NONE
+            Logger.logWarn(LOG_TAG, "SSH未连接，无法检测剪贴板后端，等待连接后重试")
+            // 不直接return，仍调用onBackendDetected让上层知道状态
+            onBackendDetected()
             return
         }
 
+        Logger.logInfo(LOG_TAG, "开始检测服务器剪贴板后端...")
         sftpManager.executeCommand("uname -s")
             .map { it.trim() }
             .subscribeOn(Schedulers.io())
@@ -333,10 +337,13 @@ class ClipboardSyncManager private constructor() {
             return
         }
 
-        val escapedContent = content
-            .replace("\\", "\\\\")
-            .replace("'", "'\\''")
-        val command = "echo '$escapedContent' | $writeCommand"
+        // 使用 base64 编码避免 shell 转义和多行内容问题
+        val base64Content = android.util.Base64.encodeToString(
+            content.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP
+        )
+        val command = "echo '$base64Content' | base64 -d | $writeCommand"
+
+        Logger.logDebug(LOG_TAG, "推送剪贴板到服务器，内容长度: ${content.length}, 后端: $backend")
 
         SFTPConnectionManager.getInstance().executeCommand(command)
             .subscribeOn(Schedulers.io())
