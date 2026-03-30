@@ -83,6 +83,16 @@ public final class TerminalView extends View {
     /** What was left in from scrolling movement. */
     float mScrollRemainder;
 
+    /** Timestamp of last user scroll gesture. Used to prevent auto-scroll-to-bottom during active output. */
+    private long mLastUserScrollTime = 0;
+    /** Timeout in ms after which auto-scroll-to-bottom resumes after user scroll. */
+    private static final long USER_SCROLL_HOLD_TIMEOUT = 3000L;
+
+    /** Check if user has scrolled recently (within hold timeout). */
+    private boolean isUserScrolling() {
+        return mLastUserScrollTime > 0 && (System.currentTimeMillis() - mLastUserScrollTime < USER_SCROLL_HOLD_TIMEOUT);
+    }
+
     /** If non-zero, this is the last unicode code point received if that was a combining character. */
     int mCombiningAccent;
 
@@ -141,7 +151,7 @@ public final class TerminalView extends View {
 
             @Override
             public boolean onUp(MotionEvent event) {
-                mScrollRemainder = 0.0f;
+                // Keep mScrollRemainder - don't reset, so next scroll gesture continues from where user left off
                 if (mEmulator != null && mEmulator.isMouseTrackingActive() && !event.isFromSource(InputDevice.SOURCE_MOUSE) && !isSelectingText() && !scrolledWithFinger) {
                     // Quick event processing when mouse tracking is active - do not wait for check of double tapping
                     // for zooming.
@@ -460,9 +470,9 @@ public final class TerminalView extends View {
         int rowsInHistory = mEmulator.getScreen().getActiveTranscriptRows();
         if (mTopRow < -rowsInHistory) mTopRow = -rowsInHistory;
 
-        if (isSelectingText() || mEmulator.isAutoScrollDisabled()) {
+        if (isSelectingText() || mEmulator.isAutoScrollDisabled() || isUserScrolling()) {
 
-            // Do not scroll when selecting text.
+            // Do not scroll when selecting text or user recently scrolled.
             int rowShift = mEmulator.getScrollCounter();
             if (-mTopRow + rowShift > rowsInHistory) {
                 // .. unless we're hitting the end of history transcript, in which
@@ -585,6 +595,12 @@ public final class TerminalView extends View {
                 mTopRow = Math.min(0, Math.max(-(mEmulator.getScreen().getActiveTranscriptRows()), mTopRow + (up ? -1 : 1)));
                 if (!awakenScrollBars()) invalidate();
             }
+        }
+        // Track user scroll time to prevent auto-scroll-to-bottom during active output
+        mLastUserScrollTime = System.currentTimeMillis();
+        // If user scrolled back to bottom, reset timer to allow auto-scroll immediately
+        if (mTopRow == 0) {
+            mLastUserScrollTime = 0;
         }
     }
 
