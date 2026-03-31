@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Launcher icon colors -->
+    <color name="launcher_background">#F97316</color>
+
     <!-- Bookmark colors -->
     <color name="bookmark_color">#FFD700</color>
     
