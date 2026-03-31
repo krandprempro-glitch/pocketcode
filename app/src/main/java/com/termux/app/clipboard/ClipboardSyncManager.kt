@@ -68,9 +68,18 @@ class ClipboardSyncManager private constructor() {
 
     /**
      * 初始化剪贴板管理器
+     * 同时检查当前状态：如果SSH已连接且master开关打开，立即启动同步
      */
     fun init(context: Context) {
         applicationContext = context.applicationContext
+
+        // 检查当前是否应该启动同步
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        val master = prefs.getBoolean(PREF_CLIPBOARD_SYNC_MASTER, false)
+        if (master && SFTPConnectionManager.getInstance().isConnected()) {
+            Logger.logError(LOG_TAG, "[DIAG] init() SSH已连接且master开启，立即startSync()")
+            startSync()
+        }
     }
 
     /**
@@ -80,7 +89,9 @@ class ClipboardSyncManager private constructor() {
     fun startSync() {
         Logger.logError(LOG_TAG, "[DIAG] startSync() isEnabled=$isEnabled, backend=$backend, displayEnv=[$displayEnv]")
         if (isEnabled && backend != ClipboardBackend.NONE) {
-            Logger.logError(LOG_TAG, "[DIAG] startSync() 已启用且后端已检测，跳过")
+            Logger.logError(LOG_TAG, "[DIAG] startSync() 已启用且后端已检测，恢复设置")
+            // 已有后端不重置，直接用当前设置启动同步
+            onBackendDetected()
             return
         }
         isEnabled = true
