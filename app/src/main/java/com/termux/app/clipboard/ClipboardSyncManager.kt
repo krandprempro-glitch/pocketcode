@@ -155,7 +155,14 @@ class ClipboardSyncManager private constructor() {
         isEnabled = false
         stopPolling()
         stopAutoPush()
-        Logger.logInfo(LOG_TAG, "剪贴板同步已停止")
+        // Reset state so reconnect triggers fresh detection
+        backend = ClipboardBackend.NONE
+        displayEnv = ""
+        readCommand = ""
+        writeCommand = ""
+        lastServerFingerprint = null
+        lastPhoneFingerprint = null
+        Logger.logError(LOG_TAG, "[DIAG] 剪贴板同步已停止，状态已重置")
     }
 
     /**

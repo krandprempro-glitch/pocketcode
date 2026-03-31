@@ -134,16 +134,22 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
         clipboardSyncStatus = findViewById(R.id.clipboard_sync_status)
 
         // 监听连接状态
-        SFTPConnectionManager.getInstance().connectionStatus
+        val connectionDisposable = SFTPConnectionManager.getInstance().connectionStatus
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { status ->
                 when (status) {
                     SFTPConnectionManager.ConnectionStatus.CONNECTED -> {
                         clipboardSyncStatus?.showSyncing()
-                        // SSH连接成功，检查用户设置并启动剪贴板同步
+                        // SSH连接成功，延迟启动剪贴板同步，等待SSH会话完全就绪
                         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this@MainTabActivity)
                         if (prefs.getBoolean("clipboard_sync_master", false)) {
-                            ClipboardSyncManager.getInstance().startSync()
+                            val delayDisposable = io.reactivex.rxjava3.core.Observable.timer(2, java.util.concurrent.TimeUnit.SECONDS)
+                                .subscribeOn(io.reactivex.rxjava3.schedulers.Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe {
+                                    ClipboardSyncManager.getInstance().startSync()
+                                }
+                            disposables.add(delayDisposable)
                         }
                     }
                     else -> {
@@ -152,6 +158,7 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
                     }
                 }
             }
+        disposables.add(connectionDisposable)
     }
 
     private fun initFloatingButton() {
