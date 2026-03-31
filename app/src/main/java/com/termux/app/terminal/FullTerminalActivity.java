@@ -1200,7 +1200,9 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     // ==================== Command Sending ====================
 
     private void sendCommandToTerminal(String command) {
-        Log.d(TAG, "sendCommandToTerminal: cmd='" + command + "' session=" + mTerminalSession
+        Log.e(TAG, "[DIAG-CMD] sendCommandToTerminal: cmd='" + command + "'",
+            new Exception("[DIAG-CMD] STACK TRACE"));
+        Log.d(TAG, "sendCommandToTerminal: session=" + mTerminalSession
             + " running=" + (mTerminalSession != null && mTerminalSession.isRunning()));
         if (mTerminalSession == null || !mTerminalSession.isRunning()) {
             showToast("终端会话未运行");
