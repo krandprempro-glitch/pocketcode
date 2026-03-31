@@ -299,10 +299,27 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         }
 
         @Override
-        public void onCopyTextToClipboard(@NonNull TerminalSession session, String text) {}
+        public void onCopyTextToClipboard(@NonNull TerminalSession session, String text) {
+            runOnUiThread(() -> {
+                android.content.ClipData clip = android.content.ClipData.newPlainText("terminal_text", text);
+                ((android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
+                        .setPrimaryClip(clip);
+            });
+        }
 
         @Override
-        public void onPasteTextFromClipboard(@Nullable TerminalSession session) {}
+        public void onPasteTextFromClipboard(@Nullable TerminalSession session) {
+            runOnUiThread(() -> {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                android.content.ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence text = clip.getItemAt(0).coerceToText(FullTerminalActivity.this);
+                    if (text != null && text.length() > 0 && mTerminalView.mEmulator != null) {
+                        mTerminalView.mEmulator.paste(text.toString());
+                    }
+                }
+            });
+        }
 
         @Override
         public void onBell(@NonNull TerminalSession session) {
