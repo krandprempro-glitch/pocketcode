@@ -163,6 +163,7 @@ public class SFTPConnectionManager {
                 }
 
                 isConnected = true;
+                updateConnectionStatus(ConnectionStatus.CONNECTED);
                 Logger.logInfo(LOG_TAG, "SFTP connection established successfully, cwd=" + currentWorkingDirectory);
                 emitter.onSuccess(true);
 
@@ -492,10 +493,10 @@ public class SFTPConnectionManager {
     public Single<Boolean> connectWithStatusMonitoring(SSHConnectionConfig config) {
         updateConnectionStatus(ConnectionStatus.CONNECTING);
         currentReconnectAttempts = 0;
-        
+
         return connect(config)
                 .doOnSuccess(success -> {
-                    updateConnectionStatus(ConnectionStatus.CONNECTED);
+                    // connect() already emits CONNECTED, but we reset reconnect counter here
                     currentReconnectAttempts = 0;
                 })
                 .doOnError(error -> {

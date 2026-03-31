@@ -142,11 +142,14 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
                         clipboardSyncStatus?.showSyncing()
                         // SSH连接成功，延迟启动剪贴板同步，等待SSH会话完全就绪
                         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this@MainTabActivity)
-                        if (prefs.getBoolean("clipboard_sync_master", false)) {
-                            val delayDisposable = io.reactivex.rxjava3.core.Observable.timer(2, java.util.concurrent.TimeUnit.SECONDS)
+                        val masterEnabled = prefs.getBoolean("clipboard_sync_master", false)
+                        android.util.Log.e("MainTab", "[DIAG-CLIP] CONNECTED received, master=$masterEnabled, will start sync")
+                        if (masterEnabled) {
+                            val delayDisposable = io.reactivex.rxjava3.core.Observable.timer(3, java.util.concurrent.TimeUnit.SECONDS)
                                 .subscribeOn(io.reactivex.rxjava3.schedulers.Schedulers.io())
                                 .observeOn(AndroidSchedulers.mainThread())
                                 .subscribe {
+                                    android.util.Log.e("MainTab", "[DIAG-CLIP] Delayed startSync() firing now")
                                     ClipboardSyncManager.getInstance().startSync()
                                 }
                             disposables.add(delayDisposable)
