@@ -311,15 +311,58 @@ cd termux-ai-dev
 
 ### 剪贴板同步
 
-**自动双向同步** Android 设备与远程服务器的剪贴板内容：
+PocketCode 支持 Android 设备与远程服务器之间的**双向剪贴板同步**，在手机上复制的内容自动推送到远程服务器，在远程服务器上复制的内容自动拉取到手机。
 
-- **自动检测后端** — macOS 使用 `pbcopy`/`pbpaste`，Linux 使用 `xclip`
-- **定时轮询** — 每 5 秒检查一次剪贴板变化
-- **MD5 去重** — 通过指纹比对避免重复同步
+#### 前置条件
+
+剪贴板同步依赖远程服务器的剪贴板工具：
+
+| 环境 | 所需工具 | 安装方式 |
+|------|---------|---------|
+| **Linux 桌面** (Ubuntu/Debian/CentOS 等) | `xclip` | `sudo apt install xclip` |
+| **macOS** | `pbcopy` / `pbpaste` | 系统自带，无需安装 |
+| **无头 Linux** (无桌面环境) | 不支持 | — |
+
+> **重要**：`xclip` 需要 X11 桌面环境才能工作。纯终端 / SSH-only 服务器无法使用剪贴板同步。App 会自动检测远程服务器的 DISPLAY 环境变量（`:0`、`:1` 等），无需手动配置。
+
+#### 开启步骤
+
+1. **连接 SSH** — 在 Tab 0 终端或 Tab 1 文件浏览器中建立 SSH 连接
+2. **打开全局设置** — Tab 3 配置中心 → **全局设置**
+3. **开启总开关** — 打开「剪贴板同步」主开关
+4. **选择方向** — 根据需要开启子开关：
+   - **服务器 → 手机**：每 5 秒轮询远程剪贴板，有新内容自动同步到手机
+   - **手机 → 服务器**：监听手机剪贴板变化，复制内容自动推送到远程
+
+#### 工作原理
+
+```
+┌─────────────┐     SSH exec      ┌─────────────────┐
+│  Android App │ ◄──────────────► │  Remote Server   │
+│              │                   │                  │
+│ ClipboardMgr │  xclip -o (read)  │  X11 Clipboard   │
+│   Listener   │  xclip -i (write) │                  │
+└─────────────┘                   └─────────────────┘
+
+服务器→手机: 每5秒执行 DISPLAY=:N xclip -o 读取远程剪贴板
+手机→服务器: 手机剪贴板变化时执行 DISPLAY=:N xclip -i 写入远程
+防循环: MD5 指纹比对，跳过已同步的内容
+```
+
+#### 技术细节
+
+- **自动检测后端** — macOS → `pbcopy`/`pbpaste`，Linux → `xclip`（自动遍历 DISPLAY `:1`/`:0`/`:2`）
+- **定时轮询** — 每 5 秒检查一次服务器剪贴板变化
+- **MD5 去重** — 通过指纹比对避免循环同步
 - **大小限制** — 单次同步上限 1MB
+- **Base64 传输** — 通过 SSH 执行 base64 编码的命令，避免 shell 转义问题
 - **自动启停** — SSH 连接建立时自动启动，断开时自动停止
 
-使用场景：在服务器上 `git clone` 一个仓库 URL，手机剪贴板自动获得该 URL，直接粘贴到浏览器中查看。
+#### 使用场景
+
+- 在远程服务器上 `git clone` 一个仓库 URL → 手机剪贴板自动获得该 URL → 在手机浏览器中粘贴查看
+- 在手机上复制一段代码 → 远程服务器的 Vim/VSCode 中直接 `Ctrl+V` 粘贴
+- 跨设备共享链接、命令、配置片段
 
 ---
 
@@ -499,9 +542,28 @@ ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
 
 ### Q: 剪贴板同步不工作？
 
-- 确认远程服务器已安装 `xclip`（Linux）或使用 macOS 自带的 `pbcopy`/`pbpaste`
-- Linux 安装：`sudo apt install xclip`
-- 同步大小限制为 1MB
+排查步骤：
+
+1. **确认远程服务器有桌面环境** — `xclip` 依赖 X11，无头服务器（纯 SSH 终端）不支持剪贴板同步
+2. **确认 xclip 已安装** — 在远程服务器上执行 `which xclip`，如果找不到：
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install xclip
+   # CentOS/RHEL
+   sudo yum install xclip
+   ```
+3. **确认 xclip 可用** — 在远程服务器上（非 SSH 会话中）执行：
+   ```bash
+   echo "test" | xclip -selection clipboard -i
+   xclip -selection clipboard -o
+   # 应输出 "test"
+   ```
+4. **检查 App 设置** — Tab 3 配置中心 → 全局设置 → 确认「剪贴板同步」总开关和方向开关已开启
+5. **查看日志** — App 会自动检测 DISPLAY 环境变量，如果检测失败可查看 logcat 日志：
+   ```bash
+   adb logcat | grep ClipboardSyncManager
+   ```
+6. **重启 App** — 如果之前同步异常，在手机设置中强制停止 App 后重新打开，后端会重新检测
 
 ---
 

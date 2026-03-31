@@ -78,9 +78,9 @@ class ClipboardSyncManager private constructor() {
      * 检测后端后，根据SharedPreferences中的设置决定启动哪些同步
      */
     fun startSync() {
-        Logger.logInfo(LOG_TAG, ">>> startSync() 被调用, isEnabled=$isEnabled, applicationContext=${applicationContext != null}")
-        if (isEnabled) {
-            Logger.logInfo(LOG_TAG, ">>> startSync() 已启用，跳过")
+        Logger.logError(LOG_TAG, "[DIAG] startSync() isEnabled=$isEnabled, backend=$backend, displayEnv=[$displayEnv]")
+        if (isEnabled && backend != ClipboardBackend.NONE) {
+            Logger.logError(LOG_TAG, "[DIAG] startSync() 已启用且后端已检测，跳过")
             return
         }
         isEnabled = true
@@ -93,7 +93,7 @@ class ClipboardSyncManager private constructor() {
      * 读取SharedPreferences设置并应用
      */
     private fun onBackendDetected() {
-        Logger.logInfo(LOG_TAG, ">>> onBackendDetected() isEnabled=$isEnabled, backend=$backend, readCmd=$readCommand, writeCmd=$writeCommand")
+        Logger.logError(LOG_TAG, "[DIAG] onBackendDetected() backend=$backend, displayEnv=[$displayEnv], readCmd=[$readCommand], writeCmd=[$writeCommand]")
         if (!isEnabled) return
 
         val context = applicationContext ?: return
@@ -215,9 +215,9 @@ class ClipboardSyncManager private constructor() {
     }
 
     private fun detectXclip() {
-        // 直接使用已知的 DISPLAY=:1（SSH非交互会话不会继承DISPLAY，必须硬编码）
-        // 依次尝试 :1 -> :0 -> :2
+        // 直接尝试常见 DISPLAY 值
         displayEnv = ""
+        Logger.logError(LOG_TAG, "[DIAG] detectXclip() 开始，依次尝试 DISPLAY=:1,:0,:2")
         tryNextDisplayFixed(listOf("DISPLAY=:1", "DISPLAY=:0", "DISPLAY=:2").iterator())
     }
 
@@ -226,7 +226,7 @@ class ClipboardSyncManager private constructor() {
      */
     private fun tryNextDisplayFixed(iterator: Iterator<String>) {
         if (!iterator.hasNext()) {
-            Logger.logWarn(LOG_TAG, "所有常见display都不可用，xclip后端失败")
+            Logger.logError(LOG_TAG, "[DIAG] 所有display尝试完毕，backend=NONE")
             backend = ClipboardBackend.NONE
             readCommand = ""
             writeCommand = ""
@@ -234,30 +234,30 @@ class ClipboardSyncManager private constructor() {
             return
         }
         val candidate = iterator.next()
-        Logger.logInfo(LOG_TAG, "DISPLAY检测: 尝试 $candidate")
+        Logger.logError(LOG_TAG, "[DIAG] 尝试 $candidate ...")
 
         val testCmd = "$candidate xclip -selection clipboard -o 2>&1 && echo XCLIP_OK || echo XCLIP_FAIL"
         SFTPConnectionManager.getInstance().executeCommand(testCmd)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ output ->
-                Logger.logInfo(LOG_TAG, "DISPLAY检测: $candidate 结果: $output")
+                Logger.logError(LOG_TAG, "[DIAG] $candidate 结果: [$output]")
                 if (output.contains("XCLIP_OK")) {
                     displayEnv = candidate
                     backend = ClipboardBackend.XCLIP
                     readCommand = "xclip -selection clipboard -o"
                     writeCommand = "xclip -selection clipboard -i"
-                    Logger.logInfo(LOG_TAG, "xclip验证通过，使用xclip后端，displayEnv=$displayEnv")
+                    Logger.logError(LOG_TAG, "[DIAG] xclip验证通过! displayEnv=$displayEnv")
                     onBackendDetected()
                 } else if (output.contains("Can't open display")) {
-                    Logger.logInfo(LOG_TAG, "DISPLAY=$candidate 不可用，尝试下一个...")
+                    Logger.logError(LOG_TAG, "[DIAG] $candidate -> Can't open display, 尝试下一个")
                     tryNextDisplayFixed(iterator)
                 } else {
-                    Logger.logWarn(LOG_TAG, "xclip验证失败: $output")
+                    Logger.logError(LOG_TAG, "[DIAG] $candidate -> 其他错误: $output, 尝试下一个")
                     tryNextDisplayFixed(iterator)
                 }
-            }, {
-                Logger.logWarn(LOG_TAG, "DISPLAY=$candidate 异常: ${it.message}，尝试下一个")
+            }, { error ->
+                Logger.logError(LOG_TAG, "[DIAG] $candidate -> 异常: ${error.message}, 尝试下一个")
                 tryNextDisplayFixed(iterator)
             })
     }
@@ -377,7 +377,7 @@ class ClipboardSyncManager private constructor() {
         if (!isEnabled || readCommand.isEmpty()) return
 
         val actualCommand = if (displayEnv.isNotEmpty()) "$displayEnv $readCommand" else readCommand
-        Logger.logDebug(LOG_TAG, ">>> syncFromServer() 执行命令: $actualCommand")
+        Logger.logError(LOG_TAG, "[DIAG-sync] 执行命令: [$actualCommand], displayEnv=[$displayEnv], backend=$backend")
         SFTPConnectionManager.getInstance().executeCommand(actualCommand)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
@@ -407,10 +407,9 @@ class ClipboardSyncManager private constructor() {
                     Logger.logDebug(LOG_TAG, ">>> syncFromServer() 内容未变化，跳过")
                 }
             }, { error ->
-                Logger.logError(LOG_TAG, ">>> syncFromServer() 失败: ${error.message}")
-                // 如果是 display 错误且还没设置过 display，尝试自动修复
+                Logger.logError(LOG_TAG, "[DIAG-sync] 失败: ${error.message}, displayEnv=[$displayEnv], backend=$backend")
                 if (displayEnv.isEmpty() && error.message?.contains("Can't open display") == true) {
-                    Logger.logInfo(LOG_TAG, "检测到display未设置，尝试自动修复...")
+                    Logger.logError(LOG_TAG, "[DIAG-sync] displayEnv为空且报display错误，尝试自动修复...")
                     tryFixDisplay { syncFromServer() }
                 }
             })
@@ -437,7 +436,7 @@ class ClipboardSyncManager private constructor() {
         val actualWriteCmd = if (displayEnv.isNotEmpty()) "$displayEnv $writeCommand" else writeCommand
         val command = "echo '$base64Content' | base64 -d | $actualWriteCmd"
 
-        Logger.logDebug(LOG_TAG, "推送剪贴板到服务器，内容长度: ${content.length}, 后端: $backend")
+        Logger.logError(LOG_TAG, "[DIAG-push] 执行命令: [$command], displayEnv=[$displayEnv]")
 
         SFTPConnectionManager.getInstance().executeCommand(command)
             .subscribeOn(Schedulers.io())
@@ -447,9 +446,9 @@ class ClipboardSyncManager private constructor() {
                 lastPhoneFingerprint = md5(content)
                 Logger.logDebug(LOG_TAG, "剪贴板已推送到服务器")
             }, { error ->
-                Logger.logError(LOG_TAG, "推送失败: ${error.message}")
+                Logger.logError(LOG_TAG, "[DIAG-push] 失败: ${error.message}, displayEnv=[$displayEnv]")
                 if (displayEnv.isEmpty() && error.message?.contains("Can't open display") == true) {
-                    Logger.logInfo(LOG_TAG, "检测到display未设置，尝试自动修复...")
+                    Logger.logError(LOG_TAG, "[DIAG-push] displayEnv为空且报display错误，尝试自动修复...")
                     tryFixDisplay { pushToServer(content) }
                 }
             })
