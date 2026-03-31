@@ -215,133 +215,50 @@ class ClipboardSyncManager private constructor() {
     }
 
     private fun detectXclip() {
-        SFTPConnectionManager.getInstance().executeCommand("which xclip")
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({ output ->
-                if (output.contains("xclip")) {
-                    Logger.logInfo(LOG_TAG, "检测到xclip，开始检测DISPLAY...")
-                    detectDisplayAndVerifyXclip()
-                } else {
-                    backend = ClipboardBackend.NONE
-                    Logger.logInfo(LOG_TAG, "未检测到xclip")
-                    onBackendDetected()
-                }
-            }, {
-                backend = ClipboardBackend.NONE
-                Logger.logInfo(LOG_TAG, "未检测到可用的剪贴板后端 (xclip/termux-clipboard)")
-                onBackendDetected()
-            })
+        // 直接使用已知的 DISPLAY=:1（SSH非交互会话不会继承DISPLAY，必须硬编码）
+        // 依次尝试 :1 -> :0 -> :2
+        displayEnv = ""
+        tryNextDisplayFixed(listOf("DISPLAY=:1", "DISPLAY=:0", "DISPLAY=:2").iterator())
     }
 
     /**
-     * 检测远程服务器的DISPLAY环境变量，并验证xclip能否工作
+     * 使用候选DISPLAY值验证xclip
      */
-    private fun detectDisplayAndVerifyXclip() {
-        // 先尝试通过SSH获取远程shell的DISPLAY变量
-        SFTPConnectionManager.getInstance()
-            .executeCommand("echo \"DISPLAY=\\\$DISPLAY\"")
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({ output ->
-                val displayValue = output.trim().removePrefix("DISPLAY=")
-                if (displayValue.isNotEmpty() && displayValue.startsWith(":")) {
-                    displayEnv = "DISPLAY=$displayValue"
-                    Logger.logInfo(LOG_TAG, "SSH会话中检测到DISPLAY=$displayValue，验证xclip...")
-                } else {
-                    displayEnv = "DISPLAY=:0"
-                    Logger.logInfo(LOG_TAG, "SSH会话中未检测到DISPLAY，使用默认值 DISPLAY=:0")
-                }
-                verifyXclipWithDisplay()
-            }, {
-                displayEnv = "DISPLAY=:0"
-                Logger.logInfo(LOG_TAG, "DISPLAY检测失败，使用默认值 DISPLAY=:0")
-                verifyXclipWithDisplay()
-            })
-    }
+    private fun tryNextDisplayFixed(iterator: Iterator<String>) {
+        if (!iterator.hasNext()) {
+            Logger.logWarn(LOG_TAG, "所有常见display都不可用，xclip后端失败")
+            backend = ClipboardBackend.NONE
+            readCommand = ""
+            writeCommand = ""
+            onBackendDetected()
+            return
+        }
+        val candidate = iterator.next()
+        Logger.logInfo(LOG_TAG, "DISPLAY检测: 尝试 $candidate")
 
-    /**
-     * 使用检测到的DISPLAY验证xclip是否能工作
-     */
-    private fun verifyXclipWithDisplay() {
-        val testCmd = "$displayEnv xclip -selection clipboard -o 2>&1 && echo XCLIP_OK || echo XCLIP_FAIL"
+        val testCmd = "$candidate xclip -selection clipboard -o 2>&1 && echo XCLIP_OK || echo XCLIP_FAIL"
         SFTPConnectionManager.getInstance().executeCommand(testCmd)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ output ->
-                if (output.contains("XCLIP_OK")) {
-                    backend = ClipboardBackend.XCLIP
-                    readCommand = "xclip -selection clipboard -o"
-                    writeCommand = "xclip -selection clipboard -i"
-                    Logger.logInfo(LOG_TAG, "xclip验证通过，使用xclip后端，$displayEnv")
-                } else if (output.contains("Can't open display")) {
-                    // :0 不行，尝试遍历 /tmp/.X11-unix 中的所有 display
-                    Logger.logInfo(LOG_TAG, "DISPLAY=:0 不工作，尝试遍历其他display...")
-                    tryAllDisplays()
-                } else {
-                    Logger.logWarn(LOG_TAG, "xclip验证失败: $output")
-                    backend = ClipboardBackend.NONE
-                    onBackendDetected()
-                }
-            }, {
-                Logger.logWarn(LOG_TAG, "xclip验证异常: ${it.message}")
-                backend = ClipboardBackend.NONE
-                onBackendDetected()
-            })
-    }
-
-    /**
-     * 遍历所有可用的X11 display
-     */
-    private fun tryAllDisplays() {
-        SFTPConnectionManager.getInstance()
-            .executeCommand("ls /tmp/.X11-unix/ 2>/dev/null")
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({ output ->
-                val displays = output.trim().lines().filter { it.startsWith("X") }
-                if (displays.isEmpty()) {
-                    Logger.logWarn(LOG_TAG, "没有找到X11 display")
-                    backend = ClipboardBackend.NONE
-                    onBackendDetected()
-                    return@subscribe
-                }
-                tryNextDisplay(displays.iterator())
-            }, {
-                Logger.logWarn(LOG_TAG, "遍历display失败: ${it.message}")
-                backend = ClipboardBackend.NONE
-                onBackendDetected()
-            })
-    }
-
-    private fun tryNextDisplay(iterator: Iterator<String>) {
-        if (!iterator.hasNext()) {
-            Logger.logWarn(LOG_TAG, "所有display都不可用")
-            backend = ClipboardBackend.NONE
-            onBackendDetected()
-            return
-        }
-        val displayFile = iterator.next()
-        val displayNum = displayFile.removePrefix("X")
-        val candidate = "DISPLAY=:$displayNum"
-
-        SFTPConnectionManager.getInstance()
-            .executeCommand("$candidate xclip -selection clipboard -o 2>&1 && echo XCLIP_OK || echo XCLIP_FAIL")
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({ output ->
+                Logger.logInfo(LOG_TAG, "DISPLAY检测: $candidate 结果: $output")
                 if (output.contains("XCLIP_OK")) {
                     displayEnv = candidate
                     backend = ClipboardBackend.XCLIP
                     readCommand = "xclip -selection clipboard -o"
                     writeCommand = "xclip -selection clipboard -i"
-                    Logger.logInfo(LOG_TAG, "找到可用display: $candidate，使用xclip后端")
+                    Logger.logInfo(LOG_TAG, "xclip验证通过，使用xclip后端，displayEnv=$displayEnv")
                     onBackendDetected()
+                } else if (output.contains("Can't open display")) {
+                    Logger.logInfo(LOG_TAG, "DISPLAY=$candidate 不可用，尝试下一个...")
+                    tryNextDisplayFixed(iterator)
                 } else {
-                    tryNextDisplay(iterator)
+                    Logger.logWarn(LOG_TAG, "xclip验证失败: $output")
+                    tryNextDisplayFixed(iterator)
                 }
             }, {
-                tryNextDisplay(iterator)
+                Logger.logWarn(LOG_TAG, "DISPLAY=$candidate 异常: ${it.message}，尝试下一个")
+                tryNextDisplayFixed(iterator)
             })
     }
 
@@ -363,6 +280,40 @@ class ClipboardSyncManager private constructor() {
                 Logger.logError(LOG_TAG, "同步出错: ${error.message}")
             })
         Logger.logInfo(LOG_TAG, "剪贴板轮询已启动，使用后端: $backend")
+    }
+
+    /**
+     * 尝试修复DISPLAY环境：依次尝试 :1, :0, :2，找到可用的后重试
+     */
+    private fun tryFixDisplay(onFixed: () -> Unit) {
+        val displays = listOf("DISPLAY=:1", "DISPLAY=:0", "DISPLAY=:2")
+        tryNextDisplayForFix(displays.iterator(), onFixed)
+    }
+
+    private fun tryNextDisplayForFix(iterator: Iterator<String>, onFixed: () -> Unit) {
+        if (!iterator.hasNext()) {
+            Logger.logWarn(LOG_TAG, "所有display尝试完毕，无法修复display问题")
+            return
+        }
+        val candidate = iterator.next()
+        val testCmd = "$candidate xclip -selection clipboard -o 2>&1 && echo XCLIP_OK || echo XCLIP_FAIL"
+        SFTPConnectionManager.getInstance().executeCommand(testCmd)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({ output ->
+                if (output.contains("XCLIP_OK")) {
+                    displayEnv = candidate
+                    backend = ClipboardBackend.XCLIP
+                    readCommand = "xclip -selection clipboard -o"
+                    writeCommand = "xclip -selection clipboard -i"
+                    Logger.logInfo(LOG_TAG, "display修复成功: $candidate，立即重试")
+                    onFixed()
+                } else {
+                    tryNextDisplayForFix(iterator, onFixed)
+                }
+            }, {
+                tryNextDisplayForFix(iterator, onFixed)
+            })
     }
 
     /**
@@ -457,6 +408,11 @@ class ClipboardSyncManager private constructor() {
                 }
             }, { error ->
                 Logger.logError(LOG_TAG, ">>> syncFromServer() 失败: ${error.message}")
+                // 如果是 display 错误且还没设置过 display，尝试自动修复
+                if (displayEnv.isEmpty() && error.message?.contains("Can't open display") == true) {
+                    Logger.logInfo(LOG_TAG, "检测到display未设置，尝试自动修复...")
+                    tryFixDisplay { syncFromServer() }
+                }
             })
     }
 
@@ -492,6 +448,10 @@ class ClipboardSyncManager private constructor() {
                 Logger.logDebug(LOG_TAG, "剪贴板已推送到服务器")
             }, { error ->
                 Logger.logError(LOG_TAG, "推送失败: ${error.message}")
+                if (displayEnv.isEmpty() && error.message?.contains("Can't open display") == true) {
+                    Logger.logInfo(LOG_TAG, "检测到display未设置，尝试自动修复...")
+                    tryFixDisplay { pushToServer(content) }
+                }
             })
     }
 
