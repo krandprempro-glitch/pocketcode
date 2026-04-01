@@ -32,7 +32,6 @@ import com.termux.app.models.DrawerMenuItem
 import com.termux.app.models.RemoteFileItem
 import com.termux.app.models.SSHConnectionConfig
 import com.termux.app.ui.SSHConfigDialog
-import com.termux.app.ui.dialogs.QuickConnectDialog
 import com.termux.app.utils.LightToast
 import com.termux.databinding.FragmentRemoteFileBrowserDrawerBinding
 import com.termux.filebrowser.adapters.DrawerFileAdapter
@@ -110,8 +109,6 @@ class RemoteFileBrowserFragment : Fragment(),
 
     // 对话框
     private var sshConfigDialog: SSHConfigDialog? = null
-    private var quickConnectDialog: QuickConnectDialog? = null
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -415,7 +412,7 @@ class RemoteFileBrowserFragment : Fragment(),
 
         // SSH快速连接按钮点击事件
         binding.btnSshConnect.setOnClickListener {
-            showQuickConnectDialog()
+            showConnectionDialog()
         }
 
         // 收藏夹管理按钮点击事件
@@ -460,13 +457,6 @@ class RemoteFileBrowserFragment : Fragment(),
             loadingProgress.visibility = if (state.isLoading) View.VISIBLE else View.GONE
             emptyStateLayout.visibility = if (state.isEmpty) View.VISIBLE else View.GONE
 
-            // 根据连接状态更新空状态提示文案
-            if (state.isEmpty) {
-                val emptyText = if (viewModel.isConnected()) "该目录为空"
-                    else "温馨提示:\nSSH连接后可实现剪贴板同步\n(配置页面开启开关)"
-                emptyStateText?.text = emptyText
-            }
-
             // 停止刷新动画
             if (!state.isLoading && fileListSwipeRefresh.isRefreshing) {
                 fileListSwipeRefresh.isRefreshing = false
@@ -485,9 +475,15 @@ class RemoteFileBrowserFragment : Fragment(),
 
         updateConnectionStatus(isConnected, statusText, if (state is RemoteFileBrowserViewModel.ConnectionState.Connected) state.config else null)
 
-        // 更新Home按钮可见性（连接成功后显示）
+        // 更新Home按钮和收藏夹按钮可见性（连接成功后显示）
         binding.btnGoHome.visibility = if (isConnected) View.VISIBLE else View.GONE
         binding.btnBookmarkManage.visibility = if (isConnected) View.VISIBLE else View.GONE
+
+        // SSH连接图标：未连接时显示link_off，连接后隐藏
+        binding.btnSshConnect.visibility = if (isConnected) View.GONE else View.VISIBLE
+
+        // 未连接时隐藏路径文字（INVISIBLE保留占位，确保右侧图标不被左移）
+        binding.toolbarTitle.visibility = if (isConnected) View.VISIBLE else View.INVISIBLE
 
         // 更新抽屉头部的连接信息和项目名称
         when (state) {
@@ -501,20 +497,13 @@ class RemoteFileBrowserFragment : Fragment(),
             }
             else -> {
                 binding.drawerConnectionInfo.text = "未连接"
-                binding.drawerProjectName.text = "远程文件浏览"
+                binding.drawerProjectName.text = getString(R.string.remote_file_browser_title)
             }
         }
     }
 
     private fun updateConnectionStatus(connected: Boolean, statusText: String, @Suppress("UNUSED_PARAMETER") config: SSHConnectionConfig? = null) {
-        // 未连接时显示link_off图标，连接后隐藏
-        binding.btnSshConnect.visibility = if (connected) View.GONE else View.VISIBLE
-
-        // 长按显示状态信息
-        binding.btnSshConnect.setOnLongClickListener {
-            LightToast.showShort(requireContext(), statusText)
-            true
-        }
+        // Visibility is controlled in handleConnectionStateChange
     }
 
     private fun updatePathDisplay(path: String) {
@@ -620,35 +609,9 @@ class RemoteFileBrowserFragment : Fragment(),
         sshConfigDialog?.show()
     }
 
-    private fun showQuickConnectDialog() {
-        quickConnectDialog?.dismiss()
-        quickConnectDialog = QuickConnectDialog(requireContext())
-        quickConnectDialog?.setOnQuickConnectListener(object : QuickConnectDialog.OnQuickConnectListener {
-            override fun onQuickConnect(config: SSHConnectionConfig) {
-                viewModel.connect(config)
-            }
-            override fun onManageConnections() {
-                // Switch to SSH Connection tab (tab 0)
-                (requireActivity() as? MainTabActivity)?.let { activity ->
-                    val viewPager = activity.findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.view_pager)
-                    viewPager?.currentItem = 0
-                }
-            }
-        })
-        quickConnectDialog?.show()
-    }
 
     private fun showAllBookmarksDialog() {
         val bookmarks = viewModel.getBookmarks().toMutableList()
-
-        if (bookmarks.isEmpty()) {
-            AlertDialog.Builder(requireContext())
-                .setTitle("收藏夹")
-                .setMessage("还没有收藏任何目录。\n\n你可以通过菜单中的「收藏当前目录」功能添加书签。")
-                .setPositiveButton("确定", null)
-                .show()
-            return
-        }
 
         com.termux.app.ui.dialogs.BookmarkManagementDialog.show(
             requireContext(),
@@ -1095,7 +1058,6 @@ class RemoteFileBrowserFragment : Fragment(),
     override fun onDestroyView() {
         super.onDestroyView()
         sshConfigDialog?.dismiss()
-        quickConnectDialog?.dismiss()
         currentViewedFile = null
         _binding = null
     }

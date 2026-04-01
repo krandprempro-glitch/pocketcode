@@ -24,7 +24,7 @@
             android:background="?attr/colorPrimary"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-            <!-- 简化布局：汉堡菜单 + 目录名 + 连接状态点 -->
+            <!-- 简化布局：汉堡菜单 + 目录名 + 右侧图标 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -38,24 +38,13 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="project"
+                    android:text="@string/remote_file_browser_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/white"
                     android:maxLines="1"
                     android:ellipsize="end"
                     android:layout_marginStart="8dp" />
-
-                <!-- SSH连接按钮 - 未连接时显示 -->
-                <ImageView
-                    android:id="@+id/btn_ssh_connect"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_link_off"
-                    android:layout_marginStart="12dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="快速连接SSH"
-                    android:padding="2dp" />
 
                 <!-- 收藏夹管理按钮 - 连接成功后显示 -->
                 <ImageView
@@ -78,6 +67,17 @@
                     android:visibility="gone"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="返回主目录" />
+
+                <!-- SSH连接按钮 - 未连接时显示在右侧，连接后隐藏 -->
+                <ImageView
+                    android:id="@+id/btn_ssh_connect"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_link_off"
+                    android:layout_marginStart="12dp"
+                    android:visibility="gone"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="快速连接SSH" />
 
             </LinearLayout>
         </androidx.appcompat.widget.Toolbar>
@@ -189,9 +189,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="该目录为空"
+                    android:text="该目录为空\n温馨提示:SSH连接后可实现剪贴板同步\n(需配置页面-全局设置开启开关)"
+                    android:gravity="center"
                     android:textSize="16sp"
                     android:textColor="#999999" />
+
+
             </LinearLayout>
 
             <!-- 加载指示器 -->
@@ -261,7 +264,7 @@
                     android:id="@+id/drawer_project_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="远程文件浏览"
+                    android:text="@string/remote_file_browser_title"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/white" />
