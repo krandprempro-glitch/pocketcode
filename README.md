@@ -63,6 +63,23 @@
 - Android 5.0 (API 21) 及以上
 - 支持架构：`arm64-v8a`、`armeabi-v7a`、`x86_64`
 
+### 编译环境
+
+- **JDK 11**（必需）— 项目使用 AGP 4.2.2 + Gradle 7.2，不兼容 JDK 8 或 JDK 17+
+- **Android SDK** — 推荐 API 28+（compileSdkVersion）
+- **Gradle 7.2** — 项目已包含 Gradle Wrapper，无需单独安装
+
+```bash
+# 验证 Java 版本（需为 11.x）
+java -version
+# 输出应为: openjdk version "11.x.x" 或 javac 11.x.x
+
+# 如果版本不对，设置 JAVA_HOME：
+export JAVA_HOME=/path/to/jdk-11
+```
+
+> **提示**：可在 [Adoptium](https://adoptium.net/) 下载 JDK 11。Android Studio 自带的 JDK 也可使用（Help → About 查看 Bundled JDK 版本）。
+
 ### 构建
 
 ```bash
