@@ -27,7 +27,6 @@ import com.termux.app.fragments.GitHistoryFragment
 import com.termux.app.fragments.TermuxFragment
 import com.termux.app.sessions.SessionListFragment
 import com.termux.app.clipboard.ClipboardSyncManager
-import com.termux.app.clipboard.ClipboardSyncStatusView
 import com.termux.filebrowser.RemoteFileBrowserFragment
 import com.termux.filebrowser.RemoteFileBrowserFragment.OnDirectoryChangeListener
 
@@ -42,7 +41,6 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
     private lateinit var viewPager: ViewPager2
     private lateinit var pagerAdapter: TabPagerAdapter
     private var floatingActionButton: FloatingActionButton? = null
-    private var clipboardSyncStatus: ClipboardSyncStatusView? = null
     private val disposables = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,16 +128,12 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
     private fun initClipboardSync() {
         ClipboardSyncManager.getInstance().init(this)
 
-        // 初始化状态图标
-        clipboardSyncStatus = findViewById(R.id.clipboard_sync_status)
-
         // 监听连接状态
         val connectionDisposable = SFTPConnectionManager.getInstance().connectionStatus
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { status ->
                 when (status) {
                     SFTPConnectionManager.ConnectionStatus.CONNECTED -> {
-                        clipboardSyncStatus?.showSyncing()
                         // SSH连接成功，延迟启动剪贴板同步，等待SSH会话完全就绪
                         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this@MainTabActivity)
                         val masterEnabled = prefs.getBoolean("clipboard_sync_master", false)
@@ -156,7 +150,6 @@ class MainTabActivity : AppCompatActivity(), OnDirectoryChangeListener {
                         }
                     }
                     else -> {
-                        clipboardSyncStatus?.hide()
                         ClipboardSyncManager.getInstance().stopSync()
                     }
                 }
