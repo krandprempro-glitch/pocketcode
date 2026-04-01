@@ -142,7 +142,7 @@ public class GitHistoryFragment extends Fragment {
             case NOT_CONNECTED:
                 progressBar.setVisibility(View.GONE);
                 statusBar.setVisibility(View.VISIBLE);
-                statusText.setText("请先在文件浏览页连接 SSH");
+                statusText.setText("请在文件浏览页连接 SSH，并跳转到git目录");
                 branchChip.setVisibility(View.GONE);
                 commitsRecyclerView.setVisibility(View.GONE);
                 commitsHeader.setVisibility(View.GONE);
