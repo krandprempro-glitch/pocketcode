@@ -1301,7 +1301,7 @@ public class TermuxFragment extends Fragment implements ServiceConnection {
 
         // 始终显示常用指令分组，如果没有则显示提示
         if (quickCommands.isEmpty()) {
-            quickCommands.add(new ClaudeCodeMenuHelper.Command("", "暂无常用指令"));
+            quickCommands.add(new ClaudeCodeMenuHelper.Command("", "暂无常用指令，可以去配置页面自定义指令"));
         }
         groups.add(new CommandGroupAdapter.CommandGroup(
             CommandGroupAdapter.CommandCategory.QUICK_COMMANDS, quickCommands));
