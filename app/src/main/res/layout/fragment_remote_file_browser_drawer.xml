@@ -46,14 +46,27 @@
                     android:ellipsize="end"
                     android:layout_marginStart="8dp" />
 
-                <!-- 连接状态指示点 -->
+                <!-- SSH连接按钮 - 未连接时显示 -->
                 <ImageView
-                    android:id="@+id/connection_status_dot"
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:src="@drawable/ic_circle_disconnected"
-                    android:layout_marginStart="8dp"
-                    android:contentDescription="连接状态" />
+                    android:id="@+id/btn_ssh_connect"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_link_off"
+                    android:layout_marginStart="12dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="快速连接SSH"
+                    android:padding="2dp" />
+
+                <!-- 收藏夹管理按钮 - 连接成功后显示 -->
+                <ImageView
+                    android:id="@+id/btn_bookmark_manage"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_bookmark_toolbar"
+                    android:layout_marginStart="12dp"
+                    android:visibility="gone"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="收藏夹管理" />
 
                 <!-- 回到Home按钮 - 连接成功后显示 -->
                 <ImageView

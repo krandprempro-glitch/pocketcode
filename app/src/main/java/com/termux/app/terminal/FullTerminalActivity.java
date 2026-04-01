@@ -117,6 +117,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     private boolean mRendererInitialized = false;
     private int mAttachRetryCount = 0;
     private static final int MAX_ATTACH_RETRIES = 20;
+    private static final int AUTO_COMMAND_DELAY_MS = 1500;
 
     // Extra keys toolbar
     private float mTerminalToolbarDefaultHeight;
@@ -1089,7 +1090,8 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
 
                 // Auto-execute SSH and/or cd commands for new sessions only (skip for reattached sessions)
                 if (!mIsReattachingExistingSession) {
-                    sendAutoCommands();
+                    // Delay to avoid double-echo during shell init
+                    mTerminalView.postDelayed(this::sendAutoCommands, AUTO_COMMAND_DELAY_MS);
                 } else {
                     Log.d(TAG, "Skipping auto commands for reattached session");
                 }
@@ -1200,9 +1202,7 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
     // ==================== Command Sending ====================
 
     private void sendCommandToTerminal(String command) {
-        Log.e(TAG, "[DIAG-CMD] sendCommandToTerminal: cmd='" + command + "'",
-            new Exception("[DIAG-CMD] STACK TRACE"));
-        Log.d(TAG, "sendCommandToTerminal: session=" + mTerminalSession
+        Log.d(TAG, "sendCommandToTerminal: cmd='" + command + "' session=" + mTerminalSession
             + " running=" + (mTerminalSession != null && mTerminalSession.isRunning()));
         if (mTerminalSession == null || !mTerminalSession.isRunning()) {
             showToast("终端会话未运行");
@@ -1248,6 +1248,11 @@ public class FullTerminalActivity extends AppCompatActivity implements ServiceCo
         super.onDestroy();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mCommandMenuDisposables.clear();
+
+        // Remove pending auto-command callback to prevent firing on destroyed Activity
+        if (mTerminalView != null) {
+            mTerminalView.removeCallbacks(null);
+        }
 
         if (mServiceBound) {
             unbindService(this);

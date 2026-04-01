@@ -139,7 +139,7 @@ public class SSHConnectionManager {
             // 密码用单引号包裹，并将密码中的单引号转义为 '\''
             // 逻辑：先闭合前导单引号，再放入 '\''（单引号转义），再闭合尾部单引号
             String escapedPwd = password.replace("'", "'\\''");
-            String sshpassCmd = "which sshpass >/dev/null 2>&1 || pkg install sshpass -y; "
+            String sshpassCmd = "which sshpass >/dev/null 2>&1 || pkg install sshpass -y >/dev/null 2>&1 && "
                 + "SSHPASS='" + escapedPwd + "' sshpass -e ssh -t " + sshCmd.substring(4);
             return sshpassCmd;
         }
