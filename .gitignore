@@ -47,6 +47,12 @@ Thumbs.db
 # Git worktrees
 .worktrees/
 
+# Claude Code
+.claude/
+
+# Docs
+docs/
+
 # Bootstrap injection markers
 app/bootstrap/*.injected
 app/bootstrap/*.original
