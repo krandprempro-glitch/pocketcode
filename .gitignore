@@ -53,6 +53,9 @@ Thumbs.db
 # Docs
 docs/
 
+# Todos
+todos/
+
 # Bootstrap injection markers
 app/bootstrap/*.injected
 app/bootstrap/*.original
