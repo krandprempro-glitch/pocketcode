@@ -14,7 +14,7 @@ import com.termux.app.configuration.activities.RunConfigListActivity
 import com.termux.app.configuration.activities.QuickCommandListActivity
 import com.termux.app.configuration.activities.GlobalSettingsActivity
 import com.termux.app.configuration.models.ConfigurationItem
-import android.widget.Toast
+import com.termux.shared.android.PackageUtils
 
 class ConfigurationMainFragment : Fragment() {
     
@@ -50,7 +50,15 @@ class ConfigurationMainFragment : Fragment() {
         recyclerView.adapter = adapter
         
         // 设置配置项数据
-        adapter.setItems(ConfigurationItem.DEFAULT_ITEMS.toList())
+        val items = ConfigurationItem.DEFAULT_ITEMS.map { item ->
+            if (item.type == ConfigurationItem.ConfigurationType.ABOUT) {
+                val versionName = PackageUtils.getVersionNameForPackage(requireContext()) ?: "unknown"
+                item.copy(title = "v$versionName")
+            } else {
+                item
+            }
+        }
+        adapter.setItems(items)
     }
     
     private fun onConfigurationItemClicked(item: ConfigurationItem) {
@@ -71,10 +79,7 @@ class ConfigurationMainFragment : Fragment() {
                 val intent = GlobalSettingsActivity.newIntent(requireContext())
                 startActivity(intent)
             }
-            ConfigurationItem.ConfigurationType.ABOUT -> {
-                // TODO: Phase 2实现关于页面
-                Toast.makeText(requireContext(), "关于页面(Phase 2将实现)", Toast.LENGTH_SHORT).show()
-            }
+            else -> {}
         }
     }
     

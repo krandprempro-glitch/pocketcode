@@ -7,8 +7,7 @@ data class ConfigurationItem(
     val title: String,
     val description: String,
     val iconRes: Int,
-    val type: ConfigurationType,
-    val enabled: Boolean = true
+    val type: ConfigurationType
 ) {
     
     enum class ConfigurationType {
@@ -52,7 +51,7 @@ data class ConfigurationItem(
             ConfigurationItem(
                 "about",
                 "关于",
-                "版本信息和帮助",
+                "版本信息",
                 R.drawable.ic_info,
                 ConfigurationType.ABOUT
             )
