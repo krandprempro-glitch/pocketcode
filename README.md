@@ -38,6 +38,25 @@
 
 ## 功能概览
 
+<p align="center">
+  <img src="preview/会话连接.png" width="30%" alt="会话连接"/>
+  <img src="preview/终端效果.png" width="30%" alt="终端效果"/>
+  <img src="preview/文件浏览.png" width="30%" alt="文件浏览"/>
+</p>
+<p align="center">
+  <img src="preview/快捷指令.png" width="30%" alt="快捷指令"/>
+  <img src="preview/自定义指令.png" width="30%" alt="自定义指令"/>
+  <img src="preview/git记录.png" width="30%" alt="git记录"/>
+</p>
+
+| 会话连接 | 终端效果 | 文件浏览 |
+|:---:|:---:|:---:|
+| SSH 多会话管理，支持密码和密钥认证 | 多会话终端，内置 Claude Code 快捷菜单 | SFTP 远程文件列表，支持浏览和下载 |
+
+| 快捷指令 | 自定义指令 | git记录 |
+|:---:|:---:|:---:|
+| 18 个 AI 内置指令一键执行 | 从远程同步 Claude Code 自定义技能 | 查看 Git 提交历史和文件变更 |
+
 ```
 ┌──────────────────────────────────────────────────┐
 │  Tab 0: 终端会话    │  Tab 1: 远程文件浏览       │
@@ -93,9 +112,9 @@ cd termux-ai-dev
 # 构建 Release APK
 ./gradlew app:assembleRelease
 
-# APK 输出路径
-# app/build/outputs/apk/debug/app-debug.apk
-# app/build/outputs/apk/release/app-release.apk
+# APK 输出路径（格式: pocketcode_v{版本}_{buildType}_{架构}.apk）
+# app/build/outputs/apk/debug/pocketcode_v1.0.0_debug_arm64-v8a.apk
+# app/build/outputs/apk/release/pocketcode_v1.0.0_release_arm64-v8a.apk
 ```
 
 ---
