@@ -152,7 +152,6 @@ class RemoteFileBrowserFragment : Fragment(),
         setupToolbar()
         setupDrawerLayout()
         setupCodeEditor()
-        updateConnectionStatus(false, "未连接")
     }
 
     private fun setupToolbar() {
@@ -466,14 +465,6 @@ class RemoteFileBrowserFragment : Fragment(),
 
     private fun handleConnectionStateChange(state: RemoteFileBrowserViewModel.ConnectionState) {
         val isConnected = state is RemoteFileBrowserViewModel.ConnectionState.Connected
-        val statusText = when (state) {
-            is RemoteFileBrowserViewModel.ConnectionState.Disconnected -> "未连接"
-            is RemoteFileBrowserViewModel.ConnectionState.Connecting -> "连接中..."
-            is RemoteFileBrowserViewModel.ConnectionState.Connected -> "已连接"
-            is RemoteFileBrowserViewModel.ConnectionState.Error -> "连接失败"
-        }
-
-        updateConnectionStatus(isConnected, statusText, if (state is RemoteFileBrowserViewModel.ConnectionState.Connected) state.config else null)
 
         // 更新Home按钮和收藏夹按钮可见性（连接成功后显示）
         binding.btnGoHome.visibility = if (isConnected) View.VISIBLE else View.GONE
@@ -500,10 +491,6 @@ class RemoteFileBrowserFragment : Fragment(),
                 binding.drawerProjectName.text = getString(R.string.remote_file_browser_title)
             }
         }
-    }
-
-    private fun updateConnectionStatus(connected: Boolean, statusText: String, @Suppress("UNUSED_PARAMETER") config: SSHConnectionConfig? = null) {
-        // Visibility is controlled in handleConnectionStateChange
     }
 
     private fun updatePathDisplay(path: String) {
