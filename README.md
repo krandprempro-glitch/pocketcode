@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://avatars.githubusercontent.com/u/29275069?s=200&v=4" width="120" alt="Termux Logo"/>
+  <img src="art/ic_launcher2.png" width="120" alt="PocketCode Logo"/>
 </p>
 
 <h1 align="center">PocketCode</h1>
