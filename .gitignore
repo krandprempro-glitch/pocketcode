@@ -59,3 +59,4 @@ todos/
 # Bootstrap injection markers
 app/bootstrap/*.injected
 app/bootstrap/*.original
+CLAUDE.md
