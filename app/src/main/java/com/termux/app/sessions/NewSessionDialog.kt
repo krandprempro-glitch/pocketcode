@@ -62,12 +62,15 @@ class NewSessionDialog(
     }
 
     private fun setupPathDropdown() {
+        // Prepend "空" as the first option
+        val emptyOption = listOf("空" to "")
+
         val paths = try {
-            ProjectWorkspaceManager.getInstance(context)
+            emptyOption + ProjectWorkspaceManager.getInstance(context)
                 .allBookmarks
                 .map { it.displayName to it.fullPath }
         } catch (e: Exception) {
-            emptyList()
+            emptyOption
         }
 
         val displayNames = paths.map { it.first }
