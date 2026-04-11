@@ -6,9 +6,9 @@
 # into the existing bootstrap ZIP files, then regenerates dpkg metadata.
 #
 # Usage:
-#   ./inject-packages.sh [--arch aarch64|arm] [--repo URL]
+#   ./inject-packages.sh [--arch aarch64|arm|x86_64] [--repo URL]
 #
-# Defaults to processing both aarch64 and arm architectures.
+# Defaults to processing aarch64, arm, and x86_64 architectures.
 #
 
 set -euo pipefail
@@ -71,6 +71,7 @@ download_deb() {
     case "$arch" in
         aarch64) arch_deb="aarch64" ;;
         arm)     arch_deb="arm" ;;
+        x86_64)  arch_deb="x86_64" ;;
         *)       err "Unsupported arch: $arch" ;;
     esac
 
@@ -328,13 +329,13 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --arch)  ARCHS+=("$2"); shift 2 ;;
         --repo)  REPO_BASE="$2"; shift 2 ;;
-        --help)  echo "Usage: $0 [--arch aarch64|arm] [--repo URL]"; exit 0 ;;
+        --help)  echo "Usage: $0 [--arch aarch64|arm|x86_64] [--repo URL]"; exit 0 ;;
         *)       err "Unknown option: $1. Use --help for usage." ;;
     esac
 done
 
 if [[ ${#ARCHS[@]} -eq 0 ]]; then
-    for arch in aarch64 arm; do
+    for arch in aarch64 arm x86_64; do
         local_zip="${SCRIPT_DIR}/bootstrap-${arch}.zip"
         if [[ -f "$local_zip" ]]; then
             local_size=$(stat -c%s "$local_zip" 2>/dev/null || echo "0")
