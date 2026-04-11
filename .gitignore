@@ -60,3 +60,4 @@ todos/
 app/bootstrap/*.injected
 app/bootstrap/*.original
 CLAUDE.md
+AGENTS.md
